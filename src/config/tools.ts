@@ -12,8 +12,16 @@ export const tools: ToolConfig[] = [
     description:
       "Hyperliquid API의 IP 기반 rate-limit(분당 weight 1200)이 실제로 어느 시점에 발동되는지 확인하는 도구입니다.\n" +
       "userFillsByTime API를 연속 호출하여 HTTP 429 응답이 돌아올 때까지 요청합니다.\n" +
-      "429 응답 시 Retry-After 헤더 유무, 응답 본문의 에러 메시지, 요청별 weight 누적량 등을 분석하여 보여줍니다.\n" +
+      "429 응답 시 전체 응답 헤더, 응답 본문, 요청별 weight 누적량 등을 분석하여 보여줍니다.\n" +
+      "Rate-limit 도달 후에는 자동으로 5초 간격 recovery probe를 실행하여 해제까지 걸리는 시간을 측정합니다.\n" +
       "참고: https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits",
   },
-  // 새 도구 추가 시 여기에 항목 추가
+  {
+    slug: "hl-testnet-faucet-farmer",
+    name: "HL Testnet Faucet Farmer",
+    description:
+      "Hyperliquid 테스트넷에서 USDC $100,000 이상을 확보하기 위한 자동화 도구입니다.\n" +
+      "다수의 Arbitrum 계정을 생성하여 메인넷 deposit → 테스트넷 faucet claim → USDC 회수 절차를 자동화합니다.\n" +
+      "⚠️ 이 도구는 브라우저에서 private key를 처리합니다. 신뢰할 수 있는 환경에서만 사용하세요.",
+  },
 ];
