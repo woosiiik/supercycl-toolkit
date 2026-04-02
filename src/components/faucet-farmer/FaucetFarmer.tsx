@@ -165,14 +165,10 @@ export default function FaucetFarmer() {
   }
 
   function handleFaucetClaim() {
-    // Only claim for accounts that passed depositCheck
-    const readyAccounts = getDepositReadyAccounts(
-      subAccounts,
-      stepStatuses.depositCheck,
-    );
-    if (readyAccounts.length === 0) return;
+    // 모든 Sub Account에 대해 claim 시도 (이미 claim된 계정은 서버에서 거부)
+    if (subAccounts.length === 0) return;
 
-    executeStep("faucetClaim", readyAccounts, async (acc) => {
+    executeStep("faucetClaim", subAccounts, async (acc) => {
       const result = await claimFaucet(acc.address);
       return { success: result.success, error: result.error };
     });
@@ -448,14 +444,7 @@ export default function FaucetFarmer() {
               />
               {stepStatuses[step].size > 0 && (
                 <AccountStatusTable
-                  accounts={
-                    step === "faucetClaim"
-                      ? getDepositReadyAccounts(
-                          subAccounts,
-                          stepStatuses.depositCheck,
-                        )
-                      : subAccounts
-                  }
+                  accounts={subAccounts}
                   statuses={stepStatuses[step]}
                   showAmount={showAmount}
                 />
