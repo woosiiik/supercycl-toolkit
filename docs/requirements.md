@@ -182,6 +182,139 @@ Supercycl Toolkit은 코인 선물거래 애그리게이터 서비스인 Supercy
 
 ---
 
-## 4. (미정) 추가 도구
+## 4. HL Testnet Stress Tester
 
-> 향후 추가될 도구의 요구사항이 여기에 정리됩니다.
+### 용어 정의 (추가)
+
+- **Stress_Tester**: Hyperliquid 테스트넷의 스트레스 내성을 확인하는 도구
+- **Stress_Instance**: 하나의 WebSocket 연결과 독립적인 구독/주문/레버리지 변경 루프를 가진 실행 단위
+- **Instance_Manager**: N개의 Stress_Instance를 생성하고 관리하는 컨트롤러
+- **Metrics_Dashboard**: WebSocket 연결 수, 채널 구독 수, GET/POST 요청 수 등 실시간 메트릭을 표시하는 UI 영역
+- **HL_SDK**: @nktkas/hyperliquid npm 패키지 (WalletClient, EventClient, WebSocketTransport 포함)
+- **EventClient**: HL_SDK의 WebSocket 구독 클라이언트 (webData2, orderUpdates, l2Book 등 채널 구독)
+- **WalletClient**: HL_SDK의 거래 클라이언트 (order, cancel, updateLeverage 등 exchange 작업)
+- **WebSocketTransport**: HL_SDK의 WebSocket 전송 계층 (테스트넷 URL: wss://api.hyperliquid-testnet.xyz/ws)
+- **Coin_List**: Hyperliquid 테스트넷에서 거래 가능한 200개 이상의 코인 목록
+
+### 4.1 도구 등록 및 라우팅
+
+**User Story:** 개발자로서, 사이드바에서 Stress Tester를 선택하여 접근하고 싶다.
+
+#### Acceptance Criteria
+
+1. THE Toolkit_App SHALL tools 배열에 slug "hl-testnet-stress-tester", name "HL Testnet Stress Tester" 항목을 포함한다
+2. WHEN 사이드바에서 "HL Testnet Stress Tester" 클릭 시, THE Toolkit_App SHALL Stress_Tester 컴포넌트를 렌더링한다
+3. THE Tool_Page SHALL 도구 설명을 상단에 표시한다
+
+### 4.2 입력 및 설정
+
+**User Story:** 개발자로서, private key와 인스턴스 수를 입력하여 스트레스 테스트를 구성하고 싶다.
+
+#### Acceptance Criteria
+
+1. THE Stress_Tester SHALL Hyperliquid 테스트넷 계정의 private key 입력 필드를 제공한다
+2. THE Stress_Tester SHALL 인스턴스 수(N) 입력 필드를 제공한다 (기본값: 1, 최솟값: 1)
+3. WHEN private key 입력 시, THE Stress_Tester SHALL 0x 접두사 66자리 16진수 형식을 검증한다
+4. IF 유효하지 않은 private key가 입력되면, THEN THE Stress_Tester SHALL 입력 필드 아래에 에러 메시지를 표시하고 시작 버튼을 비활성화한다
+5. THE Stress_Tester SHALL private key를 마스킹하여 표시한다 (처음 6자와 마지막 4자만 노출)
+6. THE Stress_Tester SHALL private key를 localStorage에 저장하지 않는다
+
+### 4.3 인스턴스 생성 및 WebSocket 연결
+
+**User Story:** 개발자로서, N개의 독립적인 인스턴스를 생성하여 동시에 테스트넷에 부하를 가하고 싶다.
+
+#### Acceptance Criteria
+
+1. WHEN "시작" 버튼 클릭 시, THE Instance_Manager SHALL N개의 Stress_Instance를 생성한다
+2. THE Stress_Instance SHALL 각각 독립적인 WebSocketTransport를 생성한다 (URL: wss://api.hyperliquid-testnet.xyz/ws)
+3. THE Stress_Instance SHALL 각각 독립적인 EventClient를 WebSocketTransport로 초기화한다
+4. THE Stress_Instance SHALL 각각 독립적인 WalletClient를 생성한다 (isTestnet: true)
+5. WHEN Stress_Instance 생성 시, THE Stress_Instance SHALL 다음 3개 채널을 EventClient로 구독한다:
+   - webData2: 사용자의 open order 및 open position 정보 수신
+   - orderUpdates: 주문 업데이트 수신
+   - l2Book: coin "BTC", nSigFigs 5 (오더북 데이터)
+6. IF WebSocket 연결이 실패하면, THEN THE Stress_Instance SHALL 에러를 로그에 기록하고 해당 인스턴스를 실패 상태로 표시한다
+7. THE Stress_Instance SHALL 다른 인스턴스의 성공/실패와 무관하게 독립적으로 동작한다
+
+### 4.4 주기적 레버리지 변경
+
+**User Story:** 개발자로서, 주기적으로 레버리지를 변경하여 exchange API에 부하를 가하고 싶다.
+
+#### Acceptance Criteria
+
+1. WHILE Stress_Instance가 실행 중인 동안, THE Stress_Instance SHALL 10초마다 레버리지 변경을 수행한다
+2. WHEN 레버리지 변경 시, THE Stress_Instance SHALL Coin_List에서 랜덤으로 코인 하나를 선정한다
+3. THE Stress_Instance SHALL WalletClient.updateLeverage를 호출하여 선정된 코인의 레버리지를 변경한다
+4. IF 레버리지 변경이 실패하면, THEN THE Stress_Instance SHALL 에러를 로그에 기록하고 다음 주기에 재시도한다
+
+### 4.5 주기적 Limit Order
+
+**User Story:** 개발자로서, 주기적으로 주문을 넣어 order 관련 API에 부하를 가하고 싶다.
+
+#### Acceptance Criteria
+
+1. WHILE Stress_Instance가 실행 중인 동안, THE Stress_Instance SHALL 10초마다 limit order를 수행한다
+2. WHEN limit order 시, THE Stress_Instance SHALL Coin_List에서 랜덤으로 코인 하나를 선정한다
+3. THE Stress_Instance SHALL 선정된 코인의 현재 mid price를 조회한다
+4. THE Stress_Instance SHALL 체결되지 않도록 현재 mid price 대비 현저히 낮은 가격으로 limit order를 설정한다 (예: mid price의 50% 이하)
+5. WHEN 선정된 코인에 기존 open order가 존재하면, THE Stress_Instance SHALL WalletClient.cancel로 해당 order를 취소한 후 새 order를 넣는다
+6. THE Stress_Instance SHALL WalletClient.order를 호출하여 limit order를 제출한다 (GTC, buy, reduce-only false)
+7. IF order 제출이 실패하면, THEN THE Stress_Instance SHALL 에러를 로그에 기록하고 다음 주기에 재시도한다
+
+### 4.6 코인 목록 조회
+
+**User Story:** 개발자로서, 테스트넷에서 거래 가능한 코인 목록을 자동으로 가져오고 싶다.
+
+#### Acceptance Criteria
+
+1. WHEN Stress_Tester 시작 시, THE Stress_Tester SHALL PublicClient.meta()를 호출하여 거래 가능한 코인 목록을 조회한다
+2. THE Stress_Tester SHALL 조회된 코인 목록을 모든 Stress_Instance가 공유하도록 한다
+3. IF 코인 목록 조회가 실패하면, THEN THE Stress_Tester SHALL 에러 메시지를 표시하고 시작을 중단한다
+
+### 4.7 실시간 메트릭 표시
+
+**User Story:** 개발자로서, 스트레스 테스트의 현재 상태를 실시간으로 모니터링하고 싶다.
+
+#### Acceptance Criteria
+
+1. THE Metrics_Dashboard SHALL 현재 활성 WebSocket 연결 수를 표시한다
+2. THE Metrics_Dashboard SHALL 전체 WebSocket 채널 구독 수를 표시한다 (인스턴스당 3개 채널 × N개 인스턴스)
+3. THE Metrics_Dashboard SHALL 누적 GET 요청 수를 표시한다 (코인 목록 조회, mid price 조회, open order 조회 등)
+4. THE Metrics_Dashboard SHALL 누적 POST 요청 수를 표시한다 (order 제출, order 취소, 레버리지 변경)
+5. WHILE 테스트 실행 중인 동안, THE Metrics_Dashboard SHALL 메트릭을 실시간으로 갱신한다
+6. THE Metrics_Dashboard SHALL 각 Stress_Instance의 개별 상태(연결됨/실행중/에러)를 표시한다
+
+### 4.8 테스트 제어
+
+**User Story:** 개발자로서, 스트레스 테스트를 시작하고 중단할 수 있어야 한다.
+
+#### Acceptance Criteria
+
+1. THE Stress_Tester SHALL "시작" 버튼을 제공한다
+2. THE Stress_Tester SHALL "중단" 버튼을 제공한다
+3. WHILE 테스트 실행 중인 동안, THE Stress_Tester SHALL 시작 버튼을 비활성화하고 중단 버튼을 활성화한다
+4. WHEN "중단" 클릭 시, THE Instance_Manager SHALL 모든 Stress_Instance의 WebSocket 연결을 종료하고 주기적 작업을 중단한다
+5. WHEN 테스트 중단 시, THE Stress_Tester SHALL 모든 open order를 취소하는 정리(cleanup) 작업을 수행한다
+6. WHEN 테스트 중단 완료 시, THE Stress_Tester SHALL 최종 메트릭 요약을 표시한다
+
+### 4.9 에러 처리
+
+**User Story:** 개발자로서, 개별 인스턴스의 에러가 전체 테스트를 중단시키지 않기를 원한다.
+
+#### Acceptance Criteria
+
+1. IF 개별 Stress_Instance에서 WebSocket 연결이 끊어지면, THEN THE Stress_Instance SHALL 재연결을 시도한다 (WebSocketTransport의 reconnect 옵션 활용)
+2. IF 개별 Stress_Instance에서 API 호출이 실패하면, THEN THE Stress_Instance SHALL 에러를 로그에 기록하고 다음 주기에 계속 실행한다
+3. THE Instance_Manager SHALL 개별 인스턴스의 실패가 다른 인스턴스의 실행에 영향을 주지 않도록 격리한다
+4. IF rate-limit (HTTP 429) 응답을 수신하면, THEN THE Stress_Instance SHALL 해당 사실을 Metrics_Dashboard에 표시하고 Retry-After 시간만큼 대기 후 재시도한다
+
+### 4.10 로그 표시
+
+**User Story:** 개발자로서, 각 인스턴스의 활동 로그를 확인하고 싶다.
+
+#### Acceptance Criteria
+
+1. THE Stress_Tester SHALL 각 Stress_Instance의 활동 로그를 시간순으로 표시한다
+2. THE Stress_Tester SHALL 로그에 타임스탬프, 인스턴스 번호, 작업 유형(레버리지 변경/주문/취소/구독), 결과(성공/실패)를 포함한다
+3. THE Stress_Tester SHALL 로그를 스크롤 가능한 영역에 표시한다
+4. THE Stress_Tester SHALL 최근 로그 500건까지 유지하고 초과 시 오래된 로그를 제거한다

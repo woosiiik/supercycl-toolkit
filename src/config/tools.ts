@@ -24,4 +24,12 @@ export const tools: ToolConfig[] = [
       "다수의 Arbitrum 계정을 생성하여 메인넷 deposit → 테스트넷 faucet claim → USDC 회수 절차를 자동화합니다.\n" +
       "⚠️ 이 도구는 브라우저에서 private key를 처리합니다. 신뢰할 수 있는 환경에서만 사용하세요.",
   },
+  {
+    slug: "hl-testnet-stress-tester",
+    name: "HL Testnet Stress Tester",
+    description:
+      "Hyperliquid 테스트넷의 스트레스 내성을 확인하는 도구입니다.\n" +
+      "N개의 독립 인스턴스를 생성하여 각각 WebSocket 구독, 레버리지 변경, limit order를 동시에 수행합니다.\n" +
+      "WebSocket 연결 수, 채널 구독 수, GET/POST 요청 수 등 실시간 메트릭을 모니터링합니다.",
+  },
 ];

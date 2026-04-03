@@ -3,6 +3,7 @@ import { tools } from "@/config/tools";
 import ToolHeader from "@/components/ToolHeader";
 import RateLimitTester from "@/components/rate-limit/RateLimitTester";
 import FaucetFarmer from "@/components/faucet-farmer/FaucetFarmer";
+import StressTester from "@/components/stress-tester/StressTester";
 
 export default async function ToolPage({
   params,
@@ -24,6 +25,8 @@ export default async function ToolPage({
           <RateLimitTester />
         ) : slug === "hl-testnet-faucet-farmer" ? (
           <FaucetFarmer />
+        ) : slug === "hl-testnet-stress-tester" ? (
+          <StressTester />
         ) : (
           <p className="text-gray-500">준비 중입니다.</p>
         )}

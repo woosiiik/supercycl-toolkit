@@ -739,6 +739,597 @@ const accountStepStatusArbitrary = fc.record({
 
 ---
 
-## 4. (미정) 추가 도구
+## 4. HL Testnet Stress Tester
 
-> 향후 추가될 도구의 설계가 여기에 정리됩니다.
+### 4.1 개요
+
+Stress Tester는 Hyperliquid 테스트넷의 스트레스 내성을 확인하는 도구이다. N개의 독립적인 Stress_Instance를 생성하여 각각 WebSocket 연결, 채널 구독, 주기적 레버리지 변경, limit order 제출을 동시에 수행한다.
+
+핵심 설계 원칙:
+- **인스턴스 독립성**: 각 Stress_Instance는 독립적인 WebSocketTransport + EventClient + WalletClient를 보유하며, 하나의 실패가 다른 인스턴스에 영향을 주지 않음
+- **공유 PublicClient**: 모든 인스턴스가 하나의 PublicClient(HttpTransport)를 공유하여 meta/allMids 등 중복 REST 호출 방지
+- **@nktkas/hyperliquid SDK 활용**: WalletClient, EventClient, PublicClient, WebSocketTransport, HttpTransport를 직접 사용
+
+### 4.2 아키텍처
+
+```mermaid
+graph TD
+    subgraph Browser
+        UI[StressTester 컴포넌트]
+        IM[Instance_Manager]
+        SI1[Stress_Instance #1]
+        SI2[Stress_Instance #2]
+        SIN[Stress_Instance #N]
+        PC[PublicClient - 공유]
+        MD[Metrics_Dashboard]
+        AL[ActivityLog]
+    end
+
+    subgraph "Per Instance"
+        WST[WebSocketTransport]
+        EC[EventClient]
+        WC[WalletClient]
+    end
+
+    subgraph "Hyperliquid Testnet"
+        WS_API["wss://api.hyperliquid-testnet.xyz/ws"]
+        REST_API["https://hyperliquid-testnet.xyz"]
+    end
+
+    UI --> IM
+    IM --> SI1
+    IM --> SI2
+    IM --> SIN
+    IM --> PC
+    SI1 --> WST
+    WST --> EC
+    WST --> WC
+    EC --> WS_API
+    WC --> REST_API
+    PC --> REST_API
+    SI1 --> MD
+    SI2 --> MD
+    SIN --> MD
+    SI1 --> AL
+    SI2 --> AL
+    SIN --> AL
+```
+
+기존 도구들과 동일한 패턴:
+- `src/config/tools.ts`에 도구 등록
+- `src/app/tools/[slug]/page.tsx`에서 slug 매핑
+- 컴포넌트: `src/components/stress-tester/` 하위
+- 비즈니스 로직: `src/lib/stress/` 하위
+
+### 4.3 컴포넌트 및 인터페이스
+
+#### 4.3.1 컴포넌트 구조
+
+```
+src/components/stress-tester/
+├── StressTester.tsx          # 메인 컨테이너 (상태 관리, Instance_Manager 오케스트레이션)
+├── StressConfig.tsx          # Private key + 인스턴스 수 입력
+├── MetricsDashboard.tsx      # 실시간 메트릭 표시
+├── InstanceStatusList.tsx    # 인스턴스별 상태 표시
+└── ActivityLog.tsx           # 스크롤 가능한 활동 로그
+```
+
+#### 4.3.2 컴포넌트 인터페이스
+
+```typescript
+// StressConfig: private key 입력 및 인스턴스 수 설정
+interface StressConfigProps {
+  onStart: (privateKey: string, instanceCount: number) => void;
+  onStop: () => void;
+  isRunning: boolean;
+  canStart: boolean;
+}
+
+// MetricsDashboard: 실시간 메트릭 표시
+interface MetricsDashboardProps {
+  metrics: StressMetrics;
+  isRunning: boolean;
+}
+
+// InstanceStatusList: 인스턴스별 상태 표시
+interface InstanceStatusListProps {
+  instances: InstanceState[];
+}
+
+// ActivityLog: 활동 로그 표시
+interface ActivityLogProps {
+  logs: LogEntry[];
+}
+```
+
+#### 4.3.3 라이브러리 모듈 구조
+
+```
+src/lib/stress/
+├── constants.ts              # 테스트넷 URL, 설정 상수
+├── instance.ts               # StressInstance 클래스 (WS 연결 + 주기적 루프)
+├── metrics.ts                # 메트릭 카운터
+└── coins.ts                  # 코인 목록 조회 + 랜덤 선택
+```
+
+```typescript
+// src/lib/stress/constants.ts
+export const TESTNET_WS_URL = 'wss://api.hyperliquid-testnet.xyz/ws' as const;
+export const TESTNET_HTTP_URL = 'https://hyperliquid-testnet.xyz' as const;
+export const LOOP_INTERVAL_MS = 10_000;  // 10초
+export const MAX_LOG_ENTRIES = 500;
+export const LEVERAGE_MIN = 1;
+export const LEVERAGE_MAX = 20;
+export const ORDER_PRICE_RATIO = 0.5;    // mid price의 50%
+export const ORDER_SIZE = '0.001';        // 최소 주문 수량
+```
+
+```typescript
+// src/lib/stress/coins.ts
+import { PublicClient, HttpTransport } from '@nktkas/hyperliquid';
+import type { PerpsMeta, AllMids } from '@nktkas/hyperliquid';
+
+// 공유 PublicClient 생성
+function createSharedPublicClient(): PublicClient<HttpTransport>
+
+// 코인 목록 조회 (meta().universe)
+async function fetchCoinList(
+  client: PublicClient,
+  signal?: AbortSignal
+): Promise<CoinInfo[]>
+
+// 현재 mid price 조회
+async function fetchAllMids(
+  client: PublicClient,
+  signal?: AbortSignal
+): Promise<AllMids>
+
+// 랜덤 코인 선택
+function pickRandomCoin(coins: CoinInfo[]): CoinInfo
+
+// limit order 가격 계산 (mid price × ORDER_PRICE_RATIO)
+function calculateLimitPrice(midPrice: string, szDecimals: number): string
+```
+
+```typescript
+// src/lib/stress/metrics.ts
+
+// 메트릭 카운터 생성
+function createMetrics(): StressMetrics
+
+// 메트릭 증가
+function incrementMetric(
+  metrics: StressMetrics,
+  key: keyof Pick<StressMetrics, 'wsConnections' | 'channelSubscriptions' | 'getRequests' | 'postRequests' | 'errors' | 'rateLimits'>
+): StressMetrics
+
+// 메트릭 감소 (WS 연결 해제 시)
+function decrementMetric(
+  metrics: StressMetrics,
+  key: 'wsConnections' | 'channelSubscriptions'
+): StressMetrics
+```
+
+```typescript
+// src/lib/stress/instance.ts
+import {
+  WalletClient, EventClient, WebSocketTransport, HttpTransport, PublicClient
+} from '@nktkas/hyperliquid';
+import { privateKeyToAccount } from 'viem/accounts';
+import type { Subscription } from '@nktkas/hyperliquid';
+
+class StressInstance {
+  readonly id: number;
+  private wsTransport: WebSocketTransport;
+  private eventClient: EventClient;
+  private walletClient: WalletClient;
+  private subscriptions: Subscription[];
+  private leverageInterval: ReturnType<typeof setInterval> | null;
+  private orderInterval: ReturnType<typeof setInterval> | null;
+  private abortController: AbortController;
+
+  constructor(
+    id: number,
+    privateKey: string,
+    publicClient: PublicClient,
+    coins: CoinInfo[],
+    onMetric: (key: string) => void,
+    onLog: (entry: LogEntry) => void,
+    onStateChange: (state: InstanceState) => void,
+  )
+
+  // 인스턴스 시작: WS 연결 → 채널 구독 → 루프 시작
+  async start(): Promise<void>
+
+  // 인스턴스 중단: 루프 중단 → open order 취소 → WS 종료
+  async stop(): Promise<void>
+
+  // 내부: 채널 구독 (webData2, orderUpdates, l2Book)
+  private async subscribeChannels(): Promise<void>
+
+  // 내부: 레버리지 변경 루프
+  private startLeverageLoop(): void
+
+  // 내부: limit order 루프
+  private startOrderLoop(): void
+
+  // 내부: open order 확인 및 취소
+  private async cancelExistingOrders(coinIndex: number): Promise<void>
+
+  // 내부: cleanup — 모든 open order 취소
+  private async cleanupOrders(): Promise<void>
+
+  getState(): InstanceState;
+}
+```
+
+### 4.4 데이터 모델
+
+```typescript
+// src/types/stress.ts
+
+/** 코인 정보 (meta에서 추출) */
+interface CoinInfo {
+  name: string;        // 코인 심볼 (예: "BTC")
+  index: number;       // asset index (universe 배열 인덱스)
+  szDecimals: number;  // 주문 수량 소수점 자릿수
+  maxLeverage: number; // 최대 레버리지
+}
+
+/** 인스턴스 상태 */
+type InstanceStatus = 'idle' | 'connecting' | 'running' | 'error' | 'stopped';
+
+interface InstanceState {
+  id: number;
+  status: InstanceStatus;
+  wsConnected: boolean;
+  channelCount: number;    // 구독된 채널 수
+  errors: number;          // 누적 에러 수
+  lastAction?: string;     // 마지막 수행 작업 설명
+}
+
+/** 실시간 메트릭 */
+interface StressMetrics {
+  wsConnections: number;        // 현재 활성 WS 연결 수
+  channelSubscriptions: number; // 전체 채널 구독 수
+  getRequests: number;          // 누적 GET 요청 수 (meta, allMids 등)
+  postRequests: number;         // 누적 POST 요청 수 (order, cancel, leverage)
+  errors: number;               // 누적 에러 수
+  rateLimits: number;           // 누적 rate-limit (429) 수
+}
+
+/** 활동 로그 항목 */
+interface LogEntry {
+  timestamp: string;       // ISO 8601
+  instanceId: number;      // 인스턴스 번호
+  action: LogAction;       // 작업 유형
+  result: 'success' | 'fail';
+  detail?: string;         // 상세 정보 (코인명, 에러 메시지 등)
+}
+
+type LogAction =
+  | 'connect'       // WS 연결
+  | 'subscribe'     // 채널 구독
+  | 'leverage'      // 레버리지 변경
+  | 'order'         // limit order 제출
+  | 'cancel'        // order 취소
+  | 'error';        // 에러
+
+/** Private key 검증 정규식 */
+const PRIVATE_KEY_REGEX = /^0x[0-9a-fA-F]{64}$/;
+```
+
+### 4.5 핵심 로직 흐름
+
+#### 4.5.1 시작 흐름
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as StressTester
+    participant IM as Instance_Manager
+    participant PC as PublicClient (공유)
+    participant SI as StressInstance
+
+    User->>UI: "시작" 클릭 (privateKey, N)
+    UI->>PC: meta() — 코인 목록 조회
+    PC-->>UI: CoinInfo[]
+    UI->>IM: createInstances(N, privateKey, coins)
+    loop N개 인스턴스
+        IM->>SI: new StressInstance(id, privateKey, publicClient, coins)
+        SI->>SI: WebSocketTransport 생성 (testnet WS URL)
+        SI->>SI: EventClient 생성 (transport)
+        SI->>SI: WalletClient 생성 (transport, wallet, isTestnet: true)
+        SI->>SI: subscribe(webData2, orderUpdates, l2Book)
+        SI->>SI: startLeverageLoop() — setInterval 10초
+        SI->>SI: startOrderLoop() — setInterval 10초
+    end
+```
+
+#### 4.5.2 Limit Order 루프 (10초마다)
+
+```mermaid
+sequenceDiagram
+    participant SI as StressInstance
+    participant PC as PublicClient
+    participant WC as WalletClient
+
+    SI->>SI: pickRandomCoin(coins)
+    SI->>PC: allMids() — 현재 mid price 조회
+    PC-->>SI: AllMids
+    SI->>SI: calculateLimitPrice(midPrice, 0.5)
+    SI->>SI: webData2에서 해당 코인 open order 확인
+    alt open order 존재
+        SI->>WC: cancel({ cancels: [{ a: coinIndex, o: oid }] })
+    end
+    SI->>WC: order({ orders: [{ a, b: true, p, s, r: false, t: { limit: { tif: "Gtc" } } }], grouping: "na" })
+```
+
+#### 4.5.3 레버리지 변경 루프 (10초마다)
+
+```mermaid
+sequenceDiagram
+    participant SI as StressInstance
+    participant WC as WalletClient
+
+    SI->>SI: pickRandomCoin(coins)
+    SI->>SI: randomLeverage(1~min(20, maxLeverage))
+    SI->>WC: updateLeverage({ asset: coinIndex, isCross: true, leverage })
+```
+
+#### 4.5.4 중단 흐름
+
+1. 모든 인스턴스의 `setInterval` 해제 (`clearInterval`)
+2. AbortController.abort()로 진행 중인 요청 취소
+3. webData2에서 open order 목록 확인 → `WalletClient.cancel`로 전체 취소
+4. 각 인스턴스의 WebSocketTransport.close() 호출
+5. 최종 메트릭 요약 표시
+
+### 4.6 SDK 사용 패턴
+
+각 Stress_Instance의 클라이언트 초기화:
+
+```typescript
+import {
+  WalletClient, EventClient, PublicClient,
+  WebSocketTransport, HttpTransport
+} from '@nktkas/hyperliquid';
+import { privateKeyToAccount } from 'viem/accounts';
+
+// 공유 PublicClient (1개)
+const httpTransport = new HttpTransport({ url: 'https://hyperliquid-testnet.xyz' });
+const publicClient = new PublicClient({ transport: httpTransport });
+
+// 인스턴스별 (N개)
+const wsTransport = new WebSocketTransport({
+  url: 'wss://api.hyperliquid-testnet.xyz/ws',
+});
+const eventClient = new EventClient({ transport: wsTransport });
+const wallet = privateKeyToAccount(privateKey as `0x${string}`);
+const walletClient = new WalletClient({
+  transport: httpTransport,
+  wallet,
+  isTestnet: true,
+});
+```
+
+채널 구독:
+
+```typescript
+const address = wallet.address;
+
+// webData2: open order + position 정보
+const sub1 = await eventClient.webData2({ user: address }, (data) => {
+  // data.openOrders — FrontendOrder[]
+});
+
+// orderUpdates: 주문 상태 변경
+const sub2 = await eventClient.orderUpdates({ user: address }, (data) => {
+  // OrderStatus<Order>[]
+});
+
+// l2Book: BTC 오더북
+const sub3 = await eventClient.l2Book({ coin: 'BTC', nSigFigs: 5 }, (data) => {
+  // Book
+});
+```
+
+레버리지 변경:
+
+```typescript
+await walletClient.updateLeverage({
+  asset: coinIndex,   // number (universe 배열 인덱스)
+  isCross: true,
+  leverage: randomLev, // 1~20
+});
+```
+
+주문 제출:
+
+```typescript
+await walletClient.order({
+  orders: [{
+    a: coinIndex,
+    b: true,           // buy
+    p: limitPrice,     // mid price × 0.5
+    s: '0.001',        // 최소 수량
+    r: false,          // reduce-only false
+    t: { limit: { tif: 'Gtc' } },
+  }],
+  grouping: 'na',
+});
+```
+
+주문 취소:
+
+```typescript
+await walletClient.cancel({
+  cancels: [{ a: coinIndex, o: orderId }],
+});
+```
+
+
+### 4.7 정확성 속성 (Correctness Properties)
+
+*속성(property)이란 시스템의 모든 유효한 실행에서 참이어야 하는 특성 또는 동작이다. 사람이 읽을 수 있는 명세와 기계가 검증할 수 있는 정확성 보장 사이의 다리 역할을 한다.*
+
+#### Property 1: Private Key 검증
+
+*For any* 문자열에 대해, `validatePrivateKey`는 해당 문자열이 `0x` 접두사 + 64자리 16진수(총 66자)인 경우에만 유효(null 반환)로 판정해야 하며, 그 외 모든 문자열에 대해서는 에러 메시지를 반환해야 한다.
+
+**Validates: Requirements 4.2.3**
+
+#### Property 2: Private Key 마스킹
+
+*For any* 유효한 private key 문자열(66자, 0x 접두사)에 대해, `maskPrivateKey`는 처음 6자와 마지막 4자만 노출하고 나머지를 마스킹 문자로 대체한 문자열을 반환해야 한다. 마스킹된 문자열의 처음 6자는 원본과 동일하고, 마지막 4자도 원본과 동일해야 한다.
+
+**Validates: Requirements 4.2.5**
+
+#### Property 3: 인스턴스 생성 수량 정확성
+
+*For any* 양의 정수 N에 대해, Instance_Manager가 N개의 인스턴스를 생성하면 결과 배열의 길이는 정확히 N이어야 하며, 각 인스턴스의 id는 0부터 N-1까지 고유해야 한다.
+
+**Validates: Requirements 4.3.1**
+
+#### Property 4: 인스턴스 에러 격리
+
+*For any* Stress_Instance 목록에서 일부 인스턴스가 에러 상태가 되더라도, 나머지 인스턴스의 상태는 영향을 받지 않아야 한다. 즉, 에러가 발생한 인스턴스만 'error' 상태로 전환되고, 다른 인스턴스는 기존 상태를 유지해야 한다.
+
+**Validates: Requirements 4.3.7, 4.9.3**
+
+#### Property 5: 랜덤 코인 선택 범위
+
+*For any* 비어있지 않은 CoinInfo 배열에 대해, `pickRandomCoin`이 반환하는 코인은 반드시 해당 배열에 포함된 코인이어야 한다.
+
+**Validates: Requirements 4.4.2, 4.5.2**
+
+#### Property 6: Limit Order 가격 계산
+
+*For any* 양의 mid price 문자열에 대해, `calculateLimitPrice(midPrice, szDecimals)`는 mid price의 50% 값을 반환해야 하며, 결과는 해당 코인의 szDecimals에 맞게 반올림되어야 한다. 결과 가격은 항상 원래 mid price보다 작아야 한다.
+
+**Validates: Requirements 4.5.4**
+
+#### Property 7: 로그 시간순 정렬
+
+*For any* LogEntry 배열에 대해, 로그 추가 함수를 통해 삽입된 로그는 항상 timestamp 기준 오름차순으로 정렬되어 있어야 한다.
+
+**Validates: Requirements 4.10.1**
+
+#### Property 8: 로그 항목 완전성
+
+*For any* LogEntry에 대해, timestamp(ISO 8601 형식), instanceId(0 이상 정수), action(유효한 LogAction 값), result('success' 또는 'fail') 필드가 반드시 존재해야 한다.
+
+**Validates: Requirements 4.10.2**
+
+#### Property 9: 로그 버퍼 상한
+
+*For any* 로그 추가 시퀀스에 대해, 로그 배열의 길이는 500을 초과하지 않아야 한다. 500건을 초과하는 로그가 추가되면 가장 오래된 로그부터 제거되어야 하며, 가장 최근 500건만 유지되어야 한다.
+
+**Validates: Requirements 4.10.4**
+
+#### Property 10: 메트릭 증가 정확성
+
+*For any* StressMetrics 초기 상태와 메트릭 키에 대해, `incrementMetric`을 호출하면 해당 키의 값만 정확히 1 증가하고 나머지 키의 값은 변경되지 않아야 한다.
+
+**Validates: Requirements 4.7.3, 4.7.4**
+
+---
+
+### 4.8 에러 처리
+
+| 에러 상황 | 처리 방식 |
+|-----------|-----------|
+| 유효하지 않은 private key 입력 | 입력 필드 아래 에러 메시지 표시, 시작 버튼 비활성화 |
+| 코인 목록 조회 실패 (meta) | 에러 메시지 표시, 시작 중단 |
+| WebSocket 연결 실패 | 해당 인스턴스 'error' 상태, 로그 기록, 다른 인스턴스 계속 |
+| WebSocket 연결 끊김 | WebSocketTransport의 reconnect 옵션으로 자동 재연결 |
+| 레버리지 변경 실패 | 에러 로그 기록, 다음 10초 주기에 재시도 |
+| Order 제출 실패 | 에러 로그 기록, 다음 10초 주기에 재시도 |
+| Order 취소 실패 | 에러 로그 기록, 새 order 제출은 계속 시도 |
+| HTTP 429 (Rate Limit) | rateLimits 메트릭 증가, Retry-After 시간만큼 대기 후 재시도 |
+| allMids 조회 실패 | 해당 주기 order 건너뜀, 다음 주기에 재시도 |
+
+공통 원칙:
+- 개별 인스턴스의 에러가 다른 인스턴스에 영향을 주지 않음
+- 모든 에러는 로그에 기록
+- 주기적 작업(setInterval)은 에러 발생 시에도 다음 주기에 계속 실행
+
+---
+
+### 4.9 테스트 전략
+
+#### 단위 테스트 (Unit Tests)
+
+특정 예시와 엣지 케이스를 검증한다:
+
+- 도구 등록: `tools` 배열에 `hl-testnet-stress-tester` slug 존재 확인
+- 인스턴스 수 기본값 1, 최솟값 1 확인
+- private key가 localStorage에 저장되지 않음 확인
+- 코인 목록 조회 실패 시 시작 중단 확인
+- WebSocket 연결 실패 시 인스턴스 'error' 상태 전환 확인
+- API 호출 실패 시 에러 로그 기록 및 인스턴스 계속 실행 확인
+- rate-limit (429) 수신 시 rateLimits 메트릭 증가 확인
+
+#### 속성 기반 테스트 (Property-Based Tests)
+
+라이브러리: **fast-check** (TypeScript/JavaScript용 PBT 라이브러리)
+
+각 테스트는 최소 100회 반복 실행하며, 설계 문서의 속성을 참조하는 태그를 포함한다.
+
+```
+// 태그 형식 예시:
+// Feature: hl-testnet-stress-tester, Property 1: Private Key 검증
+```
+
+| Property # | 테스트 내용 | 생성기 |
+|-----------|------------|--------|
+| 1 | Private Key 검증 | `fc.string()`, `fc.hexaString({minLength: 64, maxLength: 64})` |
+| 2 | Private Key 마스킹 | `fc.hexaString({minLength: 64, maxLength: 64}).map(h => '0x' + h)` |
+| 3 | 인스턴스 생성 수량 | `fc.integer({min: 1, max: 20})` |
+| 4 | 인스턴스 에러 격리 | `fc.array(instanceStateArbitrary)`, `fc.array(fc.boolean())` |
+| 5 | 랜덤 코인 선택 범위 | `fc.array(coinInfoArbitrary, {minLength: 1})` |
+| 6 | Limit Order 가격 계산 | `fc.float({min: 0.01, max: 100000})`, `fc.integer({min: 0, max: 8})` |
+| 7 | 로그 시간순 정렬 | `fc.array(logEntryArbitrary)` |
+| 8 | 로그 항목 완전성 | `logEntryArbitrary` |
+| 9 | 로그 버퍼 상한 | `fc.array(logEntryArbitrary, {minLength: 0, maxLength: 1000})` |
+| 10 | 메트릭 증가 정확성 | `metricsArbitrary`, `fc.constantFrom(...)` |
+
+커스텀 생성기:
+
+```typescript
+// CoinInfo 생성기
+const coinInfoArbitrary = fc.record({
+  name: fc.stringMatching(/^[A-Z]{2,6}$/),
+  index: fc.nat({ max: 300 }),
+  szDecimals: fc.integer({ min: 0, max: 8 }),
+  maxLeverage: fc.integer({ min: 1, max: 100 }),
+});
+
+// LogEntry 생성기
+const logEntryArbitrary = fc.record({
+  timestamp: fc.date().map(d => d.toISOString()),
+  instanceId: fc.nat({ max: 20 }),
+  action: fc.constantFrom('connect', 'subscribe', 'leverage', 'order', 'cancel', 'error'),
+  result: fc.constantFrom('success', 'fail'),
+  detail: fc.option(fc.string(), { nil: undefined }),
+});
+
+// InstanceState 생성기
+const instanceStateArbitrary = fc.record({
+  id: fc.nat({ max: 20 }),
+  status: fc.constantFrom('idle', 'connecting', 'running', 'error', 'stopped'),
+  wsConnected: fc.boolean(),
+  channelCount: fc.nat({ max: 10 }),
+  errors: fc.nat({ max: 100 }),
+});
+
+// StressMetrics 생성기
+const metricsArbitrary = fc.record({
+  wsConnections: fc.nat({ max: 100 }),
+  channelSubscriptions: fc.nat({ max: 300 }),
+  getRequests: fc.nat({ max: 10000 }),
+  postRequests: fc.nat({ max: 10000 }),
+  errors: fc.nat({ max: 1000 }),
+  rateLimits: fc.nat({ max: 100 }),
+});
+```

@@ -1,0 +1,8 @@
+export const TESTNET_WS_URL = 'wss://api.hyperliquid-testnet.xyz/ws' as const;
+export const TESTNET_HTTP_URL = 'https://hyperliquid-testnet.xyz' as const;
+export const LOOP_INTERVAL_MS = 10_000;  // 10초
+export const MAX_LOG_ENTRIES = 500;
+export const LEVERAGE_MIN = 1;
+export const LEVERAGE_MAX = 20;
+export const ORDER_PRICE_RATIO = 0.5;    // mid price의 50%
+export const MIN_ORDER_USD = 11;          // 최소 주문 금액 ($10 이상 보장)
