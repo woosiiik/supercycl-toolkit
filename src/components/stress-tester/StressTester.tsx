@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import type { InstanceState, StressMetrics, LogEntry } from "@/types/stress";
+import { useState, useRef, useCallback, useEffect } from "react";
+import type { InstanceState, StressMetrics, LogEntry, MinuteMetrics } from "@/types/stress";
 import { PRIVATE_KEY_REGEX } from "@/types/stress";
 import { createSharedPublicClient, fetchCoinList } from "@/lib/stress/coins";
 import { createMetrics, incrementMetric, decrementMetric } from "@/lib/stress/metrics";
@@ -13,15 +13,51 @@ import InstanceStatusList from "./InstanceStatusList";
 import ActivityLog from "./ActivityLog";
 import type { PublicClient, HttpTransport } from "@nktkas/hyperliquid";
 
+function getMinuteKey(): string {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
+
 export default function StressTester() {
   const [instances, setInstances] = useState<InstanceState[]>([]);
   const [metrics, setMetrics] = useState<StressMetrics>(createMetrics());
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [minuteHistory, setMinuteHistory] = useState<MinuteMetrics[]>([]);
 
   const instancesRef = useRef<StressInstance[]>([]);
   const publicClientRef = useRef<PublicClient<HttpTransport> | null>(null);
+  const prevSnapshotRef = useRef<StressMetrics>(createMetrics());
+  const prevMinuteRef = useRef<string>(getMinuteKey());
+
+  // 1분 단위 스냅샷 체크 (1초마다)
+  useEffect(() => {
+    if (!isRunning) return;
+
+    const interval = setInterval(() => {
+      const currentMinute = getMinuteKey();
+      if (currentMinute !== prevMinuteRef.current) {
+        // 분이 바뀜 → 이전 1분의 delta 계산
+        setMetrics((currentMetrics) => {
+          const prev = prevSnapshotRef.current;
+          const snap: MinuteMetrics = {
+            startTime: prevMinuteRef.current,
+            getRequests: currentMetrics.getRequests - prev.getRequests,
+            postRequests: currentMetrics.postRequests - prev.postRequests,
+            errors: currentMetrics.errors - prev.errors,
+            rateLimits: currentMetrics.rateLimits - prev.rateLimits,
+          };
+          prevSnapshotRef.current = { ...currentMetrics };
+          prevMinuteRef.current = currentMinute;
+          setMinuteHistory((h) => [...h, snap]);
+          return currentMetrics;
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isRunning]);
 
   const handleMetric = useCallback((key: string) => {
     setMetrics((prev) => {
@@ -59,37 +95,31 @@ export default function StressTester() {
       setError(null);
       setMetrics(createMetrics());
       setLogs([]);
+      setMinuteHistory([]);
+      prevSnapshotRef.current = createMetrics();
+      prevMinuteRef.current = getMinuteKey();
 
-      // Create shared PublicClient
       if (!publicClientRef.current) {
         publicClientRef.current = createSharedPublicClient();
       }
       const publicClient = publicClientRef.current;
 
-      // Fetch coin list
       let coins;
       try {
         coins = await fetchCoinList(publicClient);
       } catch (err) {
-        const msg =
-          err instanceof Error ? err.message : "코인 목록 조회 실패";
+        const msg = err instanceof Error ? err.message : "코인 목록 조회 실패";
         setError(`코인 목록 조회 실패: ${msg}`);
         return;
       }
 
-      // Create N StressInstance objects
       const newInstances: StressInstance[] = [];
       const initialStates: InstanceState[] = [];
 
       for (let i = 0; i < instanceCount; i++) {
         const instance = new StressInstance(
-          i,
-          privateKey,
-          publicClient,
-          coins,
-          handleMetric,
-          handleLog,
-          handleStateChange,
+          i, privateKey, publicClient, coins,
+          handleMetric, handleLog, handleStateChange,
         );
         newInstances.push(instance);
         initialStates.push(instance.getState());
@@ -99,7 +129,6 @@ export default function StressTester() {
       setInstances(initialStates);
       setIsRunning(true);
 
-      // Start all instances
       for (const instance of newInstances) {
         instance.start();
       }
@@ -110,10 +139,7 @@ export default function StressTester() {
   const handleStop = useCallback(async () => {
     const stoppingInstances = instancesRef.current;
     instancesRef.current = [];
-
-    // Stop all instances
     await Promise.all(stoppingInstances.map((inst) => inst.stop()));
-
     setIsRunning(false);
   }, []);
 
@@ -132,7 +158,7 @@ export default function StressTester() {
         </div>
       )}
 
-      <MetricsDashboard metrics={metrics} isRunning={isRunning} />
+      <MetricsDashboard metrics={metrics} isRunning={isRunning} minuteHistory={minuteHistory} />
       <InstanceStatusList instances={instances} />
       <ActivityLog logs={logs} />
     </div>

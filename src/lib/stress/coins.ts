@@ -14,12 +14,18 @@ export async function fetchCoinList(
   signal?: AbortSignal,
 ): Promise<CoinInfo[]> {
   const meta = await client.meta(signal);
-  return meta.universe.map((item, index) => ({
-    name: item.name,
-    index,
-    szDecimals: item.szDecimals,
-    maxLeverage: item.maxLeverage,
-  }));
+  return meta.universe
+    .map((item, index) => ({
+      name: item.name,
+      index,
+      szDecimals: item.szDecimals,
+      maxLeverage: item.maxLeverage,
+    }))
+    .filter((coin) => {
+      const raw = meta.universe[coin.index];
+      // isDelisted 코인 제외 (Trading is halted)
+      return !('isDelisted' in raw && raw.isDelisted);
+    });
 }
 
 /** 현재 mid price 조회 */
