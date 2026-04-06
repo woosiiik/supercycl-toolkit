@@ -58,7 +58,9 @@ export default function StressTester() {
             getRequests: currentMetrics.getRequests - prev.getRequests,
             postRequests: currentMetrics.postRequests - prev.postRequests,
             errors: currentMetrics.errors - prev.errors,
-            rateLimits: currentMetrics.rateLimits - prev.rateLimits,
+            getRateLimits: currentMetrics.getRateLimits - prev.getRateLimits,
+            postRateLimits: currentMetrics.postRateLimits - prev.postRateLimits,
+            wsRateLimits: currentMetrics.wsRateLimits - prev.wsRateLimits,
           };
           prevSnapshotRef.current = { ...currentMetrics };
           setMinuteHistory((h) => {

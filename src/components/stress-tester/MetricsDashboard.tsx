@@ -36,9 +36,19 @@ const metricCards: {
   },
   { key: "errors", label: "에러", color: "text-red-600 dark:text-red-400" },
   {
-    key: "rateLimits",
-    label: "Rate-Limit",
+    key: "getRateLimits",
+    label: "GET Rate-Limit",
     color: "text-yellow-600 dark:text-yellow-400",
+  },
+  {
+    key: "postRateLimits",
+    label: "POST Rate-Limit",
+    color: "text-amber-600 dark:text-amber-400",
+  },
+  {
+    key: "wsRateLimits",
+    label: "WS Rate-Limit",
+    color: "text-orange-600 dark:text-orange-400",
   },
 ];
 
@@ -94,7 +104,9 @@ export default function MetricsDashboard({
                   <th className="px-3 py-1.5 font-medium">GET</th>
                   <th className="px-3 py-1.5 font-medium">POST</th>
                   <th className="px-3 py-1.5 font-medium">에러</th>
-                  <th className="px-3 py-1.5 font-medium">Rate-Limit</th>
+                  <th className="px-3 py-1.5 font-medium">GET RL</th>
+                  <th className="px-3 py-1.5 font-medium">POST RL</th>
+                  <th className="px-3 py-1.5 font-medium">WS RL</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
@@ -111,7 +123,13 @@ export default function MetricsDashboard({
                       {m.errors}
                     </td>
                     <td className="px-3 py-1 tabular-nums text-yellow-600 dark:text-yellow-400">
-                      {m.rateLimits}
+                      {m.getRateLimits}
+                    </td>
+                    <td className="px-3 py-1 tabular-nums text-amber-600 dark:text-amber-400">
+                      {m.postRateLimits}
+                    </td>
+                    <td className="px-3 py-1 tabular-nums text-orange-600 dark:text-orange-400">
+                      {m.wsRateLimits}
                     </td>
                   </tr>
                 ))}

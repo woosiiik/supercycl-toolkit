@@ -131,6 +131,7 @@ export class StressInstance {
       this.onMetric("channelSubscriptions");
       this.log("subscribe", "success", "webData2 subscribed");
     } catch (err) {
+      this.handleWsRateLimit(err);
       this.log("subscribe", "fail", `webData2 failed: ${errorMessage(err)}`);
       this.setState("error");
       throw err;
@@ -148,6 +149,7 @@ export class StressInstance {
       this.onMetric("channelSubscriptions");
       this.log("subscribe", "success", "orderUpdates subscribed");
     } catch (err) {
+      this.handleWsRateLimit(err);
       this.log(
         "subscribe",
         "fail",
@@ -169,6 +171,7 @@ export class StressInstance {
       this.onMetric("channelSubscriptions");
       this.log("subscribe", "success", "l2Book(BTC) subscribed");
     } catch (err) {
+      this.handleWsRateLimit(err);
       this.log("subscribe", "fail", `l2Book failed: ${errorMessage(err)}`);
       this.setState("error");
       throw err;
@@ -207,7 +210,7 @@ export class StressInstance {
     } catch (err) {
       this.onMetric("errors");
       this.incrementErrors();
-      this.handleRateLimit(err);
+      this.handleRateLimit(err, "post");
       this.log("leverage", "fail", errorMessage(err));
     }
   }
@@ -256,7 +259,7 @@ export class StressInstance {
     } catch (err) {
       this.onMetric("errors");
       this.incrementErrors();
-      this.handleRateLimit(err);
+      this.handleRateLimit(err, "get");
       this.log("error", "fail", `GET failed: ${errorMessage(err)}`);
     }
   }
@@ -332,7 +335,7 @@ export class StressInstance {
     } catch (err) {
       this.onMetric("errors");
       this.incrementErrors();
-      this.handleRateLimit(err);
+      this.handleRateLimit(err, "post");
       this.log("order", "fail", errorMessage(err));
     }
   }
@@ -472,11 +475,26 @@ export class StressInstance {
     this.state = { ...this.state, errors: this.state.errors + 1 };
   }
 
-  private handleRateLimit(err: unknown): void {
+  private handleRateLimit(err: unknown, source: "get" | "post"): void {
     const msg = errorMessage(err);
     if (msg.includes("429") || msg.toLowerCase().includes("rate limit")) {
-      this.onMetric("rateLimits");
-      this.log("error", "fail", `Rate limited: ${msg}`);
+      const key = source === "get" ? "getRateLimits" : "postRateLimits";
+      this.onMetric(key);
+      this.log("error", "fail", `${source.toUpperCase()} Rate limited: ${msg}`);
+    }
+  }
+
+  private handleWsRateLimit(err: unknown): void {
+    const msg = errorMessage(err);
+    if (
+      msg.includes("429") ||
+      msg.toLowerCase().includes("rate limit") ||
+      msg.toLowerCase().includes("too many") ||
+      msg.includes("1008") ||
+      msg.includes("1013")
+    ) {
+      this.onMetric("wsRateLimits");
+      this.log("error", "fail", `WS Rate limited: ${msg}`);
     }
   }
 

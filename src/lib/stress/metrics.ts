@@ -10,7 +10,9 @@ export function createMetrics(): StressMetrics {
     getRequests: 0,
     postRequests: 0,
     errors: 0,
-    rateLimits: 0,
+    getRateLimits: 0,
+    postRateLimits: 0,
+    wsRateLimits: 0,
   };
 }
 

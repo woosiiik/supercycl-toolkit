@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { LogEntry, LogAction } from "@/types/stress";
 
 interface ActivityLogProps {
@@ -48,10 +48,21 @@ const actionConfig: Record<LogAction, { label: string; className: string }> = {
 
 export default function ActivityLog({ logs }: ActivityLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const isAtBottomRef = useRef(true);
+
+  // 스크롤 위치 추적: 맨 아래에 있을 때만 자동 스크롤
+  function handleScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    const threshold = 30;
+    isAtBottomRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) {
+    if (el && isAtBottomRef.current) {
       el.scrollTop = el.scrollHeight;
     }
   }, [logs]);
@@ -66,7 +77,11 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-zinc-300 dark:border-zinc-600">
-      <div ref={scrollRef} className="max-h-80 overflow-y-auto">
+      <div
+        ref={scrollRef}
+        className="max-h-80 overflow-y-auto"
+        onScroll={handleScroll}
+      >
         <table className="w-full text-left text-sm">
           <thead className="sticky top-0 bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
             <tr>
@@ -106,8 +121,22 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
                       {log.result === "success" ? "성공" : "실패"}
                     </span>
                   </td>
-                  <td className="max-w-64 truncate px-3 py-1.5 text-zinc-500 dark:text-zinc-400">
-                    {log.detail ?? "—"}
+                  <td
+                    className="max-w-64 cursor-pointer px-3 py-1.5 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                    onClick={() =>
+                      setExpandedIdx(expandedIdx === idx ? null : idx)
+                    }
+                    title="클릭하여 상세 보기"
+                  >
+                    <span
+                      className={
+                        expandedIdx === idx
+                          ? "whitespace-pre-wrap break-all"
+                          : "block truncate"
+                      }
+                    >
+                      {log.detail ?? "—"}
+                    </span>
                   </td>
                 </tr>
               );
