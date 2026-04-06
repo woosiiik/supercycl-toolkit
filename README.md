@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Supercycl Toolkit
 
-## Getting Started
+코인 선물거래 애그리게이터 Supercycl 개발에 필요한 테스트/유틸리티 도구 모음.
 
-First, run the development server:
+## 도구 목록
+
+| 도구                     | 설명                                                           |
+| ------------------------ | -------------------------------------------------------------- |
+| HL Rate-Limit Tester     | Hyperliquid API rate-limit 임계값 테스트 및 recovery 시간 측정 |
+| HL Testnet Faucet Farmer | 다수 계정으로 테스트넷 USDC 대량 확보 자동화                   |
+| HL Testnet Stress Tester | N개 인스턴스로 테스트넷 WebSocket/REST 부하 테스트             |
+| JWE Decoder              | JWE(RSA-OAEP + A256GCM) 암호문 복호화                          |
+
+## 로컬 실행
 
 ```bash
+# 의존성 설치
+npm install
+
+# 개발 서버 실행
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 에서 확인.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 프로덕션 빌드
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## 새 도구 추가 방법
 
-To learn more about Next.js, take a look at the following resources:
+1. `docs/requirements.md`에 요구사항 추가 (섹션 번호 부여)
+2. 내용이 복잡한 경우 `docs/design.md`에 설계 문서 작성
+3. `src/config/tools.ts`의 `tools` 배열에 항목 추가
+4. `src/app/tools/[slug]/page.tsx`에 slug 매핑 추가
+5. 컴포넌트는 `src/components/{tool-name}/` 하위에 배치
+6. 비즈니스 로직은 `src/lib/{tool-name}/` 하위에 배치
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 프로젝트 구조
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/tools/[slug]/page.tsx   # 동적 라우트 (도구별 페이지)
+├── config/tools.ts             # 도구 등록 설정
+├── components/                 # UI 컴포넌트
+│   ├── rate-limit/             # Rate-Limit Tester
+│   ├── faucet-farmer/          # Faucet Farmer
+│   ├── stress-tester/          # Stress Tester
+│   └── jwe-decoder/            # JWE Decoder
+├── lib/                        # 비즈니스 로직
+│   ├── faucet/                 # Faucet Farmer 라이브러리
+│   └── stress/                 # Stress Tester 라이브러리
+├── types/                      # TypeScript 타입 정의
+docs/
+├── requirements.md             # 요구사항 문서 (모든 도구)
+└── design.md                   # 설계 문서 (모든 도구)
+```
 
-## Deploy on Vercel
+## 기술 스택
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 16 (App Router) + TypeScript + Tailwind CSS
+- @nktkas/hyperliquid (Hyperliquid SDK)
+- viem (Arbitrum 체인 상호작용)
+- jose (JWE 복호화)
