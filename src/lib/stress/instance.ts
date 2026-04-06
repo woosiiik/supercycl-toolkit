@@ -13,6 +13,7 @@ import {
   TESTNET_WS_URL,
   TESTNET_HTTP_URL,
   LOOP_INTERVAL_MS,
+  GET_INTERVAL_MS,
   LEVERAGE_MIN,
   LEVERAGE_MAX,
   MIN_ORDER_USD,
@@ -26,17 +27,22 @@ interface StoredOpenOrder {
 
 export class StressInstance {
   readonly id: number;
-  private wsTransport: WebSocketTransport;
-  private eventClient: EventClient;
+  private wsTransport: WebSocketTransport | null = null;
+  private eventClient: EventClient | null = null;
   private walletClient: WalletClient;
   private publicClient: PublicClient;
   private coins: CoinInfo[];
   private walletAddress: string;
+  private enableWs: boolean;
 
   private subscriptions: Subscription[] = [];
   private leverageInterval: ReturnType<typeof setInterval> | null = null;
+  private leverageTimeout: ReturnType<typeof setTimeout> | null = null;
   private orderInterval: ReturnType<typeof setInterval> | null = null;
   private orderLoopTimeout: ReturnType<typeof setTimeout> | null = null;
+  private getInterval: ReturnType<typeof setInterval> | null = null;
+  private getTimeout: ReturnType<typeof setTimeout> | null = null;
+  private stopped = false;
 
   private openOrders: StoredOpenOrder[] = [];
   private state: InstanceState;
@@ -53,6 +59,8 @@ export class StressInstance {
     onMetric: (key: string) => void,
     onLog: (entry: LogEntry) => void,
     onStateChange: (state: InstanceState) => void,
+    walletAddress?: string,
+    enableWs?: boolean,
   ) {
     this.id = id;
     this.publicClient = publicClient;
@@ -60,16 +68,17 @@ export class StressInstance {
     this.onMetric = onMetric;
     this.onLog = onLog;
     this.onStateChange = onStateChange;
+    this.enableWs = enableWs !== false; // default true
 
-    // Create WebSocketTransport for subscriptions
-    this.wsTransport = new WebSocketTransport({ url: TESTNET_WS_URL });
-
-    // Create EventClient with the WS transport
-    this.eventClient = new EventClient({ transport: this.wsTransport });
+    // Create WebSocketTransport + EventClient only if WS enabled
+    if (this.enableWs) {
+      this.wsTransport = new WebSocketTransport({ url: TESTNET_WS_URL });
+      this.eventClient = new EventClient({ transport: this.wsTransport });
+    }
 
     // Create wallet from private key
     const wallet = privateKeyToAccount(privateKey as `0x${string}`);
-    this.walletAddress = wallet.address;
+    this.walletAddress = walletAddress ?? wallet.address;
 
     // Create WalletClient with HTTP transport for exchange operations
     const httpTransport = new HttpTransport({ url: TESTNET_HTTP_URL });
@@ -91,6 +100,11 @@ export class StressInstance {
 
   /** Subscribe to webData2, orderUpdates, and l2Book channels */
   private async subscribeChannels(): Promise<void> {
+    if (!this.eventClient) {
+      this.log('subscribe', 'success', 'WS disabled — skipping subscriptions');
+      return;
+    }
+
     try {
       // webData2: open orders + position info
       const sub1 = await this.eventClient.webData2(
@@ -149,11 +163,15 @@ export class StressInstance {
 
   /** Periodically change leverage on a random coin every LOOP_INTERVAL_MS */
   private startLeverageLoop(): void {
-    // 인스턴스별 시간차: id * (LOOP_INTERVAL_MS / totalInstances) 만큼 오프셋
-    const offset = this.id * 1000; // 인스턴스당 1초 오프셋
-    setTimeout(() => {
-      this.doLeverage(); // 첫 실행
-      this.leverageInterval = setInterval(() => this.doLeverage(), LOOP_INTERVAL_MS);
+    // 30초 이내 랜덤 시작
+    const offset = Math.floor(Math.random() * LOOP_INTERVAL_MS);
+    this.leverageTimeout = setTimeout(() => {
+      if (this.stopped) return;
+      this.doLeverage();
+      this.leverageInterval = setInterval(() => {
+        if (this.stopped) return;
+        this.doLeverage();
+      }, LOOP_INTERVAL_MS);
     }, offset);
   }
 
@@ -181,105 +199,159 @@ export class StressInstance {
 
   /** Periodically place limit orders on a random coin, offset from leverage loop */
   private startOrderLoop(): void {
-    // 레버리지 루프와 5초 차이 + 인스턴스별 1초 오프셋
-    const offset = this.id * 1000 + 5000;
+    // 30초 이내 랜덤 시작
+    const offset = Math.floor(Math.random() * LOOP_INTERVAL_MS);
     this.orderLoopTimeout = setTimeout(() => {
-      this.doOrder(); // 첫 실행
-      this.orderInterval = setInterval(() => this.doOrder(), LOOP_INTERVAL_MS);
+      if (this.stopped) return;
+      this.doOrder();
+      this.orderInterval = setInterval(() => {
+        if (this.stopped) return;
+        this.doOrder();
+      }, LOOP_INTERVAL_MS);
     }, offset);
+  }
+
+  /** Periodically make GET requests (allMids, meta, etc.) every GET_INTERVAL_MS */
+  private startGetLoop(): void {
+    // 5초 이내 랜덤 시작
+    const offset = Math.floor(Math.random() * GET_INTERVAL_MS);
+    this.getTimeout = setTimeout(() => {
+      if (this.stopped) return;
+      this.doGet();
+      this.getInterval = setInterval(() => {
+        if (this.stopped) return;
+        this.doGet();
+      }, GET_INTERVAL_MS);
+    }, offset);
+  }
+
+  private async doGet(): Promise<void> {
+    try {
+      // 랜덤으로 GET 요청 종류 선택
+      const choice = Math.random();
+      if (choice < 0.5) {
+        await fetchAllMids(this.publicClient);
+        this.onMetric('getRequests');
+        this.log('subscribe', 'success', 'GET allMids');
+      } else {
+        await this.publicClient.meta();
+        this.onMetric('getRequests');
+        this.log('subscribe', 'success', 'GET meta');
+      }
+    } catch (err) {
+      this.onMetric('errors');
+      this.incrementErrors();
+      this.handleRateLimit(err);
+      this.log('error', 'fail', `GET failed: ${errorMessage(err)}`);
+    }
   }
 
   private async doOrder(): Promise<void> {
     try {
-          const coin = pickRandomCoin(this.coins);
+      const coin = pickRandomCoin(this.coins);
 
-          // Fetch current mid prices
-          const allMids = await fetchAllMids(this.publicClient);
-          this.onMetric('getRequests');
+      // Fetch current mid prices
+      const allMids = await fetchAllMids(this.publicClient);
+      this.onMetric('getRequests');
 
-          const midPrice = allMids[coin.name];
-          if (!midPrice) {
-            this.log('order', 'fail', `No mid price for ${coin.name}`);
-            return;
-          }
+      const midPrice = allMids[coin.name];
+      if (!midPrice) {
+        this.log('order', 'fail', `No mid price for ${coin.name}`);
+        return;
+      }
 
-          const limitPrice = calculateLimitPrice(midPrice);
+      const limitPrice = calculateLimitPrice(midPrice);
+      const orderSize = calculateOrderSize(MIN_ORDER_USD, limitPrice, coin.szDecimals);
 
-          // Calculate size to ensure order value >= $10
-          const orderSize = calculateOrderSize(MIN_ORDER_USD, limitPrice, coin.szDecimals);
-
-          // Check for existing open orders on this coin and cancel if found
-          const existingOrder = this.openOrders.find((o) => o.coin === coin.name);
-          if (existingOrder) {
-            try {
-              await this.walletClient.cancel({
-                cancels: [{ a: coin.index, o: existingOrder.oid }],
-              });
-              this.onMetric('postRequests');
-              this.log('cancel', 'success', `Cancelled ${coin.name} oid=${existingOrder.oid}`);
-            } catch (cancelErr) {
-              this.onMetric('errors');
-              this.incrementErrors();
-              this.handleRateLimit(cancelErr);
-              this.log('cancel', 'fail', `Cancel ${coin.name} failed: ${errorMessage(cancelErr)}`);
-            }
-          }
-
-          // Place new limit order
-          await this.walletClient.order({
-            orders: [{
-              a: coin.index,
-              b: true,
-              p: limitPrice,
-              s: orderSize,
-              r: false,
-              t: { limit: { tif: 'Gtc' } },
-            }],
-            grouping: 'na',
+      // REST API로 open order 조회 후 한번에 전부 취소
+      try {
+        const orders = await this.publicClient.openOrders({ user: this.walletAddress as `0x${string}` });
+        this.onMetric('getRequests');
+        if (orders.length > 0) {
+          const cancels = orders.map((o) => {
+            const c = this.coins.find((c) => c.name === o.coin);
+            return { a: c?.index ?? 0, o: o.oid };
           });
-          this.onMetric('postRequests');
-          this.log('order', 'success', `${coin.name} buy ${orderSize} @ ${limitPrice}`);
-        } catch (err) {
-          this.onMetric('errors');
+          try {
+            await this.walletClient.cancel({ cancels });
+            this.onMetric('postRequests');
+            this.log('cancel', 'success', `Cancelled ${cancels.length} open orders`);
+          } catch {
+            // 이미 취소되었을 수 있음
+          }
+        }
+      } catch {
+        // open order 조회 실패 — 그냥 주문 시도
+      }
+
+      // Place new limit order
+      await this.walletClient.order({
+        orders: [{
+          a: coin.index,
+          b: true,
+          p: limitPrice,
+          s: orderSize,
+          r: false,
+          t: { limit: { tif: 'Gtc' } },
+        }],
+        grouping: 'na',
+      });
+      this.onMetric('postRequests');
+      this.log('order', 'success', `${coin.name} buy ${orderSize} @ ${limitPrice}`);
+    } catch (err) {
+      this.onMetric('errors');
           this.incrementErrors();
           this.handleRateLimit(err);
           this.log('order', 'fail', errorMessage(err));
     }
   }
 
-  /** Cancel all open orders from stored webData2 data */
+  /** Cancel all open orders via REST API query */
   private async cleanupOrders(): Promise<void> {
-    if (this.openOrders.length === 0) return;
+    try {
+      const orders = await this.publicClient.openOrders({ user: this.walletAddress as `0x${string}` });
+      if (orders.length === 0) return;
 
-    // Cancel each order individually, ignoring already-cancelled errors
-    let cancelled = 0;
-    for (const o of this.openOrders) {
-      const coin = this.coins.find((c) => c.name === o.coin);
-      try {
-        await this.walletClient.cancel({ cancels: [{ a: coin?.index ?? 0, o: o.oid }] });
-        cancelled++;
-      } catch {
-        // Ignore — order may already be cancelled or filled
-      }
+      const cancels = orders.map((o) => {
+        const c = this.coins.find((c) => c.name === o.coin);
+        return { a: c?.index ?? 0, o: o.oid };
+      });
+      await this.walletClient.cancel({ cancels });
+      this.onMetric('postRequests');
+      this.log('cancel', 'success', `Cleanup: cancelled ${cancels.length} open orders`);
+    } catch {
+      // ignore cleanup errors
     }
-    this.onMetric('postRequests');
-    this.log('cancel', 'success', `Cleanup: cancelled ${cancelled}/${this.openOrders.length} orders`);
   }
 
   /** Stop the instance: clear intervals, cancel orders, close WS */
   async stop(): Promise<void> {
-    // Clear intervals
+    this.stopped = true;
+
+    // Clear all timers
+    if (this.leverageTimeout !== null) {
+      clearTimeout(this.leverageTimeout);
+      this.leverageTimeout = null;
+    }
     if (this.leverageInterval !== null) {
       clearInterval(this.leverageInterval);
       this.leverageInterval = null;
+    }
+    if (this.orderLoopTimeout !== null) {
+      clearTimeout(this.orderLoopTimeout);
+      this.orderLoopTimeout = null;
     }
     if (this.orderInterval !== null) {
       clearInterval(this.orderInterval);
       this.orderInterval = null;
     }
-    if (this.orderLoopTimeout !== null) {
-      clearTimeout(this.orderLoopTimeout);
-      this.orderLoopTimeout = null;
+    if (this.getTimeout !== null) {
+      clearTimeout(this.getTimeout);
+      this.getTimeout = null;
+    }
+    if (this.getInterval !== null) {
+      clearInterval(this.getInterval);
+      this.getInterval = null;
     }
 
     // Cancel all open orders
@@ -296,17 +368,21 @@ export class StressInstance {
     this.subscriptions = [];
 
     // Close WebSocket transport
-    try {
-      await this.wsTransport.close();
-    } catch {
-      // Ignore close errors
+    if (this.wsTransport) {
+      try {
+        await this.wsTransport.close();
+      } catch {
+        // Ignore close errors
+      }
     }
 
     // Decrement metrics
-    this.onMetric('-wsConnections');
-    this.onMetric('-channelSubscriptions');
-    this.onMetric('-channelSubscriptions');
-    this.onMetric('-channelSubscriptions');
+    if (this.enableWs) {
+      this.onMetric('-wsConnections');
+      this.onMetric('-channelSubscriptions');
+      this.onMetric('-channelSubscriptions');
+      this.onMetric('-channelSubscriptions');
+    }
 
     this.setState('stopped');
   }
@@ -320,10 +396,13 @@ export class StressInstance {
 
       this.startLeverageLoop();
       this.startOrderLoop();
+      this.startGetLoop();
 
       this.setState('running');
-      this.onMetric('wsConnections');
-      this.log('connect', 'success', 'Instance started');
+      if (this.enableWs) {
+        this.onMetric('wsConnections');
+      }
+      this.log('connect', 'success', `Instance started${this.enableWs ? '' : ' (WS off)'}`);
     } catch (err) {
       this.setState('error');
       this.log('connect', 'fail', `Start failed: ${errorMessage(err)}`);

@@ -38,19 +38,24 @@ export default function StressTester() {
     const interval = setInterval(() => {
       const currentMinute = getMinuteKey();
       if (currentMinute !== prevMinuteRef.current) {
-        // 분이 바뀜 → 이전 1분의 delta 계산
+        // 즉시 업데이트하여 다음 tick에서 중복 감지 방지
+        const prevMinute = prevMinuteRef.current;
+        prevMinuteRef.current = currentMinute;
+
         setMetrics((currentMetrics) => {
           const prev = prevSnapshotRef.current;
           const snap: MinuteMetrics = {
-            startTime: prevMinuteRef.current,
+            startTime: prevMinute,
             getRequests: currentMetrics.getRequests - prev.getRequests,
             postRequests: currentMetrics.postRequests - prev.postRequests,
             errors: currentMetrics.errors - prev.errors,
             rateLimits: currentMetrics.rateLimits - prev.rateLimits,
           };
           prevSnapshotRef.current = { ...currentMetrics };
-          prevMinuteRef.current = currentMinute;
-          setMinuteHistory((h) => [...h, snap]);
+          setMinuteHistory((h) => {
+            if (h.length > 0 && h[h.length - 1].startTime === prevMinute) return h;
+            return [...h, snap];
+          });
           return currentMetrics;
         });
       }
@@ -86,7 +91,7 @@ export default function StressTester() {
   }, []);
 
   const handleStart = useCallback(
-    async (privateKey: string, instanceCount: number) => {
+    async (privateKey: string, instanceCount: number, walletAddress?: string, enableWs?: boolean) => {
       if (!PRIVATE_KEY_REGEX.test(privateKey)) {
         setError("유효한 private key를 입력해주세요");
         return;
@@ -119,7 +124,7 @@ export default function StressTester() {
       for (let i = 0; i < instanceCount; i++) {
         const instance = new StressInstance(
           i, privateKey, publicClient, coins,
-          handleMetric, handleLog, handleStateChange,
+          handleMetric, handleLog, handleStateChange, walletAddress, enableWs,
         );
         newInstances.push(instance);
         initialStates.push(instance.getState());
@@ -129,9 +134,26 @@ export default function StressTester() {
       setInstances(initialStates);
       setIsRunning(true);
 
-      for (const instance of newInstances) {
-        instance.start();
-      }
+      // 순차적으로 500ms 간격으로 시작, 실패 시 재시도
+      const startWithRetry = async (instance: StressInstance, retries = 3) => {
+        for (let attempt = 0; attempt < retries; attempt++) {
+          try {
+            await instance.start();
+            return;
+          } catch {
+            if (attempt < retries - 1) {
+              await new Promise((r) => setTimeout(r, 3000));
+            }
+          }
+        }
+      };
+
+      (async () => {
+        for (const instance of newInstances) {
+          await startWithRetry(instance);
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      })();
     },
     [handleMetric, handleLog, handleStateChange],
   );

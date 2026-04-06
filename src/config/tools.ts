@@ -32,4 +32,11 @@ export const tools: ToolConfig[] = [
       "N개의 독립 인스턴스를 생성하여 각각 WebSocket 구독, 레버리지 변경, limit order를 동시에 수행합니다.\n" +
       "WebSocket 연결 수, 채널 구독 수, GET/POST 요청 수 등 실시간 메트릭을 모니터링합니다.",
   },
+  {
+    slug: "jwe-decoder",
+    name: "JWE Decoder",
+    description:
+      "JWE(JSON Web Encryption) Compact Serialization으로 암호화된 데이터를 RSA private key로 복호화합니다.\n" +
+      "알고리즘: RSA-OAEP + A256GCM, RSA 2048bit PEM 또는 JWK 형식의 private key를 지원합니다.",
+  },
 ];
