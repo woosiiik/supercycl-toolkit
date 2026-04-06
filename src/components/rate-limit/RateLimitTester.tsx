@@ -1,10 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { RequestLogEntry, TestSessionSummary, ApiResponse } from "@/types/hyperliquid";
+import type {
+  RequestLogEntry,
+  TestSessionSummary,
+  ApiResponse,
+} from "@/types/hyperliquid";
 import type { RecoveryProbeResult } from "@/lib/hyperliquid";
 import { validateAddress } from "@/lib/validation";
-import { createTestSummary, runTestSession, runRecoveryProbe } from "@/lib/hyperliquid";
+import {
+  createTestSummary,
+  runTestSession,
+  runRecoveryProbe,
+} from "@/lib/hyperliquid";
 import AddressInput from "./AddressInput";
 import TestControls from "./TestControls";
 import LiveStatus from "./LiveStatus";
@@ -22,13 +30,16 @@ export default function RateLimitTester() {
   const [summary, setSummary] = useState<TestSessionSummary | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [recoveryProbes, setRecoveryProbes] = useState<RecoveryProbeResult[]>([]);
+  const [recoveryProbes, setRecoveryProbes] = useState<RecoveryProbeResult[]>(
+    [],
+  );
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Elapsed time ticker while running or recovering
   useEffect(() => {
-    if ((status !== "running" && status !== "recovering") || startedAt === null) return;
+    if ((status !== "running" && status !== "recovering") || startedAt === null)
+      return;
 
     const interval = setInterval(() => {
       setElapsedTime(Date.now() - startedAt);
@@ -69,8 +80,8 @@ export default function RateLimitTester() {
     let rateLimitResponse: ApiResponse | undefined;
     if (lastLog?.statusCode === 429) {
       const headers: Record<string, string> = lastLog.headers ?? {};
-      if (lastLog.retryAfter != null && !headers['retry-after']) {
-        headers['retry-after'] = String(lastLog.retryAfter);
+      if (lastLog.retryAfter != null && !headers["retry-after"]) {
+        headers["retry-after"] = String(lastLog.retryAfter);
       }
       rateLimitResponse = {
         statusCode: 429,
@@ -90,7 +101,11 @@ export default function RateLimitTester() {
       const probes: RecoveryProbeResult[] = [];
 
       try {
-        for await (const probe of runRecoveryProbe(address, controller.signal, 5000)) {
+        for await (const probe of runRecoveryProbe(
+          address,
+          controller.signal,
+          5000,
+        )) {
           probes.push(probe);
           setRecoveryProbes([...probes]);
 
@@ -146,9 +161,7 @@ export default function RateLimitTester() {
         />
       )}
 
-      {status === "recovering" && (
-        <RecoveryStatus probes={recoveryProbes} />
-      )}
+      {status === "recovering" && <RecoveryStatus probes={recoveryProbes} />}
 
       <TestSummary summary={summary} />
 

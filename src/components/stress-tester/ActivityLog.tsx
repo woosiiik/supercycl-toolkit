@@ -17,12 +17,33 @@ function formatTimestamp(iso: string): string {
 }
 
 const actionConfig: Record<LogAction, { label: string; className: string }> = {
-  connect: { label: "연결", className: "bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-  subscribe: { label: "구독", className: "bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-300" },
-  leverage: { label: "레버리지", className: "bg-cyan-200 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
-  order: { label: "주문", className: "bg-indigo-200 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300" },
-  cancel: { label: "취소", className: "bg-orange-200 text-orange-800 dark:bg-orange-900 dark:text-orange-300" },
-  error: { label: "에러", className: "bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-300" },
+  connect: {
+    label: "연결",
+    className: "bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+  },
+  subscribe: {
+    label: "구독",
+    className:
+      "bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+  },
+  leverage: {
+    label: "레버리지",
+    className: "bg-cyan-200 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300",
+  },
+  order: {
+    label: "주문",
+    className:
+      "bg-indigo-200 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300",
+  },
+  cancel: {
+    label: "취소",
+    className:
+      "bg-orange-200 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
+  },
+  error: {
+    label: "에러",
+    className: "bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-300",
+  },
 };
 
 export default function ActivityLog({ logs }: ActivityLogProps) {
@@ -64,17 +85,24 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
                   <td className="whitespace-nowrap px-3 py-1.5 tabular-nums">
                     {formatTimestamp(log.timestamp)}
                   </td>
-                  <td className="px-3 py-1.5 tabular-nums">#{log.instanceId}</td>
+                  <td className="px-3 py-1.5 tabular-nums">
+                    #{log.instanceId}
+                  </td>
                   <td className="px-3 py-1.5">
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${action.className}`}>
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${action.className}`}
+                    >
                       {action.label}
                     </span>
                   </td>
                   <td className="px-3 py-1.5">
-                    <span className={log.result === "success"
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400"
-                    }>
+                    <span
+                      className={
+                        log.result === "success"
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-red-600 dark:text-red-400"
+                      }
+                    >
                       {log.result === "success" ? "성공" : "실패"}
                     </span>
                   </td>

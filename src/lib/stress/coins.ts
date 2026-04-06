@@ -1,6 +1,6 @@
-import { PublicClient, HttpTransport } from '@nktkas/hyperliquid';
-import type { CoinInfo } from '@/types/stress';
-import { TESTNET_HTTP_URL, ORDER_PRICE_RATIO } from './constants';
+import { PublicClient, HttpTransport } from "@nktkas/hyperliquid";
+import type { CoinInfo } from "@/types/stress";
+import { TESTNET_HTTP_URL, ORDER_PRICE_RATIO } from "./constants";
 
 /** 공유 PublicClient 생성 (테스트넷 HTTP) */
 export function createSharedPublicClient(): PublicClient<HttpTransport> {
@@ -24,7 +24,7 @@ export async function fetchCoinList(
     .filter((coin) => {
       const raw = meta.universe[coin.index];
       // isDelisted 코인 제외 (Trading is halted)
-      return !('isDelisted' in raw && raw.isDelisted);
+      return !("isDelisted" in raw && raw.isDelisted);
     });
 }
 
@@ -52,7 +52,7 @@ export function calculateLimitPrice(midPrice: string): string {
 
 /** 숫자를 유효 숫자 N자리로 포맷 (trailing zeros 제거) */
 function formatPriceToSigFigs(value: number, sigFigs: number): string {
-  if (value === 0) return '0';
+  if (value === 0) return "0";
   const d = Math.ceil(Math.log10(Math.abs(value)));
   const power = sigFigs - d;
   const magnitude = Math.pow(10, power);
@@ -64,9 +64,13 @@ function formatPriceToSigFigs(value: number, sigFigs: number): string {
 }
 
 /** 주문 수량을 szDecimals에 맞게 올림 포맷 */
-export function calculateOrderSize(minUsd: number, price: string, szDecimals: number): string {
+export function calculateOrderSize(
+  minUsd: number,
+  price: string,
+  szDecimals: number,
+): string {
   const priceNum = parseFloat(price);
-  if (priceNum <= 0) return '1';
+  if (priceNum <= 0) return "1";
   const rawSize = minUsd / priceNum;
   const factor = Math.pow(10, szDecimals);
   const rounded = Math.ceil(rawSize * factor) / factor;

@@ -1,6 +1,6 @@
-import * as hl from '@nktkas/hyperliquid';
-import { privateKeyToAccount } from 'viem/accounts';
-import { FAUCET_API } from './constants';
+import * as hl from "@nktkas/hyperliquid";
+import { privateKeyToAccount } from "viem/accounts";
+import { FAUCET_API } from "./constants";
 
 /**
  * Claim testnet USDC from the Hyperliquid faucet.
@@ -11,9 +11,9 @@ export async function claimFaucet(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const response = await fetch(FAUCET_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'claimDrip', user: address }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "claimDrip", user: address }),
     });
 
     if (!response.ok) {
@@ -43,7 +43,9 @@ export async function sendUsd(
   try {
     const wallet = privateKeyToAccount(privateKey as `0x${string}`);
     const transport = new hl.HttpTransport({
-      url: isTestnet ? 'https://hyperliquid-testnet.xyz' : 'https://hyperliquid.xyz',
+      url: isTestnet
+        ? "https://hyperliquid-testnet.xyz"
+        : "https://hyperliquid.xyz",
     });
     const client = new hl.WalletClient({ wallet, transport, isTestnet });
 

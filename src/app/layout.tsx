@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Supercycl Toolkit",
-  description: "코인 선물거래 애그리게이터 Supercycl 개발용 테스트/유틸리티 도구 모음",
+  description:
+    "코인 선물거래 애그리게이터 Supercycl 개발용 테스트/유틸리티 도구 모음",
 };
 
 export default function RootLayout({

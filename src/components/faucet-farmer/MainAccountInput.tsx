@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { privateKeyToAccount } from "viem/accounts";
-import { getUsdcBalance, getEthBalance, formatUsdcBalance, formatEthBalance } from "@/lib/faucet/balance";
+import {
+  getUsdcBalance,
+  getEthBalance,
+  formatUsdcBalance,
+  formatEthBalance,
+} from "@/lib/faucet/balance";
 import { isBalanceSufficient } from "@/lib/faucet/account";
 import type { MainAccountInfo } from "@/types/faucet";
 
@@ -52,7 +57,9 @@ export default function MainAccountInput({
       setRawUsdcBalance(usdcRaw);
       onAccountSet(info);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "계정 정보를 불러올 수 없습니다");
+      setError(
+        err instanceof Error ? err.message : "계정 정보를 불러올 수 없습니다",
+      );
     } finally {
       setLoading(false);
     }
@@ -70,7 +77,10 @@ export default function MainAccountInput({
       </h3>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="main-private-key" className="text-xs text-zinc-500 dark:text-zinc-400">
+        <label
+          htmlFor="main-private-key"
+          className="text-xs text-zinc-500 dark:text-zinc-400"
+        >
           Private Key
         </label>
         <div className="flex gap-2">
@@ -106,21 +116,35 @@ export default function MainAccountInput({
         </p>
       </div>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      )}
 
       {accountInfo && !loading && (
         <div className="flex flex-col gap-2 rounded-md border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">Address</span>
-            <span className="font-mono text-xs text-zinc-900 dark:text-zinc-100">{accountInfo.address}</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              Address
+            </span>
+            <span className="font-mono text-xs text-zinc-900 dark:text-zinc-100">
+              {accountInfo.address}
+            </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">USDC 잔액</span>
-            <span className="text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-100">{accountInfo.usdcBalance} USDC</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              USDC 잔액
+            </span>
+            <span className="text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+              {accountInfo.usdcBalance} USDC
+            </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">ETH 잔액</span>
-            <span className="text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-100">{accountInfo.ethBalance} ETH</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              ETH 잔액
+            </span>
+            <span className="text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+              {accountInfo.ethBalance} ETH
+            </span>
           </div>
         </div>
       )}
@@ -128,7 +152,9 @@ export default function MainAccountInput({
       {accountInfo && !loading && !balanceSufficient && (
         <div className="rounded-md border border-red-500/30 bg-red-50 px-3 py-2 dark:border-red-500/20 dark:bg-red-900/20">
           <p className="text-sm font-medium text-red-700 dark:text-red-400">
-            잔액 부족 — {subAccountCount}개 계정 × 5.5 USDC = {(subAccountCount * 5.5).toFixed(1)} USDC 필요 (현재 {accountInfo.usdcBalance} USDC)
+            잔액 부족 — {subAccountCount}개 계정 × 5.5 USDC ={" "}
+            {(subAccountCount * 5.5).toFixed(1)} USDC 필요 (현재{" "}
+            {accountInfo.usdcBalance} USDC)
           </p>
         </div>
       )}

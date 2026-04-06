@@ -28,7 +28,9 @@ export default function JweDecoder() {
 
       // JWE 헤더에서 알고리즘 자동 감지
       const headerB64 = trimmedJwe.split(".")[0];
-      const headerJson = JSON.parse(atob(headerB64.replace(/-/g, "+").replace(/_/g, "/")));
+      const headerJson = JSON.parse(
+        atob(headerB64.replace(/-/g, "+").replace(/_/g, "/")),
+      );
       const alg = headerJson.alg || "RSA-OAEP-256";
       setHeader(JSON.stringify(headerJson, null, 2));
 
@@ -40,7 +42,9 @@ export default function JweDecoder() {
         const jwk = JSON.parse(trimmedKey);
         key = await importJWK(jwk, alg);
       } else {
-        setError("PEM (-----BEGIN ...) 또는 JWK ({...}) 형식의 private key를 입력해주세요");
+        setError(
+          "PEM (-----BEGIN ...) 또는 JWK ({...}) 형식의 private key를 입력해주세요",
+        );
         return;
       }
 
@@ -66,14 +70,19 @@ export default function JweDecoder() {
     <div className="flex flex-col gap-4">
       {/* Private Key */}
       <div className="flex flex-col gap-1">
-        <label htmlFor="jwe-private-key" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label
+          htmlFor="jwe-private-key"
+          className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
+        >
           RSA Private Key (PEM 또는 JWK)
         </label>
         <textarea
           id="jwe-private-key"
           value={privateKeyText}
           onChange={(e) => setPrivateKeyText(e.target.value)}
-          placeholder={"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"}
+          placeholder={
+            "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+          }
           rows={6}
           className="rounded-md border border-zinc-300 bg-white px-3 py-2 font-mono text-xs text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
         />
@@ -81,7 +90,10 @@ export default function JweDecoder() {
 
       {/* JWE Cipher Text */}
       <div className="flex flex-col gap-1">
-        <label htmlFor="jwe-cipher" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label
+          htmlFor="jwe-cipher"
+          className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
+        >
           JWE Compact Serialization
         </label>
         <textarea
@@ -114,7 +126,9 @@ export default function JweDecoder() {
       {/* JWE Header */}
       {header && (
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">JWE Header</span>
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            JWE Header
+          </span>
           <pre className="overflow-auto rounded-md border border-zinc-300 bg-zinc-50 p-3 text-xs text-zinc-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200">
             {header}
           </pre>
@@ -124,7 +138,9 @@ export default function JweDecoder() {
       {/* Result */}
       {result && (
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">복호화 결과</span>
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            복호화 결과
+          </span>
           <pre className="max-h-96 overflow-auto rounded-md border border-zinc-300 bg-zinc-50 p-3 text-xs text-zinc-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200">
             {result}
           </pre>

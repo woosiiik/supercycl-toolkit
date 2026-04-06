@@ -1,13 +1,13 @@
-import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type {
   SubAccount,
   AccountStepStatus,
   StepSummary,
   AccountBackup,
-} from '@/types/faucet';
-import { TRANSFER_AMOUNT_USD, USDC_DECIMALS } from './constants';
+} from "@/types/faucet";
+import { TRANSFER_AMOUNT_USD, USDC_DECIMALS } from "./constants";
 
-const STORAGE_KEY = 'faucet-farmer-sub-accounts';
+const STORAGE_KEY = "faucet-farmer-sub-accounts";
 
 /** Generate N sub-accounts using viem */
 export function generateSubAccounts(count: number): SubAccount[] {
@@ -55,9 +55,9 @@ export function importFromJson(json: string): SubAccount[] {
 /** Download accounts as a JSON backup file via Blob + anchor click */
 export function downloadBackup(accounts: SubAccount[]): void {
   const json = exportToJson(accounts);
-  const blob = new Blob([json], { type: 'application/json' });
+  const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = `faucet-farmer-backup-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a);
@@ -71,7 +71,7 @@ export function maskPrivateKey(privateKey: string): string {
   if (privateKey.length <= 10) return privateKey;
   const start = privateKey.slice(0, 6);
   const end = privateKey.slice(-4);
-  const masked = '•'.repeat(privateKey.length - 10);
+  const masked = "•".repeat(privateKey.length - 10);
   return `${start}${masked}${end}`;
 }
 
@@ -93,8 +93,8 @@ export function computeSummary(
   let hasAmount = false;
 
   for (const status of statuses.values()) {
-    if (status.status === 'success') success++;
-    if (status.status === 'failed') failed++;
+    if (status.status === "success") success++;
+    if (status.status === "failed") failed++;
     if (status.amount !== undefined) {
       hasAmount = true;
       totalAmountNum += parseFloat(status.amount);
@@ -120,7 +120,7 @@ export function getFailedAccounts(
 ): string[] {
   const failed: string[] = [];
   for (const [address, status] of statuses.entries()) {
-    if (status.status === 'failed') {
+    if (status.status === "failed") {
       failed.push(address);
     }
   }
@@ -134,7 +134,7 @@ export function getDepositReadyAccounts(
 ): SubAccount[] {
   return accounts.filter((account) => {
     const status = depositCheckStatuses.get(account.address);
-    return status?.status === 'success';
+    return status?.status === "success";
   });
 }
 
@@ -143,5 +143,5 @@ export function buildClaimBody(address: string): {
   type: string;
   user: string;
 } {
-  return { type: 'claimDrip', user: address };
+  return { type: "claimDrip", user: address };
 }

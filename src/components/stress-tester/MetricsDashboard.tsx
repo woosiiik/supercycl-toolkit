@@ -9,16 +9,44 @@ interface MetricsDashboardProps {
   minuteHistory: MinuteMetrics[];
 }
 
-const metricCards: { key: keyof StressMetrics; label: string; color: string }[] = [
-  { key: "wsConnections", label: "WS 연결", color: "text-blue-600 dark:text-blue-400" },
-  { key: "channelSubscriptions", label: "채널 구독", color: "text-purple-600 dark:text-purple-400" },
-  { key: "getRequests", label: "GET 요청", color: "text-green-600 dark:text-green-400" },
-  { key: "postRequests", label: "POST 요청", color: "text-cyan-600 dark:text-cyan-400" },
+const metricCards: {
+  key: keyof StressMetrics;
+  label: string;
+  color: string;
+}[] = [
+  {
+    key: "wsConnections",
+    label: "WS 연결",
+    color: "text-blue-600 dark:text-blue-400",
+  },
+  {
+    key: "channelSubscriptions",
+    label: "채널 구독",
+    color: "text-purple-600 dark:text-purple-400",
+  },
+  {
+    key: "getRequests",
+    label: "GET 요청",
+    color: "text-green-600 dark:text-green-400",
+  },
+  {
+    key: "postRequests",
+    label: "POST 요청",
+    color: "text-cyan-600 dark:text-cyan-400",
+  },
   { key: "errors", label: "에러", color: "text-red-600 dark:text-red-400" },
-  { key: "rateLimits", label: "Rate-Limit", color: "text-yellow-600 dark:text-yellow-400" },
+  {
+    key: "rateLimits",
+    label: "Rate-Limit",
+    color: "text-yellow-600 dark:text-yellow-400",
+  },
 ];
 
-export default function MetricsDashboard({ metrics, isRunning, minuteHistory }: MetricsDashboardProps) {
+export default function MetricsDashboard({
+  metrics,
+  isRunning,
+  minuteHistory,
+}: MetricsDashboardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,9 +66,16 @@ export default function MetricsDashboard({ metrics, isRunning, minuteHistory }: 
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {metricCards.map(({ key, label, color }) => (
-          <div key={key} className="flex flex-col gap-1 rounded-md border border-zinc-200 p-3 dark:border-zinc-700">
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
-            <span className={`text-lg font-semibold tabular-nums ${color}`}>{metrics[key]}</span>
+          <div
+            key={key}
+            className="flex flex-col gap-1 rounded-md border border-zinc-200 p-3 dark:border-zinc-700"
+          >
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              {label}
+            </span>
+            <span className={`text-lg font-semibold tabular-nums ${color}`}>
+              {metrics[key]}
+            </span>
           </div>
         ))}
       </div>
@@ -66,10 +101,18 @@ export default function MetricsDashboard({ metrics, isRunning, minuteHistory }: 
                 {minuteHistory.map((m, i) => (
                   <tr key={i} className="text-zinc-900 dark:text-zinc-100">
                     <td className="px-3 py-1 tabular-nums">{m.startTime}</td>
-                    <td className="px-3 py-1 tabular-nums text-green-600 dark:text-green-400">{m.getRequests}</td>
-                    <td className="px-3 py-1 tabular-nums text-cyan-600 dark:text-cyan-400">{m.postRequests}</td>
-                    <td className="px-3 py-1 tabular-nums text-red-600 dark:text-red-400">{m.errors}</td>
-                    <td className="px-3 py-1 tabular-nums text-yellow-600 dark:text-yellow-400">{m.rateLimits}</td>
+                    <td className="px-3 py-1 tabular-nums text-green-600 dark:text-green-400">
+                      {m.getRequests}
+                    </td>
+                    <td className="px-3 py-1 tabular-nums text-cyan-600 dark:text-cyan-400">
+                      {m.postRequests}
+                    </td>
+                    <td className="px-3 py-1 tabular-nums text-red-600 dark:text-red-400">
+                      {m.errors}
+                    </td>
+                    <td className="px-3 py-1 tabular-nums text-yellow-600 dark:text-yellow-400">
+                      {m.rateLimits}
+                    </td>
                   </tr>
                 ))}
               </tbody>

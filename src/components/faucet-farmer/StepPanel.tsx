@@ -88,9 +88,7 @@ export default function StepPanel({
           </span>
           <span className="text-green-600 dark:text-green-400">
             성공{" "}
-            <span className="font-medium tabular-nums">
-              {summary.success}
-            </span>
+            <span className="font-medium tabular-nums">{summary.success}</span>
           </span>
           <span className="text-red-600 dark:text-red-400">
             실패{" "}

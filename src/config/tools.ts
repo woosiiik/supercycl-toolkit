@@ -1,8 +1,8 @@
 export interface ToolConfig {
-  slug: string;        // URL 경로
-  name: string;        // 메뉴 표시명
+  slug: string; // URL 경로
+  name: string; // 메뉴 표시명
   description: string; // Tool_Page 상단 설명
-  icon?: string;       // 선택적 아이콘
+  icon?: string; // 선택적 아이콘
 }
 
 export const tools: ToolConfig[] = [

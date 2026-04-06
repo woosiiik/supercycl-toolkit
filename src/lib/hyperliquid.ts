@@ -2,9 +2,9 @@ import type {
   ApiResponse,
   RequestLogEntry,
   TestSessionSummary,
-} from '@/types/hyperliquid';
+} from "@/types/hyperliquid";
 
-const API_URL = 'https://api.hyperliquid.xyz/info';
+const API_URL = "https://api.hyperliquid.xyz/info";
 
 /**
  * Calculate the weight of a userFillsByTime request.
@@ -29,10 +29,10 @@ export async function callUserFillsByTime(
 
   try {
     const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        type: 'userFillsByTime',
+        type: "userFillsByTime",
         user: address,
         startTime,
         endTime,
@@ -76,7 +76,7 @@ export async function callUserFillsByTime(
   } catch (err: unknown) {
     const responseTimeMs = Math.round(performance.now() - startMs);
     const message =
-      err instanceof Error ? err.message : 'Unknown network error';
+      err instanceof Error ? err.message : "Unknown network error";
 
     return {
       statusCode: 0,
@@ -87,7 +87,6 @@ export async function callUserFillsByTime(
     };
   }
 }
-
 
 /**
  * Create a summary of a completed test session.
@@ -110,7 +109,7 @@ export function createTestSummary(
   };
 
   if (rateLimitResponse) {
-    const retryAfterRaw = rateLimitResponse.headers['retry-after'];
+    const retryAfterRaw = rateLimitResponse.headers["retry-after"];
     if (retryAfterRaw) {
       const parsed = Number(retryAfterRaw);
       if (!isNaN(parsed)) {
@@ -156,13 +155,25 @@ export async function* runRecoveryProbe(
   while (!signal.aborted) {
     await new Promise((resolve) => {
       const timer = setTimeout(resolve, intervalMs);
-      signal.addEventListener('abort', () => { clearTimeout(timer); resolve(undefined); }, { once: true });
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timer);
+          resolve(undefined);
+        },
+        { once: true },
+      );
     });
 
     if (signal.aborted) return;
 
     attempt++;
-    const response = await callUserFillsByTime(address, startTime, endTime, signal);
+    const response = await callUserFillsByTime(
+      address,
+      startTime,
+      endTime,
+      signal,
+    );
 
     const result: RecoveryProbeResult = {
       attempt,
@@ -231,7 +242,7 @@ export async function* runTestSession(
 
     // 429 응답 시 Retry-After 헤더 추출
     if (response.statusCode === 429) {
-      const retryAfterRaw = response.headers['retry-after'];
+      const retryAfterRaw = response.headers["retry-after"];
       if (retryAfterRaw) {
         const parsed = Number(retryAfterRaw);
         if (!isNaN(parsed)) {

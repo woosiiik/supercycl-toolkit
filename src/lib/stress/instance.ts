@@ -4,11 +4,21 @@ import {
   PublicClient,
   WebSocketTransport,
   HttpTransport,
-} from '@nktkas/hyperliquid';
-import type { Subscription } from '@nktkas/hyperliquid';
-import { privateKeyToAccount } from 'viem/accounts';
-import type { CoinInfo, InstanceState, InstanceStatus, LogEntry } from '@/types/stress';
-import { fetchAllMids, pickRandomCoin, calculateLimitPrice, calculateOrderSize } from './coins';
+} from "@nktkas/hyperliquid";
+import type { Subscription } from "@nktkas/hyperliquid";
+import { privateKeyToAccount } from "viem/accounts";
+import type {
+  CoinInfo,
+  InstanceState,
+  InstanceStatus,
+  LogEntry,
+} from "@/types/stress";
+import {
+  fetchAllMids,
+  pickRandomCoin,
+  calculateLimitPrice,
+  calculateOrderSize,
+} from "./coins";
 import {
   TESTNET_WS_URL,
   TESTNET_HTTP_URL,
@@ -17,7 +27,7 @@ import {
   LEVERAGE_MIN,
   LEVERAGE_MAX,
   MIN_ORDER_USD,
-} from './constants';
+} from "./constants";
 
 /** Open order info stored from webData2 subscription */
 interface StoredOpenOrder {
@@ -91,7 +101,7 @@ export class StressInstance {
     // Initialize state
     this.state = {
       id,
-      status: 'idle',
+      status: "idle",
       wsConnected: false,
       channelCount: 0,
       errors: 0,
@@ -101,7 +111,7 @@ export class StressInstance {
   /** Subscribe to webData2, orderUpdates, and l2Book channels */
   private async subscribeChannels(): Promise<void> {
     if (!this.eventClient) {
-      this.log('subscribe', 'success', 'WS disabled — skipping subscriptions');
+      this.log("subscribe", "success", "WS disabled — skipping subscriptions");
       return;
     }
 
@@ -118,11 +128,11 @@ export class StressInstance {
         },
       );
       this.subscriptions.push(sub1);
-      this.onMetric('channelSubscriptions');
-      this.log('subscribe', 'success', 'webData2 subscribed');
+      this.onMetric("channelSubscriptions");
+      this.log("subscribe", "success", "webData2 subscribed");
     } catch (err) {
-      this.log('subscribe', 'fail', `webData2 failed: ${errorMessage(err)}`);
-      this.setState('error');
+      this.log("subscribe", "fail", `webData2 failed: ${errorMessage(err)}`);
+      this.setState("error");
       throw err;
     }
 
@@ -135,28 +145,32 @@ export class StressInstance {
         },
       );
       this.subscriptions.push(sub2);
-      this.onMetric('channelSubscriptions');
-      this.log('subscribe', 'success', 'orderUpdates subscribed');
+      this.onMetric("channelSubscriptions");
+      this.log("subscribe", "success", "orderUpdates subscribed");
     } catch (err) {
-      this.log('subscribe', 'fail', `orderUpdates failed: ${errorMessage(err)}`);
-      this.setState('error');
+      this.log(
+        "subscribe",
+        "fail",
+        `orderUpdates failed: ${errorMessage(err)}`,
+      );
+      this.setState("error");
       throw err;
     }
 
     try {
       // l2Book: BTC order book
       const sub3 = await this.eventClient.l2Book(
-        { coin: 'BTC', nSigFigs: 5 },
+        { coin: "BTC", nSigFigs: 5 },
         () => {
           // No-op listener — just maintaining the subscription for stress
         },
       );
       this.subscriptions.push(sub3);
-      this.onMetric('channelSubscriptions');
-      this.log('subscribe', 'success', 'l2Book(BTC) subscribed');
+      this.onMetric("channelSubscriptions");
+      this.log("subscribe", "success", "l2Book(BTC) subscribed");
     } catch (err) {
-      this.log('subscribe', 'fail', `l2Book failed: ${errorMessage(err)}`);
-      this.setState('error');
+      this.log("subscribe", "fail", `l2Book failed: ${errorMessage(err)}`);
+      this.setState("error");
       throw err;
     }
   }
@@ -179,7 +193,8 @@ export class StressInstance {
     try {
       const coin = pickRandomCoin(this.coins);
       const maxLev = Math.min(LEVERAGE_MAX, coin.maxLeverage);
-      const leverage = Math.floor(Math.random() * (maxLev - LEVERAGE_MIN + 1)) + LEVERAGE_MIN;
+      const leverage =
+        Math.floor(Math.random() * (maxLev - LEVERAGE_MIN + 1)) + LEVERAGE_MIN;
 
       await this.walletClient.updateLeverage({
         asset: coin.index,
@@ -187,13 +202,13 @@ export class StressInstance {
         leverage,
       });
 
-      this.onMetric('postRequests');
-      this.log('leverage', 'success', `${coin.name} leverage → ${leverage}`);
+      this.onMetric("postRequests");
+      this.log("leverage", "success", `${coin.name} leverage → ${leverage}`);
     } catch (err) {
-      this.onMetric('errors');
+      this.onMetric("errors");
       this.incrementErrors();
       this.handleRateLimit(err);
-      this.log('leverage', 'fail', errorMessage(err));
+      this.log("leverage", "fail", errorMessage(err));
     }
   }
 
@@ -231,18 +246,18 @@ export class StressInstance {
       const choice = Math.random();
       if (choice < 0.5) {
         await fetchAllMids(this.publicClient);
-        this.onMetric('getRequests');
-        this.log('subscribe', 'success', 'GET allMids');
+        this.onMetric("getRequests");
+        this.log("subscribe", "success", "GET allMids");
       } else {
         await this.publicClient.meta();
-        this.onMetric('getRequests');
-        this.log('subscribe', 'success', 'GET meta');
+        this.onMetric("getRequests");
+        this.log("subscribe", "success", "GET meta");
       }
     } catch (err) {
-      this.onMetric('errors');
+      this.onMetric("errors");
       this.incrementErrors();
       this.handleRateLimit(err);
-      this.log('error', 'fail', `GET failed: ${errorMessage(err)}`);
+      this.log("error", "fail", `GET failed: ${errorMessage(err)}`);
     }
   }
 
@@ -252,21 +267,27 @@ export class StressInstance {
 
       // Fetch current mid prices
       const allMids = await fetchAllMids(this.publicClient);
-      this.onMetric('getRequests');
+      this.onMetric("getRequests");
 
       const midPrice = allMids[coin.name];
       if (!midPrice) {
-        this.log('order', 'fail', `No mid price for ${coin.name}`);
+        this.log("order", "fail", `No mid price for ${coin.name}`);
         return;
       }
 
       const limitPrice = calculateLimitPrice(midPrice);
-      const orderSize = calculateOrderSize(MIN_ORDER_USD, limitPrice, coin.szDecimals);
+      const orderSize = calculateOrderSize(
+        MIN_ORDER_USD,
+        limitPrice,
+        coin.szDecimals,
+      );
 
       // REST API로 open order 조회 후 한번에 전부 취소
       try {
-        const orders = await this.publicClient.openOrders({ user: this.walletAddress as `0x${string}` });
-        this.onMetric('getRequests');
+        const orders = await this.publicClient.openOrders({
+          user: this.walletAddress as `0x${string}`,
+        });
+        this.onMetric("getRequests");
         if (orders.length > 0) {
           const cancels = orders.map((o) => {
             const c = this.coins.find((c) => c.name === o.coin);
@@ -274,8 +295,12 @@ export class StressInstance {
           });
           try {
             await this.walletClient.cancel({ cancels });
-            this.onMetric('postRequests');
-            this.log('cancel', 'success', `Cancelled ${cancels.length} open orders`);
+            this.onMetric("postRequests");
+            this.log(
+              "cancel",
+              "success",
+              `Cancelled ${cancels.length} open orders`,
+            );
           } catch {
             // 이미 취소되었을 수 있음
           }
@@ -286,30 +311,38 @@ export class StressInstance {
 
       // Place new limit order
       await this.walletClient.order({
-        orders: [{
-          a: coin.index,
-          b: true,
-          p: limitPrice,
-          s: orderSize,
-          r: false,
-          t: { limit: { tif: 'Gtc' } },
-        }],
-        grouping: 'na',
+        orders: [
+          {
+            a: coin.index,
+            b: true,
+            p: limitPrice,
+            s: orderSize,
+            r: false,
+            t: { limit: { tif: "Gtc" } },
+          },
+        ],
+        grouping: "na",
       });
-      this.onMetric('postRequests');
-      this.log('order', 'success', `${coin.name} buy ${orderSize} @ ${limitPrice}`);
+      this.onMetric("postRequests");
+      this.log(
+        "order",
+        "success",
+        `${coin.name} buy ${orderSize} @ ${limitPrice}`,
+      );
     } catch (err) {
-      this.onMetric('errors');
-          this.incrementErrors();
-          this.handleRateLimit(err);
-          this.log('order', 'fail', errorMessage(err));
+      this.onMetric("errors");
+      this.incrementErrors();
+      this.handleRateLimit(err);
+      this.log("order", "fail", errorMessage(err));
     }
   }
 
   /** Cancel all open orders via REST API query */
   private async cleanupOrders(): Promise<void> {
     try {
-      const orders = await this.publicClient.openOrders({ user: this.walletAddress as `0x${string}` });
+      const orders = await this.publicClient.openOrders({
+        user: this.walletAddress as `0x${string}`,
+      });
       if (orders.length === 0) return;
 
       const cancels = orders.map((o) => {
@@ -317,8 +350,12 @@ export class StressInstance {
         return { a: c?.index ?? 0, o: o.oid };
       });
       await this.walletClient.cancel({ cancels });
-      this.onMetric('postRequests');
-      this.log('cancel', 'success', `Cleanup: cancelled ${cancels.length} open orders`);
+      this.onMetric("postRequests");
+      this.log(
+        "cancel",
+        "success",
+        `Cleanup: cancelled ${cancels.length} open orders`,
+      );
     } catch {
       // ignore cleanup errors
     }
@@ -378,19 +415,19 @@ export class StressInstance {
 
     // Decrement metrics
     if (this.enableWs) {
-      this.onMetric('-wsConnections');
-      this.onMetric('-channelSubscriptions');
-      this.onMetric('-channelSubscriptions');
-      this.onMetric('-channelSubscriptions');
+      this.onMetric("-wsConnections");
+      this.onMetric("-channelSubscriptions");
+      this.onMetric("-channelSubscriptions");
+      this.onMetric("-channelSubscriptions");
     }
 
-    this.setState('stopped');
+    this.setState("stopped");
   }
 
   /** Start the instance: connect WS, subscribe channels, start loops */
   async start(): Promise<void> {
     try {
-      this.setState('connecting');
+      this.setState("connecting");
 
       await this.subscribeChannels();
 
@@ -398,14 +435,18 @@ export class StressInstance {
       this.startOrderLoop();
       this.startGetLoop();
 
-      this.setState('running');
+      this.setState("running");
       if (this.enableWs) {
-        this.onMetric('wsConnections');
+        this.onMetric("wsConnections");
       }
-      this.log('connect', 'success', `Instance started${this.enableWs ? '' : ' (WS off)'}`);
+      this.log(
+        "connect",
+        "success",
+        `Instance started${this.enableWs ? "" : " (WS off)"}`,
+      );
     } catch (err) {
-      this.setState('error');
-      this.log('connect', 'fail', `Start failed: ${errorMessage(err)}`);
+      this.setState("error");
+      this.log("connect", "fail", `Start failed: ${errorMessage(err)}`);
     }
   }
 
@@ -420,7 +461,7 @@ export class StressInstance {
     this.state = {
       ...this.state,
       status,
-      wsConnected: status === 'running' || status === 'connecting',
+      wsConnected: status === "running" || status === "connecting",
       channelCount: this.subscriptions.length,
       lastAction: `State → ${status}`,
     };
@@ -433,13 +474,17 @@ export class StressInstance {
 
   private handleRateLimit(err: unknown): void {
     const msg = errorMessage(err);
-    if (msg.includes('429') || msg.toLowerCase().includes('rate limit')) {
-      this.onMetric('rateLimits');
-      this.log('error', 'fail', `Rate limited: ${msg}`);
+    if (msg.includes("429") || msg.toLowerCase().includes("rate limit")) {
+      this.onMetric("rateLimits");
+      this.log("error", "fail", `Rate limited: ${msg}`);
     }
   }
 
-  private log(action: LogEntry['action'], result: LogEntry['result'], detail?: string): void {
+  private log(
+    action: LogEntry["action"],
+    result: LogEntry["result"],
+    detail?: string,
+  ): void {
     this.onLog({
       timestamp: new Date().toISOString(),
       instanceId: this.id,

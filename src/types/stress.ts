@@ -7,7 +7,12 @@ export interface CoinInfo {
 }
 
 /** 인스턴스 상태 */
-export type InstanceStatus = 'idle' | 'connecting' | 'running' | 'error' | 'stopped';
+export type InstanceStatus =
+  | "idle"
+  | "connecting"
+  | "running"
+  | "error"
+  | "stopped";
 
 export interface InstanceState {
   id: number;
@@ -33,17 +38,17 @@ export interface LogEntry {
   timestamp: string;
   instanceId: number;
   action: LogAction;
-  result: 'success' | 'fail';
+  result: "success" | "fail";
   detail?: string;
 }
 
 export type LogAction =
-  | 'connect'
-  | 'subscribe'
-  | 'leverage'
-  | 'order'
-  | 'cancel'
-  | 'error';
+  | "connect"
+  | "subscribe"
+  | "leverage"
+  | "order"
+  | "cancel"
+  | "error";
 
 /** Private key 검증 정규식 */
 export const PRIVATE_KEY_REGEX = /^0x[0-9a-fA-F]{64}$/;

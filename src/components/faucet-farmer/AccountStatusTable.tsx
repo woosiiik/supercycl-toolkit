@@ -23,8 +23,7 @@ function truncateHash(hash: string): string {
 const statusConfig: Record<string, { label: string; className: string }> = {
   idle: {
     label: "대기",
-    className:
-      "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300",
+    className: "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300",
   },
   pending: {
     label: "대기중",
@@ -43,8 +42,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   },
   failed: {
     label: "실패",
-    className:
-      "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+    className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
   },
 };
 
@@ -85,9 +83,7 @@ export default function AccountStatusTable({
               <th className="px-3 py-2 font-medium">Address</th>
               <th className="px-3 py-2 font-medium">Private Key</th>
               <th className="px-3 py-2 font-medium">Status</th>
-              {showAmount && (
-                <th className="px-3 py-2 font-medium">Amount</th>
-              )}
+              {showAmount && <th className="px-3 py-2 font-medium">Amount</th>}
               <th className="px-3 py-2 font-medium">Details</th>
             </tr>
           </thead>

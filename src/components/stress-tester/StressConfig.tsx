@@ -4,14 +4,22 @@ import { useState } from "react";
 import { PRIVATE_KEY_REGEX } from "@/types/stress";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { createWalletClient, custom } from "viem";
-import { WalletClient as HLWalletClient, HttpTransport } from "@nktkas/hyperliquid";
+import {
+  WalletClient as HLWalletClient,
+  HttpTransport,
+} from "@nktkas/hyperliquid";
 import { TESTNET_HTTP_URL } from "@/lib/stress/constants";
 import { getHyperliquidBalance } from "@/lib/faucet/balance";
 
 type AuthMode = "privateKey" | "metamask";
 
 interface StressConfigProps {
-  onStart: (privateKey: string, instanceCount: number, walletAddress?: string, enableWs?: boolean) => void;
+  onStart: (
+    privateKey: string,
+    instanceCount: number,
+    walletAddress?: string,
+    enableWs?: boolean,
+  ) => void;
   onStop: () => void;
   isRunning: boolean;
   canStart: boolean;
@@ -37,9 +45,12 @@ export default function StressConfig({
   const [testnetBalance, setTestnetBalance] = useState<string | null>(null);
 
   const isValidKey = PRIVATE_KEY_REGEX.test(privateKey);
-  const showError = authMode === "privateKey" && privateKey.length > 0 && !isValidKey;
+  const showError =
+    authMode === "privateKey" && privateKey.length > 0 && !isValidKey;
   const canStartTest =
-    authMode === "privateKey" ? isValidKey && canStart : agentKey !== null && canStart;
+    authMode === "privateKey"
+      ? isValidKey && canStart
+      : agentKey !== null && canStart;
 
   async function handleConnectMetaMask() {
     if (typeof window === "undefined" || !window.ethereum) {
@@ -54,7 +65,11 @@ export default function StressConfig({
       // MetaMask provider 찾기 (여러 지갑 확장이 있을 수 있음)
       let provider = window.ethereum;
       if ((window.ethereum as unknown as { providers?: unknown[] }).providers) {
-        const providers = (window.ethereum as unknown as { providers: Array<{ isMetaMask?: boolean }> }).providers;
+        const providers = (
+          window.ethereum as unknown as {
+            providers: Array<{ isMetaMask?: boolean }>;
+          }
+        ).providers;
         const mm = providers.find((p) => p.isMetaMask);
         if (mm) provider = mm as typeof window.ethereum;
       }
@@ -65,9 +80,9 @@ export default function StressConfig({
       }
 
       // 1. MetaMask 연결
-      const accounts = await provider!.request({
+      const accounts = (await provider!.request({
         method: "eth_requestAccounts",
-      }) as string[];
+      })) as string[];
       const address = accounts[0];
       setMmAddress(address);
 
@@ -164,7 +179,10 @@ export default function StressConfig({
       {/* Private Key Mode */}
       {authMode === "privateKey" && (
         <div className="flex flex-col gap-1">
-          <label htmlFor="stress-private-key" className="text-xs text-zinc-500 dark:text-zinc-400">
+          <label
+            htmlFor="stress-private-key"
+            className="text-xs text-zinc-500 dark:text-zinc-400"
+          >
             Private Key
           </label>
           <div className="relative">
@@ -211,7 +229,8 @@ export default function StressConfig({
                 {mmLoading ? "연결 중..." : "MetaMask 연결 + Agent 생성"}
               </button>
               <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                MetaMask로 연결 후 API Agent 계정을 자동 생성합니다 (서명 1회 필요)
+                MetaMask로 연결 후 API Agent 계정을 자동 생성합니다 (서명 1회
+                필요)
               </p>
             </div>
           ) : (
@@ -221,7 +240,10 @@ export default function StressConfig({
               </p>
               <div className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
                 <span>Master: {mmAddress}</span>
-                <span>Agent: {privateKeyToAccount(agentKey as `0x${string}`).address}</span>
+                <span>
+                  Agent:{" "}
+                  {privateKeyToAccount(agentKey as `0x${string}`).address}
+                </span>
                 {testnetBalance !== null && (
                   <span>테스트넷 USDC: {testnetBalance}</span>
                 )}
@@ -236,7 +258,10 @@ export default function StressConfig({
 
       {/* WebSocket Toggle */}
       <div className="flex items-center gap-3">
-        <label htmlFor="stress-ws-toggle" className="text-xs text-zinc-500 dark:text-zinc-400">
+        <label
+          htmlFor="stress-ws-toggle"
+          className="text-xs text-zinc-500 dark:text-zinc-400"
+        >
           WebSocket 연결
         </label>
         <button
@@ -245,7 +270,9 @@ export default function StressConfig({
           onClick={() => setEnableWs((prev) => !prev)}
           disabled={isRunning}
           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:opacity-50 ${
-            enableWs ? "bg-blue-600 dark:bg-blue-500" : "bg-zinc-300 dark:bg-zinc-600"
+            enableWs
+              ? "bg-blue-600 dark:bg-blue-500"
+              : "bg-zinc-300 dark:bg-zinc-600"
           }`}
         >
           <span
@@ -261,7 +288,10 @@ export default function StressConfig({
 
       {/* Instance Count */}
       <div className="flex flex-col gap-1">
-        <label htmlFor="stress-instance-count" className="text-xs text-zinc-500 dark:text-zinc-400">
+        <label
+          htmlFor="stress-instance-count"
+          className="text-xs text-zinc-500 dark:text-zinc-400"
+        >
           인스턴스 수 (N)
         </label>
         <input

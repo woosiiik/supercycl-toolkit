@@ -42,10 +42,7 @@ export default function RequestLog({ logs }: RequestLogProps) {
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-zinc-300 dark:border-zinc-600">
-      <div
-        ref={scrollRef}
-        className="max-h-80 overflow-y-auto"
-      >
+      <div ref={scrollRef} className="max-h-80 overflow-y-auto">
         <table className="w-full text-left text-sm">
           <thead className="sticky top-0 bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
             <tr>
@@ -63,12 +60,20 @@ export default function RequestLog({ logs }: RequestLogProps) {
                 key={log.requestNumber}
                 className="text-zinc-900 dark:text-zinc-100"
               >
-                <td className="px-3 py-1.5 tabular-nums">{log.requestNumber}</td>
-                <td className="px-3 py-1.5 tabular-nums">{formatTimestamp(log.timestamp)}</td>
-                <td className={`px-3 py-1.5 font-medium ${statusColor(log.statusCode)}`}>
+                <td className="px-3 py-1.5 tabular-nums">
+                  {log.requestNumber}
+                </td>
+                <td className="px-3 py-1.5 tabular-nums">
+                  {formatTimestamp(log.timestamp)}
+                </td>
+                <td
+                  className={`px-3 py-1.5 font-medium ${statusColor(log.statusCode)}`}
+                >
                   {log.statusCode}
                 </td>
-                <td className="px-3 py-1.5 tabular-nums">{log.responseTimeMs}</td>
+                <td className="px-3 py-1.5 tabular-nums">
+                  {log.responseTimeMs}
+                </td>
                 <td className="px-3 py-1.5 tabular-nums">{log.itemCount}</td>
                 <td className="px-3 py-1.5 tabular-nums">{log.weight}</td>
               </tr>

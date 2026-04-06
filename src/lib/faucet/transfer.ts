@@ -1,12 +1,18 @@
-import { createWalletClient, createPublicClient, http, parseUnits, parseAbi } from 'viem';
-import { arbitrum } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
+import {
+  createWalletClient,
+  createPublicClient,
+  http,
+  parseUnits,
+  parseAbi,
+} from "viem";
+import { arbitrum } from "viem/chains";
+import { privateKeyToAccount } from "viem/accounts";
 import {
   USDC_CONTRACT,
   USDC_ABI,
   USDC_DECIMALS,
   ARBITRUM_RPC,
-} from './constants';
+} from "./constants";
 
 const publicClient = createPublicClient({
   chain: arbitrum,
@@ -35,7 +41,7 @@ export async function transferUsdc(
   const txHash = await client.writeContract({
     address: USDC_CONTRACT,
     abi: usdcAbi,
-    functionName: 'transfer',
+    functionName: "transfer",
     args: [toAddress as `0x${string}`, amount],
   });
 

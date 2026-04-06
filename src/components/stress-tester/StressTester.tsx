@@ -1,10 +1,19 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import type { InstanceState, StressMetrics, LogEntry, MinuteMetrics } from "@/types/stress";
+import type {
+  InstanceState,
+  StressMetrics,
+  LogEntry,
+  MinuteMetrics,
+} from "@/types/stress";
 import { PRIVATE_KEY_REGEX } from "@/types/stress";
 import { createSharedPublicClient, fetchCoinList } from "@/lib/stress/coins";
-import { createMetrics, incrementMetric, decrementMetric } from "@/lib/stress/metrics";
+import {
+  createMetrics,
+  incrementMetric,
+  decrementMetric,
+} from "@/lib/stress/metrics";
 import { StressInstance } from "@/lib/stress/instance";
 import { MAX_LOG_ENTRIES } from "@/lib/stress/constants";
 import StressConfig from "./StressConfig";
@@ -53,7 +62,8 @@ export default function StressTester() {
           };
           prevSnapshotRef.current = { ...currentMetrics };
           setMinuteHistory((h) => {
-            if (h.length > 0 && h[h.length - 1].startTime === prevMinute) return h;
+            if (h.length > 0 && h[h.length - 1].startTime === prevMinute)
+              return h;
             return [...h, snap];
           });
           return currentMetrics;
@@ -67,7 +77,9 @@ export default function StressTester() {
   const handleMetric = useCallback((key: string) => {
     setMetrics((prev) => {
       if (key.startsWith("-")) {
-        const realKey = key.slice(1) as "wsConnections" | "channelSubscriptions";
+        const realKey = key.slice(1) as
+          | "wsConnections"
+          | "channelSubscriptions";
         return decrementMetric(prev, realKey);
       }
       return incrementMetric(prev, key as keyof StressMetrics);
@@ -91,7 +103,12 @@ export default function StressTester() {
   }, []);
 
   const handleStart = useCallback(
-    async (privateKey: string, instanceCount: number, walletAddress?: string, enableWs?: boolean) => {
+    async (
+      privateKey: string,
+      instanceCount: number,
+      walletAddress?: string,
+      enableWs?: boolean,
+    ) => {
       if (!PRIVATE_KEY_REGEX.test(privateKey)) {
         setError("유효한 private key를 입력해주세요");
         return;
@@ -123,8 +140,15 @@ export default function StressTester() {
 
       for (let i = 0; i < instanceCount; i++) {
         const instance = new StressInstance(
-          i, privateKey, publicClient, coins,
-          handleMetric, handleLog, handleStateChange, walletAddress, enableWs,
+          i,
+          privateKey,
+          publicClient,
+          coins,
+          handleMetric,
+          handleLog,
+          handleStateChange,
+          walletAddress,
+          enableWs,
         );
         newInstances.push(instance);
         initialStates.push(instance.getState());
@@ -180,7 +204,11 @@ export default function StressTester() {
         </div>
       )}
 
-      <MetricsDashboard metrics={metrics} isRunning={isRunning} minuteHistory={minuteHistory} />
+      <MetricsDashboard
+        metrics={metrics}
+        isRunning={isRunning}
+        minuteHistory={minuteHistory}
+      />
       <InstanceStatusList instances={instances} />
       <ActivityLog logs={logs} />
     </div>

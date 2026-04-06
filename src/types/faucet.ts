@@ -14,7 +14,12 @@ export interface MainAccountInfo {
 }
 
 /** 각 Sub_Account의 단계별 실행 상태 */
-export type AccountStepStatusType = 'idle' | 'pending' | 'running' | 'success' | 'failed';
+export type AccountStepStatusType =
+  | "idle"
+  | "pending"
+  | "running"
+  | "success"
+  | "failed";
 
 export interface AccountStepStatus {
   status: AccountStepStatusType;
@@ -33,12 +38,12 @@ export interface StepSummary {
 
 /** 실행 단계 열거 */
 export type FarmerStep =
-  | 'transfer'
-  | 'deposit'
-  | 'depositCheck'
-  | 'faucetClaim'
-  | 'testnetRecover'
-  | 'mainnetRecover';
+  | "transfer"
+  | "deposit"
+  | "depositCheck"
+  | "faucetClaim"
+  | "testnetRecover"
+  | "mainnetRecover";
 
 /** Faucet Farmer 전체 상태 */
 export interface FaucetFarmerState {

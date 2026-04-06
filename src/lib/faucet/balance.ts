@@ -1,5 +1,5 @@
-import { createPublicClient, http, formatUnits, parseAbi } from 'viem';
-import { arbitrum } from 'viem/chains';
+import { createPublicClient, http, formatUnits, parseAbi } from "viem";
+import { arbitrum } from "viem/chains";
 import {
   USDC_CONTRACT,
   USDC_ABI,
@@ -7,7 +7,7 @@ import {
   ARBITRUM_RPC,
   MAINNET_INFO_API,
   TESTNET_INFO_API,
-} from './constants';
+} from "./constants";
 
 const publicClient = createPublicClient({
   chain: arbitrum,
@@ -21,7 +21,7 @@ export async function getUsdcBalance(address: string): Promise<bigint> {
   const balance = await publicClient.readContract({
     address: USDC_CONTRACT,
     abi: usdcAbi,
-    functionName: 'balanceOf',
+    functionName: "balanceOf",
     args: [address as `0x${string}`],
   });
   return balance as bigint;
@@ -41,9 +41,9 @@ export async function getHyperliquidBalance(
 ): Promise<string> {
   const apiUrl = isTestnet ? TESTNET_INFO_API : MAINNET_INFO_API;
   const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'clearinghouseState', user: address }),
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "clearinghouseState", user: address }),
   });
 
   if (!response.ok) {
@@ -51,7 +51,7 @@ export async function getHyperliquidBalance(
   }
 
   const data = await response.json();
-  const accountValue = data?.marginSummary?.accountValue ?? '0';
+  const accountValue = data?.marginSummary?.accountValue ?? "0";
   return accountValue;
 }
 

@@ -29,7 +29,10 @@ import MainAccountInput from "./MainAccountInput";
 import StepPanel from "./StepPanel";
 import AccountStatusTable from "./AccountStatusTable";
 
-function createEmptyStatuses(): Record<FarmerStep, Map<string, AccountStepStatus>> {
+function createEmptyStatuses(): Record<
+  FarmerStep,
+  Map<string, AccountStepStatus>
+> {
   return {
     transfer: new Map(),
     deposit: new Map(),
@@ -86,9 +89,7 @@ export default function FaucetFarmer() {
   async function executeStep(
     step: FarmerStep,
     accounts: SubAccount[],
-    handler: (
-      account: SubAccount,
-    ) => Promise<{
+    handler: (account: SubAccount) => Promise<{
       success: boolean;
       txHash?: string;
       error?: string;
@@ -400,8 +401,7 @@ export default function FaucetFarmer() {
     {
       step: "mainnetRecover",
       title: "6. 메인넷 USDC 회수",
-      description:
-        "각 Sub Account의 메인넷 USDC를 Main Account로 회수합니다.",
+      description: "각 Sub Account의 메인넷 USDC를 Main Account로 회수합니다.",
       onExecute: handleMainnetRecover,
       needsMainAccount: true,
       showAmount: true,
@@ -425,7 +425,14 @@ export default function FaucetFarmer() {
       />
 
       {stepConfigs.map(
-        ({ step, title, description, onExecute, needsMainAccount, showAmount }) => {
+        ({
+          step,
+          title,
+          description,
+          onExecute,
+          needsMainAccount,
+          showAmount,
+        }) => {
           const isDisabled =
             !hasAccounts ||
             (needsMainAccount && !hasMainAccount) ||

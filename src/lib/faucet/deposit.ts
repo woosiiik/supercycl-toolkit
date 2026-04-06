@@ -1,7 +1,7 @@
-import { privateKeyToAccount } from 'viem/accounts';
-import { createPublicClient, http, parseAbi, parseUnits } from 'viem';
-import { arbitrum } from 'viem/chains';
-import type { PermitSignature } from '@/types/faucet';
+import { privateKeyToAccount } from "viem/accounts";
+import { createPublicClient, http, parseAbi, parseUnits } from "viem";
+import { arbitrum } from "viem/chains";
+import type { PermitSignature } from "@/types/faucet";
 import {
   USDC_CONTRACT,
   USDC_ABI,
@@ -11,7 +11,7 @@ import {
   PERMIT_TYPES,
   DEPOSIT_API,
   USDC_DECIMALS,
-} from './constants';
+} from "./constants";
 
 const publicClient = createPublicClient({
   chain: arbitrum,
@@ -25,7 +25,7 @@ export async function getNonce(owner: string): Promise<bigint> {
   const nonce = await publicClient.readContract({
     address: USDC_CONTRACT,
     abi: usdcAbi,
-    functionName: 'nonces',
+    functionName: "nonces",
     args: [owner as `0x${string}`],
   });
   return nonce as bigint;
@@ -44,7 +44,7 @@ export async function signPermit(
   const signatureHex = await account.signTypedData({
     domain: PERMIT_DOMAIN,
     types: PERMIT_TYPES,
-    primaryType: 'Permit',
+    primaryType: "Permit",
     message: {
       owner: owner as `0x${string}`,
       spender: BRIDGE_ADDRESS,
@@ -56,7 +56,7 @@ export async function signPermit(
 
   // Split signature: r (32 bytes), s (32 bytes), v (1 byte)
   const r = signatureHex.slice(0, 66);
-  const s = ('0x' + signatureHex.slice(66, 130)) as string;
+  const s = ("0x" + signatureHex.slice(66, 130)) as string;
   const vRaw = parseInt(signatureHex.slice(130, 132), 16);
   const v = vRaw < 27 ? vRaw + 27 : vRaw;
 
@@ -72,10 +72,10 @@ export async function submitDeposit(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const response = await fetch(DEPOSIT_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        type: 'depositWithPermit',
+        type: "depositWithPermit",
         user: user.toLowerCase(),
         usd,
         deadline,
@@ -109,21 +109,27 @@ export async function depositWithPermit(
   address: string,
 ): Promise<{ success: boolean; error?: string }> {
   // 전액 deposit: Sub Account의 USDC 잔액 전체를 사용
-  const balance = await publicClient.readContract({
+  const balance = (await publicClient.readContract({
     address: USDC_CONTRACT,
     abi: usdcAbi,
-    functionName: 'balanceOf',
+    functionName: "balanceOf",
     args: [address as `0x${string}`],
-  }) as bigint;
+  })) as bigint;
 
   if (balance === BigInt(0)) {
-    return { success: false, error: 'USDC 잔액 없음' };
+    return { success: false, error: "USDC 잔액 없음" };
   }
 
   const nonce = await getNonce(address);
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
 
-  const signature = await signPermit(privateKey, address, balance, nonce, deadline);
+  const signature = await signPermit(
+    privateKey,
+    address,
+    balance,
+    nonce,
+    deadline,
+  );
 
   return submitDeposit(address, Number(balance), Number(deadline), signature);
 }
