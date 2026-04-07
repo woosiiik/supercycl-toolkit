@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Youthmeta 연동 테스터 (Form POST)</title>
+    <title>Youthmeta 연동 테스터</title>
     <style>
       * {
         box-sizing: border-box;
@@ -141,6 +141,7 @@
   <select id="urlPreset" onchange="document.getElementById('targetUrl').value = this.value" style="width:100%; border:1px solid #d4d4d8; border-radius:0.375rem; padding:0.375rem 0.75rem; font-size:0.875rem; background:#fff; margin-bottom:0.375rem;">
     <option value="https://aggr-dev.supercycl.io">https://aggr-dev.supercycl.io (데브넷)</option>
     <option value="https://aggr-stg.supercycl.io">https://aggr-stg.supercycl.io (스테이징)</option>
+    <option value="https://preview.supercycl.io">https://preview.supercycl.io (메인넷-프리뷰)</option>
     <option value="https://app.supercycl.io">https://app.supercycl.io (메인넷)</option>
     <option value="http://localhost:3001">http://localhost:3001 (로컬)</option>
   </select>
@@ -183,13 +184,14 @@ DwIDAQAB
 }</textarea
   >
   <div style="font-size:0.75rem; color:#dc2626; margin-top:0.25rem; font-weight:500;">
-    * uid를 변경하시오. uid가 중복되는 경우 이전 사용자의 Youthmeta 계정이 disable 처리 됩니다.
+    * uid를 변경하시오. uid가 중복되는 경우 이전 사용자의 Youthmeta 계정이 disable 처리 됩니다.<br>
+    * userid도 취향것 변경하면 세팅에서 변경된 id를 확인 할 수 있음.
   </div>
 </div>
 
 <div class="buttons">
   <button class="btn-primary" id="sendBtn" onclick="handleSend()">
-    슈퍼사이클로 이동 (Form POST)
+    슈퍼사이클로 이동
   </button>
   <button class="btn-secondary" onclick="handleReset()">초기화</button>
 </div>
@@ -240,8 +242,12 @@ DwIDAQAB
           .setProtectedHeader({ alg: 'RSA-OAEP-256', enc: 'A256GCM' })
           .encrypt(key);
 
-        // action URL
-        const urlObj = new URL(targetUrl);
+        // action URL — 프로토콜이 없으면 https:// 추가
+        let fullTargetUrl = targetUrl;
+        if (!/^https?:\/\//i.test(fullTargetUrl)) {
+          fullTargetUrl = 'https://' + fullTargetUrl;
+        }
+        const urlObj = new URL(fullTargetUrl);
         const actionUrl = `${urlObj.origin}/api/ym?partner=${encodeURIComponent(partner)}`;
 
         // 결과 표시
