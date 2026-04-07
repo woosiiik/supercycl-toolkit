@@ -45,6 +45,7 @@ export const tools: ToolConfig[] = [
     description:
       "Youthmeta 연동용 PostMessage 테스트 도구입니다.\n" +
       "Supercycl 웹사이트를 새 탭으로 열고 JWE 암호화된 사용자 데이터를 postMessage로 전송합니다.\n" +
-      "RSA 공개키로 데이터를 JWE 암호화(RSA-OAEP-256 + A256GCM)한 후, 새 탭이 ready 신호를 보내면 전송합니다.",
+      "RSA 공개키로 데이터를 JWE 암호화(RSA-OAEP-256 + A256GCM)한 후, 새 탭이 ready 신호를 보내면 전송합니다.\n" +
+      "참고: https://icon-project.atlassian.net/wiki/spaces/SuperCycl/pages/4168024074/Design+-+UTM+Referral+Affiliate#Youthmeta-%ED%9A%8C%EC%9B%90-%EA%B0%80%EC%9E%85-%EB%B0%8F-%ED%9A%8C%EC%9B%90-%EC%A0%95%EB%B3%B4-%EC%88%98%EB%A0%B9",
   },
 ];
