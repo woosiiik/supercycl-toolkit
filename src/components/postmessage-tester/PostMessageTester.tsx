@@ -41,13 +41,15 @@ const DEFAULT_PUBLIC_KEY =
   "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz4ZBbxtzHKUvU3GeXtOC\nuKpAbhiJHSKt/kgig4QMeT0n3wr6zwKWZomz70smvEVZkoX12Aqqdgj8J9MxMzO2\nSFR+OgRn+XLvK182XMxeHWQpk9+ULEaOPOAYWSYo2ao8gsCsJdKT3TakTHtmrh2V\nVcAj2UZvTfro1lPbGu+Sve4Rlbi6xyA/BliwvnVVHTf4DQZmvopDsY002nAwTjdr\nAUswGWRBZTeKUwXk7mWBsoWvtgnnRUHsnW+qQpu6RCRZuGyIrWecbynTRCNMlY/A\nkkQaaWMVL8xR9Mi6LrR0S4XLlV5fR1alQEm1oeNE4du95FtPSIMQkGYCkSTESjbM\nDwIDAQAB\n-----END PUBLIC KEY-----";
 const DEFAULT_PLAINTEXT = JSON.stringify(
   {
-    Platform: "ex",
-    uid: 12345,
-    userid: "testuser_ym",
-    temp: 1775446490,
-    nonce: "e2e-test-nonce-001",
-    sc_price: 3000,
-    end_date: "2026-05-06",
+    data: {
+      platform: "ex",
+      uid: 12345,
+      userid: "testuser_ym",
+      temp: 1775446490,
+      nonce: "e2e-test-nonce-001",
+      sc_price: 3000,
+      end_date: "2026-05-06",
+    },
   },
   null,
   2,
