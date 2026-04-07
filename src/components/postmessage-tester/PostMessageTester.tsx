@@ -85,6 +85,7 @@ export default function PostMessageTester() {
   const [step, setStep] = useState<
     "idle" | "encrypting" | "opening" | "waiting" | "sent" | "timeout"
   >(saved?.step ?? "idle");
+  const [messageLogs, setMessageLogs] = useState<string[]>([]);
   const newTabRef = useRef<Window | null>(null);
 
   // localStorage에 상태 저장
@@ -131,6 +132,7 @@ export default function PostMessageTester() {
     setJwePreview(null);
     setCalledUrl(null);
     setStep("idle");
+    setMessageLogs([]);
     localStorage.removeItem(STORAGE_KEY);
   }
 
@@ -198,9 +200,23 @@ export default function PostMessageTester() {
 
       // 메시지 핸들러
       const onMessage = (event: MessageEvent) => {
-        if (event.origin !== targetOrigin) return;
+        // 모든 수신 메시지 로그
+        const dataStr =
+          typeof event.data === "string"
+            ? event.data
+            : JSON.stringify(event.data);
+        setMessageLogs((prev) => [
+          ...prev.slice(-19),
+          `[${new Date().toLocaleTimeString()}] origin=${event.origin} data=${dataStr.slice(0, 200)}`,
+        ]);
 
-        if (event.data === "ready") {
+        // origin 체크 생략 — localhost 테스트 및 상대방이 "*"로 보내는 경우 지원
+        // "ready" 문자열 또는 { type: "ready" } 객체 모두 처리
+        const isReady =
+          event.data === "ready" ||
+          (typeof event.data === "object" && event.data?.type === "ready");
+
+        if (isReady) {
           newTab.postMessage(jwe, targetOrigin);
           window.removeEventListener("message", onMessage);
           setStep("sent");
@@ -396,6 +412,18 @@ export default function PostMessageTester() {
       {error && (
         <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-300">
           {error}
+        </div>
+      )}
+
+      {/* PostMessage 수신 로그 */}
+      {messageLogs.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            수신된 postMessage 로그
+          </span>
+          <pre className="max-h-40 overflow-auto rounded bg-zinc-100 p-2 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+            {messageLogs.join("\n")}
+          </pre>
         </div>
       )}
     </div>
