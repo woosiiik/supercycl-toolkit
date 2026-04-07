@@ -5,6 +5,7 @@ import RateLimitTester from "@/components/rate-limit/RateLimitTester";
 import FaucetFarmer from "@/components/faucet-farmer/FaucetFarmer";
 import StressTester from "@/components/stress-tester/StressTester";
 import JweDecoder from "@/components/jwe-decoder/JweDecoder";
+import PostMessageTester from "@/components/postmessage-tester/PostMessageTester";
 
 export default async function ToolPage({
   params,
@@ -30,6 +31,8 @@ export default async function ToolPage({
           <StressTester />
         ) : slug === "jwe-decoder" ? (
           <JweDecoder />
+        ) : slug === "postmessage-tester" ? (
+          <PostMessageTester />
         ) : (
           <p className="text-gray-500">준비 중입니다.</p>
         )}

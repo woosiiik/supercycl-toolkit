@@ -39,4 +39,12 @@ export const tools: ToolConfig[] = [
       "JWE(JSON Web Encryption) Compact Serialization으로 암호화된 데이터를 RSA private key로 복호화합니다.\n" +
       "알고리즘: RSA-OAEP + A256GCM, RSA 2048bit PEM 또는 JWK 형식의 private key를 지원합니다.",
   },
+  {
+    slug: "postmessage-tester",
+    name: "Youthmeta 연동 테스터",
+    description:
+      "Youthmeta 연동용 PostMessage 테스트 도구입니다.\n" +
+      "Supercycl 웹사이트를 새 탭으로 열고 JWE 암호화된 사용자 데이터를 postMessage로 전송합니다.\n" +
+      "RSA 공개키로 데이터를 JWE 암호화(RSA-OAEP-256 + A256GCM)한 후, 새 탭이 ready 신호를 보내면 전송합니다.",
+  },
 ];
