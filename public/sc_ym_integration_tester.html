@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Youthmeta 연동 테스터 (Form POST)</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f9fafb;
+        color: #18181b;
+        padding: 2rem;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+      .desc {
+        font-size: 0.875rem;
+        color: #71717a;
+        margin-bottom: 1.5rem;
+        white-space: pre-line;
+      }
+      .desc a {
+        color: #2563eb;
+      }
+      label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #3f3f46;
+        margin-bottom: 0.25rem;
+      }
+      input[type="text"],
+      textarea {
+        width: 100%;
+        border: 1px solid #d4d4d8;
+        border-radius: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+        font-family: monospace;
+        background: #fff;
+      }
+      textarea {
+        resize: vertical;
+      }
+      .field {
+        margin-bottom: 1rem;
+      }
+      .field-sm {
+        width: 16rem;
+      }
+      .buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      button {
+        border: none;
+        border-radius: 0.375rem;
+        padding: 0.375rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .btn-primary {
+        background: #2563eb;
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: #1d4ed8;
+      }
+      .btn-primary:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .btn-secondary {
+        background: #fff;
+        color: #3f3f46;
+        border: 1px solid #d4d4d8;
+      }
+      .btn-secondary:hover {
+        background: #f4f4f5;
+      }
+      .result {
+        margin-top: 1rem;
+      }
+      .result-label {
+        font-size: 0.75rem;
+        color: #71717a;
+        margin-bottom: 0.25rem;
+      }
+      .result-box {
+        background: #f4f4f5;
+        border-radius: 0.375rem;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+        font-family: monospace;
+        word-break: break-all;
+        white-space: pre-wrap;
+        max-height: 8rem;
+        overflow: auto;
+      }
+      .error {
+        background: #fef2f2;
+        border: 1px solid #fca5a5;
+        color: #b91c1c;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        font-size: 0.875rem;
+        margin-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Youthmeta 연동 테스터 (Form POST)</h1>
+    <div class="desc">
+      Youthmeta 연동용 Form POST 방식 테스트 도구입니다. JWE 암호화된 데이터를
+      hidden form으로 Supercycl /api/ym 엔드포인트에 POST 전송합니다. 서버에서
+      JWE를 쿠키에 저장하고 메인 페이지로 리다이렉트합니다.
+      <a
+        href="https://icon-project.atlassian.net/wiki/spaces/SuperCycl/pages/4168024074/Design+-+UTM+Referral+Affiliate#Youthmeta-%ED%9A%8C%EC%9B%90-%EA%B0%80%EC%9E%85-%EB%B0%8F-%ED%9A%8C%EC%9B%90-%EC%A0%95%EB%B3%B4-%EC%88%98%EB%A0%B9"
+        target="_blank"
+        >참고 문서</a
+      >
+    </div>
+  </body>
+</html>
+
+<div class="field">
+  <label for="targetUrl">대상 URL</label>
+  <select id="urlPreset" onchange="document.getElementById('targetUrl').value = this.value" style="width:100%; border:1px solid #d4d4d8; border-radius:0.375rem; padding:0.375rem 0.75rem; font-size:0.875rem; background:#fff; margin-bottom:0.375rem;">
+    <option value="https://aggr-dev.supercycl.io">https://aggr-dev.supercycl.io (데브넷)</option>
+    <option value="https://aggr-stg.supercycl.io">https://aggr-stg.supercycl.io (스테이징)</option>
+    <option value="https://app.supercycl.io">https://app.supercycl.io (메인넷)</option>
+    <option value="http://localhost:3001">http://localhost:3001 (로컬)</option>
+  </select>
+  <input type="text" id="targetUrl" value="https://aggr-dev.supercycl.io" />
+</div>
+
+<div class="field">
+  <label for="partner">Partner (URL 파라미터)</label>
+  <input type="text" id="partner" value="Youthmeta" class="field-sm" />
+</div>
+
+<div class="field">
+  <label for="publicKey">RSA Public Key (PEM 또는 JWK)</label>
+  <textarea id="publicKey" rows="10">
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz4ZBbxtzHKUvU3GeXtOC
+uKpAbhiJHSKt/kgig4QMeT0n3wr6zwKWZomz70smvEVZkoX12Aqqdgj8J9MxMzO2
+SFR+OgRn+XLvK182XMxeHWQpk9+ULEaOPOAYWSYo2ao8gsCsJdKT3TakTHtmrh2V
+VcAj2UZvTfro1lPbGu+Sve4Rlbi6xyA/BliwvnVVHTf4DQZmvopDsY002nAwTjdr
+AUswGWRBZTeKUwXk7mWBsoWvtgnnRUHsnW+qQpu6RCRZuGyIrWecbynTRCNMlY/A
+kkQaaWMVL8xR9Mi6LrR0S4XLlV5fR1alQEm1oeNE4du95FtPSIMQkGYCkSTESjbM
+DwIDAQAB
+-----END PUBLIC KEY-----</textarea
+  >
+</div>
+
+<div class="field">
+  <label for="plaintext">암호화할 데이터</label>
+  <textarea id="plaintext" rows="14">
+{
+  "data": {
+    "platform": "ex",
+    "uid": 12345,
+    "userid": "testuser_ym",
+    "temp": 1775446490,
+    "nonce": "e2e-test-nonce-001",
+    "sc_price": 3000,
+    "end_date": "2026-05-06"
+  }
+}</textarea
+  >
+  <div style="font-size:0.75rem; color:#dc2626; margin-top:0.25rem; font-weight:500;">
+    * uid를 변경하시오. uid가 중복되는 경우 이전 사용자의 Youthmeta 계정이 disable 처리 됩니다.
+  </div>
+</div>
+
+<div class="buttons">
+  <button class="btn-primary" id="sendBtn" onclick="handleSend()">
+    슈퍼사이클로 이동 (Form POST)
+  </button>
+  <button class="btn-secondary" onclick="handleReset()">초기화</button>
+</div>
+
+<div id="results"></div>
+<div id="errorBox"></div>
+
+<!-- Hidden form for POST -->
+<form id="handoffForm" method="POST" target="_blank" style="display: none">
+  <input type="hidden" name="jwe" id="jweInput" />
+</form>
+
+  <script type="module">
+    import { CompactEncrypt, importSPKI, importJWK } from 'https://cdn.jsdelivr.net/npm/jose@6.0.11/+esm';
+
+    window.handleSend = async function() {
+      const resultsEl = document.getElementById('results');
+      const errorEl = document.getElementById('errorBox');
+      const sendBtn = document.getElementById('sendBtn');
+      resultsEl.innerHTML = '';
+      errorEl.innerHTML = '';
+      sendBtn.disabled = true;
+      sendBtn.textContent = '처리 중...';
+
+      try {
+        const targetUrl = document.getElementById('targetUrl').value.trim();
+        const partner = document.getElementById('partner').value.trim();
+        const publicKeyText = document.getElementById('publicKey').value.trim();
+        const plaintext = document.getElementById('plaintext').value.trim();
+
+        if (!targetUrl || !publicKeyText || !plaintext) {
+          throw new Error('URL, 공개키, 데이터를 모두 입력해주세요');
+        }
+
+        // Public key 파싱
+        let key;
+        if (publicKeyText.startsWith('-----BEGIN')) {
+          key = await importSPKI(publicKeyText, 'RSA-OAEP-256');
+        } else if (publicKeyText.startsWith('{')) {
+          key = await importJWK(JSON.parse(publicKeyText), 'RSA-OAEP-256');
+        } else {
+          throw new Error('PEM 또는 JWK 형식의 공개키를 입력해주세요');
+        }
+
+        // JWE 암호화
+        const encoder = new TextEncoder();
+        const jwe = await new CompactEncrypt(encoder.encode(plaintext))
+          .setProtectedHeader({ alg: 'RSA-OAEP-256', enc: 'A256GCM' })
+          .encrypt(key);
+
+        // action URL
+        const urlObj = new URL(targetUrl);
+        const actionUrl = `${urlObj.origin}/api/ym?partner=${encodeURIComponent(partner)}`;
+
+        // 결과 표시
+        resultsEl.innerHTML = `
+          <div class="result">
+            <div class="result-label">Form POST URL</div>
+            <div class="result-box">${actionUrl}</div>
+          </div>
+          <div class="result">
+            <div class="result-label">생성된 JWE</div>
+            <div class="result-box">${jwe}</div>
+          </div>
+        `;
+
+        // form submit
+        const form = document.getElementById('handoffForm');
+        form.action = actionUrl;
+        document.getElementById('jweInput').value = jwe;
+        form.submit();
+
+      } catch (err) {
+        errorEl.innerHTML = `<div class="error">${err.message}</div>`;
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = '슈퍼사이클로 이동 (Form POST)';
+      }
+    };
+
+    window.handleReset = function() {
+      document.getElementById('targetUrl').value = 'https://aggr-dev.supercycl.io';
+      document.getElementById('partner').value = 'Youthmeta';
+      document.getElementById('publicKey').value = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz4ZBbxtzHKUvU3GeXtOC
+uKpAbhiJHSKt/kgig4QMeT0n3wr6zwKWZomz70smvEVZkoX12Aqqdgj8J9MxMzO2
+SFR+OgRn+XLvK182XMxeHWQpk9+ULEaOPOAYWSYo2ao8gsCsJdKT3TakTHtmrh2V
+VcAj2UZvTfro1lPbGu+Sve4Rlbi6xyA/BliwvnVVHTf4DQZmvopDsY002nAwTjdr
+AUswGWRBZTeKUwXk7mWBsoWvtgnnRUHsnW+qQpu6RCRZuGyIrWecbynTRCNMlY/A
+kkQaaWMVL8xR9Mi6LrR0S4XLlV5fR1alQEm1oeNE4du95FtPSIMQkGYCkSTESjbM
+DwIDAQAB
+-----END PUBLIC KEY-----`;
+      document.getElementById('plaintext').value = JSON.stringify({
+        data: {
+          platform: "ex",
+          uid: 12345,
+          userid: "testuser_ym",
+          temp: 1775446490,
+          nonce: "e2e-test-nonce-001",
+          sc_price: 3000,
+          end_date: "2026-05-06"
+        }
+      }, null, 2);
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('errorBox').innerHTML = '';
+    };
+  </script>
+</body>
+</html>
