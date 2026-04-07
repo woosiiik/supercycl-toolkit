@@ -41,11 +41,20 @@ export const tools: ToolConfig[] = [
   },
   {
     slug: "postmessage-tester",
-    name: "Youthmeta 연동 테스터",
+    name: "Youthmeta 연동 테스터 (PostMessage)",
     description:
       "Youthmeta 연동용 PostMessage 테스트 도구입니다.\n" +
       "Supercycl 웹사이트를 새 탭으로 열고 JWE 암호화된 사용자 데이터를 postMessage로 전송합니다.\n" +
       "RSA 공개키로 데이터를 JWE 암호화(RSA-OAEP-256 + A256GCM)한 후, 새 탭이 ready 신호를 보내면 전송합니다.\n" +
+      "참고: https://icon-project.atlassian.net/wiki/spaces/SuperCycl/pages/4168024074/Design+-+UTM+Referral+Affiliate#Youthmeta-%ED%9A%8C%EC%9B%90-%EA%B0%80%EC%9E%85-%EB%B0%8F-%ED%9A%8C%EC%9B%90-%EC%A0%95%EB%B3%B4-%EC%88%98%EB%A0%B9",
+  },
+  {
+    slug: "handoff-tester",
+    name: "Youthmeta 연동 테스터 (Form POST)",
+    description:
+      "Youthmeta 연동용 Form POST 방식 테스트 도구입니다.\n" +
+      "JWE 암호화된 데이터를 hidden form으로 Supercycl /api/handoff 엔드포인트에 POST 전송합니다.\n" +
+      "서버에서 JWE를 쿠키에 저장하고 메인 페이지로 리다이렉트합니다.\n" +
       "참고: https://icon-project.atlassian.net/wiki/spaces/SuperCycl/pages/4168024074/Design+-+UTM+Referral+Affiliate#Youthmeta-%ED%9A%8C%EC%9B%90-%EA%B0%80%EC%9E%85-%EB%B0%8F-%ED%9A%8C%EC%9B%90-%EC%A0%95%EB%B3%B4-%EC%88%98%EB%A0%B9",
   },
 ];
