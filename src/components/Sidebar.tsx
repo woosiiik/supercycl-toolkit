@@ -8,13 +8,13 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-56 shrink-0 border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+    <aside className="flex w-56 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="px-4 py-5">
         <h1 className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
           Supercycl Toolkit
         </h1>
       </div>
-      <nav className="flex flex-col gap-0.5 px-2 pb-4">
+      <nav className="flex flex-1 flex-col gap-0.5 px-2 pb-4">
         {tools.map((tool) => {
           const href = `/tools/${tool.slug}`;
           const isActive = pathname === href;
@@ -34,6 +34,9 @@ export default function Sidebar() {
           );
         })}
       </nav>
+      <div className="px-4 py-3 text-xs text-zinc-400 dark:text-zinc-600">
+        v1.0.0
+      </div>
     </aside>
   );
 }
