@@ -177,7 +177,7 @@ export default function StressTester() {
       (async () => {
         for (const instance of newInstances) {
           startWithRetry(instance); // fire-and-forget — 각 인스턴스가 독립적으로 재시도
-          await new Promise((r) => setTimeout(r, 3000));
+          await new Promise((r) => setTimeout(r, 1000));
         }
       })();
     },
