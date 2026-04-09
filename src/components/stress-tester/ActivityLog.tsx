@@ -40,6 +40,11 @@ const actionConfig: Record<LogAction, { label: string; className: string }> = {
     className:
       "bg-orange-200 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
   },
+  query: {
+    label: "조회",
+    className:
+      "bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-300",
+  },
   error: {
     label: "에러",
     className: "bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-300",

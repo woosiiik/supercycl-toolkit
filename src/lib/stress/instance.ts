@@ -250,11 +250,11 @@ export class StressInstance {
       if (choice < 0.5) {
         await fetchAllMids(this.publicClient);
         this.onMetric("getRequests");
-        this.log("subscribe", "success", "GET allMids");
+        this.log("query", "success", "GET allMids");
       } else {
         await this.publicClient.meta();
         this.onMetric("getRequests");
-        this.log("subscribe", "success", "GET meta");
+        this.log("query", "success", "GET meta");
       }
     } catch (err) {
       this.onMetric("errors");

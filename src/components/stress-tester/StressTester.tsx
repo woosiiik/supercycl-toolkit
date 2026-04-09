@@ -47,10 +47,10 @@ export default function StressTester() {
     const interval = setInterval(() => {
       const currentMinute = getMinuteKey();
       if (currentMinute !== prevMinuteRef.current) {
-        // 즉시 업데이트하여 다음 tick에서 중복 감지 방지
         const prevMinute = prevMinuteRef.current;
         prevMinuteRef.current = currentMinute;
 
+        // 현재 metrics를 ref로 직접 읽어서 delta 계산
         setMetrics((currentMetrics) => {
           const prev = prevSnapshotRef.current;
           const snap: MinuteMetrics = {
@@ -63,10 +63,9 @@ export default function StressTester() {
             wsRateLimits: currentMetrics.wsRateLimits - prev.wsRateLimits,
           };
           prevSnapshotRef.current = { ...currentMetrics };
-          setMinuteHistory((h) => {
-            if (h.length > 0 && h[h.length - 1].startTime === prevMinute)
-              return h;
-            return [...h, snap];
+          // 별도 queueMicrotask로 history 업데이트 (batching 회피)
+          queueMicrotask(() => {
+            setMinuteHistory((h) => [...h, snap]);
           });
           return currentMetrics;
         });
@@ -160,24 +159,22 @@ export default function StressTester() {
       setInstances(initialStates);
       setIsRunning(true);
 
-      // 순차적으로 500ms 간격으로 시작, 실패 시 재시도
-      const startWithRetry = async (instance: StressInstance, retries = 3) => {
-        for (let attempt = 0; attempt < retries; attempt++) {
+      // 순차적으로 3초 간격으로 시작, 실패 시 5초 후 무한 재시도
+      const startWithRetry = async (instance: StressInstance) => {
+        while (!instance.getState().status.match(/running|stopped/)) {
           try {
             await instance.start();
             return;
           } catch {
-            if (attempt < retries - 1) {
-              await new Promise((r) => setTimeout(r, 3000));
-            }
+            await new Promise((r) => setTimeout(r, 5000));
           }
         }
       };
 
       (async () => {
         for (const instance of newInstances) {
-          await startWithRetry(instance);
-          await new Promise((r) => setTimeout(r, 500));
+          startWithRetry(instance); // fire-and-forget — 각 인스턴스가 독립적으로 재시도
+          await new Promise((r) => setTimeout(r, 3000));
         }
       })();
     },

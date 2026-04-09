@@ -50,6 +50,7 @@ export type LogAction =
   | "leverage"
   | "order"
   | "cancel"
+  | "query"
   | "error";
 
 /** Private key 검증 정규식 */

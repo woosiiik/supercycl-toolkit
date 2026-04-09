@@ -26,23 +26,23 @@ const metricCards: {
   },
   {
     key: "getRequests",
-    label: "GET 요청",
+    label: "Public 요청",
     color: "text-green-600 dark:text-green-400",
   },
   {
     key: "postRequests",
-    label: "POST 요청",
+    label: "Private 요청",
     color: "text-cyan-600 dark:text-cyan-400",
   },
   { key: "errors", label: "에러", color: "text-red-600 dark:text-red-400" },
   {
     key: "getRateLimits",
-    label: "GET Rate-Limit",
+    label: "Public RL",
     color: "text-yellow-600 dark:text-yellow-400",
   },
   {
     key: "postRateLimits",
-    label: "POST Rate-Limit",
+    label: "Private RL",
     color: "text-amber-600 dark:text-amber-400",
   },
   {
@@ -101,11 +101,11 @@ export default function MetricsDashboard({
               <thead className="sticky top-0 bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                 <tr>
                   <th className="px-3 py-1.5 font-medium">시간</th>
-                  <th className="px-3 py-1.5 font-medium">GET</th>
-                  <th className="px-3 py-1.5 font-medium">POST</th>
+                  <th className="px-3 py-1.5 font-medium">Public</th>
+                  <th className="px-3 py-1.5 font-medium">Private</th>
                   <th className="px-3 py-1.5 font-medium">에러</th>
-                  <th className="px-3 py-1.5 font-medium">GET RL</th>
-                  <th className="px-3 py-1.5 font-medium">POST RL</th>
+                  <th className="px-3 py-1.5 font-medium">Public RL</th>
+                  <th className="px-3 py-1.5 font-medium">Private RL</th>
                   <th className="px-3 py-1.5 font-medium">WS RL</th>
                 </tr>
               </thead>
