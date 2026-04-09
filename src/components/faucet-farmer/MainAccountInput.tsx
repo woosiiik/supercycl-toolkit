@@ -27,7 +27,14 @@ export default function MainAccountInput({
   const [accountInfo, setAccountInfo] = useState<MainAccountInfo | null>(null);
   const [rawUsdcBalance, setRawUsdcBalance] = useState<bigint | null>(null);
 
-  const isValidKey = /^0x[0-9a-fA-F]{64}$/.test(privateKey);
+  const isValidKey = /^(0x)?[0-9a-fA-F]{64}$/.test(privateKey);
+
+  function normalizeKey(key: string): `0x${string}` {
+    const trimmed = key.trim();
+    if (/^[0-9a-fA-F]{64}$/.test(trimmed))
+      return `0x${trimmed}` as `0x${string}`;
+    return trimmed as `0x${string}`;
+  }
 
   async function handleConfirm() {
     if (!isValidKey) return;
@@ -38,7 +45,8 @@ export default function MainAccountInput({
     setRawUsdcBalance(null);
 
     try {
-      const account = privateKeyToAccount(privateKey as `0x${string}`);
+      const normalizedKey = normalizeKey(privateKey);
+      const account = privateKeyToAccount(normalizedKey);
       const address = account.address;
 
       const [usdcRaw, ethRaw] = await Promise.all([
@@ -48,7 +56,7 @@ export default function MainAccountInput({
 
       const info: MainAccountInfo = {
         address,
-        privateKey,
+        privateKey: normalizedKey,
         usdcBalance: formatUsdcBalance(usdcRaw),
         ethBalance: formatEthBalance(ethRaw),
       };

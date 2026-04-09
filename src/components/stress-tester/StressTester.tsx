@@ -160,14 +160,16 @@ export default function StressTester() {
       setInstances(initialStates);
       setIsRunning(true);
 
-      // 순차적으로 3초 간격으로 시작, 실패 시 5초 후 무한 재시도
+      // 순차적으로 3초 간격으로 시작, 실패 시 5~15초 랜덤 간격으로 무한 재시도
       const startWithRetry = async (instance: StressInstance) => {
         while (!instance.getState().status.match(/running|stopped/)) {
           try {
             await instance.start();
             return;
           } catch {
-            await new Promise((r) => setTimeout(r, 5000));
+            // 5~15초 랜덤 대기 (동시 재시도 방지)
+            const jitter = 5000 + Math.floor(Math.random() * 10000);
+            await new Promise((r) => setTimeout(r, jitter));
           }
         }
       };

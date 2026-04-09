@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PRIVATE_KEY_REGEX } from "@/types/stress";
+import { PRIVATE_KEY_REGEX, normalizePrivateKey } from "@/types/stress";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { createWalletClient, custom } from "viem";
 import {
@@ -34,7 +34,7 @@ export default function StressConfig({
   const [authMode, setAuthMode] = useState<AuthMode>("privateKey");
   const [privateKey, setPrivateKey] = useState("");
   const [showKey, setShowKey] = useState(false);
-  const [instanceCount, setInstanceCount] = useState(1);
+  const [instanceCount, setInstanceCount] = useState(30);
   const [enableWs, setEnableWs] = useState(true);
 
   // MetaMask state
@@ -130,7 +130,12 @@ export default function StressConfig({
   function handleStart() {
     if (authMode === "privateKey") {
       if (!isValidKey) return;
-      onStart(privateKey, instanceCount, undefined, enableWs);
+      onStart(
+        normalizePrivateKey(privateKey),
+        instanceCount,
+        undefined,
+        enableWs,
+      );
     } else {
       if (!agentKey || !mmAddress) return;
       onStart(agentKey, instanceCount, mmAddress, enableWs);

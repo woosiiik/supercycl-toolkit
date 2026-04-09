@@ -53,8 +53,15 @@ export type LogAction =
   | "query"
   | "error";
 
-/** Private key 검증 정규식 */
-export const PRIVATE_KEY_REGEX = /^0x[0-9a-fA-F]{64}$/;
+/** Private key 검증 정규식 (0x 접두사 있거나 없거나) */
+export const PRIVATE_KEY_REGEX = /^(0x)?[0-9a-fA-F]{64}$/;
+
+/** 0x 접두사가 없으면 자동으로 추가 */
+export function normalizePrivateKey(key: string): string {
+  const trimmed = key.trim();
+  if (/^[0-9a-fA-F]{64}$/.test(trimmed)) return `0x${trimmed}`;
+  return trimmed;
+}
 
 /** 1분 단위 메트릭 스냅샷 */
 export interface MinuteMetrics {
