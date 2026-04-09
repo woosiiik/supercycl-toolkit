@@ -55,6 +55,7 @@ export default function StressTester() {
           const prev = prevSnapshotRef.current;
           const snap: MinuteMetrics = {
             startTime: prevMinute,
+            wsConnections: currentMetrics.wsConnections,
             getRequests: currentMetrics.getRequests - prev.getRequests,
             postRequests: currentMetrics.postRequests - prev.postRequests,
             errors: currentMetrics.errors - prev.errors,

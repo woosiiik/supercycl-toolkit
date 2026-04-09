@@ -59,6 +59,7 @@ export const PRIVATE_KEY_REGEX = /^0x[0-9a-fA-F]{64}$/;
 /** 1분 단위 메트릭 스냅샷 */
 export interface MinuteMetrics {
   startTime: string;
+  wsConnections: number;
   getRequests: number;
   postRequests: number;
   errors: number;

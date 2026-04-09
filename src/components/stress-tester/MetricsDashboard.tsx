@@ -101,6 +101,7 @@ export default function MetricsDashboard({
               <thead className="sticky top-0 bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                 <tr>
                   <th className="px-3 py-1.5 font-medium">시간</th>
+                  <th className="px-3 py-1.5 font-medium">WS</th>
                   <th className="px-3 py-1.5 font-medium">Public</th>
                   <th className="px-3 py-1.5 font-medium">Private</th>
                   <th className="px-3 py-1.5 font-medium">에러</th>
@@ -113,6 +114,9 @@ export default function MetricsDashboard({
                 {minuteHistory.map((m, i) => (
                   <tr key={i} className="text-zinc-900 dark:text-zinc-100">
                     <td className="px-3 py-1 tabular-nums">{m.startTime}</td>
+                    <td className="px-3 py-1 tabular-nums text-blue-600 dark:text-blue-400">
+                      {m.wsConnections}
+                    </td>
                     <td className="px-3 py-1 tabular-nums text-green-600 dark:text-green-400">
                       {m.getRequests}
                     </td>
