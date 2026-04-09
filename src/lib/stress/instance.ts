@@ -260,7 +260,7 @@ export class StressInstance {
       this.onMetric("errors");
       this.incrementErrors();
       this.handleRateLimit(err, "get");
-      this.log("error", "fail", `GET failed: ${errorMessage(err)}`);
+      this.log("query", "fail", `GET failed: ${errorMessage(err)}`);
     }
   }
 
@@ -450,6 +450,7 @@ export class StressInstance {
     } catch (err) {
       this.setState("error");
       this.log("connect", "fail", `Start failed: ${errorMessage(err)}`);
+      throw err; // startWithRetry에서 재시도할 수 있도록
     }
   }
 
@@ -480,7 +481,8 @@ export class StressInstance {
     if (msg.includes("429") || msg.toLowerCase().includes("rate limit")) {
       const key = source === "get" ? "getRateLimits" : "postRateLimits";
       this.onMetric(key);
-      this.log("error", "fail", `${source.toUpperCase()} Rate limited: ${msg}`);
+      const action = source === "get" ? "query" : "order";
+      this.log(action, "fail", `${source.toUpperCase()} Rate limited: ${msg}`);
     }
   }
 
@@ -494,7 +496,7 @@ export class StressInstance {
       msg.includes("1013")
     ) {
       this.onMetric("wsRateLimits");
-      this.log("error", "fail", `WS Rate limited: ${msg}`);
+      this.log("subscribe", "fail", `WS Rate limited: ${msg}`);
     }
   }
 

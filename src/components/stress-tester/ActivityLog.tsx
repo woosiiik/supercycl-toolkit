@@ -18,11 +18,11 @@ function formatTimestamp(iso: string): string {
 
 const actionConfig: Record<LogAction, { label: string; className: string }> = {
   connect: {
-    label: "연결",
+    label: "WS연결",
     className: "bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
   },
   subscribe: {
-    label: "구독",
+    label: "WS채널구독",
     className:
       "bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
   },
