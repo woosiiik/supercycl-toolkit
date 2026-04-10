@@ -44,13 +44,43 @@ export default function StressConfig({
   const [mmError, setMmError] = useState<string | null>(null);
   const [testnetBalance, setTestnetBalance] = useState<string | null>(null);
 
+  // Private key 확인 상태
+  const [pkVerified, setPkVerified] = useState(false);
+  const [pkAddress, setPkAddress] = useState<string | null>(null);
+  const [pkBalance, setPkBalance] = useState<string | null>(null);
+  const [pkVerifying, setPkVerifying] = useState(false);
+  const [pkError, setPkError] = useState<string | null>(null);
+
   const isValidKey = PRIVATE_KEY_REGEX.test(privateKey);
   const showError =
     authMode === "privateKey" && privateKey.length > 0 && !isValidKey;
   const canStartTest =
     authMode === "privateKey"
-      ? isValidKey && canStart
+      ? pkVerified && canStart
       : agentKey !== null && canStart;
+
+  async function handleVerifyKey() {
+    if (!isValidKey) return;
+    setPkVerifying(true);
+    setPkError(null);
+    setPkVerified(false);
+    setPkAddress(null);
+    setPkBalance(null);
+
+    try {
+      const normalized = normalizePrivateKey(privateKey);
+      const account = privateKeyToAccount(normalized as `0x${string}`);
+      setPkAddress(account.address);
+
+      const balance = await getHyperliquidBalance(account.address, true);
+      setPkBalance(balance);
+      setPkVerified(true);
+    } catch (err) {
+      setPkError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPkVerifying(false);
+    }
+  }
 
   async function handleConnectMetaMask() {
     if (typeof window === "undefined" || !window.ethereum) {
@@ -195,7 +225,12 @@ export default function StressConfig({
               id="stress-private-key"
               type={showKey ? "text" : "password"}
               value={privateKey}
-              onChange={(e) => setPrivateKey(e.target.value)}
+              onChange={(e) => {
+                setPrivateKey(e.target.value);
+                setPkVerified(false);
+                setPkAddress(null);
+                setPkBalance(null);
+              }}
               placeholder="0x..."
               autoComplete="off"
               disabled={isRunning}
@@ -217,6 +252,30 @@ export default function StressConfig({
           <p className="text-xs text-zinc-400 dark:text-zinc-500">
             Private key는 브라우저 메모리에만 보관되며 저장되지 않습니다
           </p>
+          <button
+            type="button"
+            onClick={handleVerifyKey}
+            disabled={!isValidKey || isRunning || pkVerifying}
+            className="mt-1 self-start rounded-md bg-zinc-600 px-3 py-1 text-xs font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-500 dark:hover:bg-zinc-600"
+          >
+            {pkVerifying ? "확인 중..." : "키 확인"}
+          </button>
+          {pkError && (
+            <p className="text-xs text-red-600 dark:text-red-400">{pkError}</p>
+          )}
+          {pkVerified && pkAddress && (
+            <div className="flex flex-col gap-1 rounded-md border border-green-300 bg-green-50 p-2 text-xs dark:border-green-700 dark:bg-green-900/20">
+              <span className="text-green-700 dark:text-green-400">
+                ✅ 확인 완료
+              </span>
+              <span className="text-zinc-600 dark:text-zinc-400">
+                Address: <span className="font-mono">{pkAddress}</span>
+              </span>
+              <span className="text-zinc-600 dark:text-zinc-400">
+                테스트넷 USDC: {pkBalance ?? "조회 실패"}
+              </span>
+            </div>
+          )}
         </div>
       )}
 

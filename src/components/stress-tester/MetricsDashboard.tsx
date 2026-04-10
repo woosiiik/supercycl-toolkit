@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import type { StressMetrics, MinuteMetrics } from "@/types/stress";
 
 interface MetricsDashboardProps {
@@ -20,10 +20,54 @@ export default function MetricsDashboard({
 }: MetricsDashboardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [minuteHistory]);
+
+  function handleExport() {
+    const m = metrics;
+    const lines: string[] = [
+      "=== HL Testnet Stress Test 결과 ===",
+      `시각: ${new Date().toLocaleString()}`,
+    ];
+    if (accountAddress) lines.push(`Account: ${accountAddress}`);
+    lines.push(`IP: ${externalIp}`);
+    lines.push("");
+    lines.push("── WebSocket ──");
+    lines.push(`WS 연결: ${m.wsConnections}`);
+    lines.push(`WS 채널구독: ${m.channelSubscriptions}`);
+    lines.push(`WS 에러: ${m.wsErrors} / WS Rate-Limit: ${m.wsRateLimits}`);
+    lines.push("");
+    lines.push("── API ──");
+    lines.push(
+      `Public  요청: ${m.getRequests} / 성공: ${m.getRequests - m.publicErrors} / 에러: ${m.publicErrors} / RL: ${m.getRateLimits}`,
+    );
+    lines.push(
+      `Private 요청: ${m.postRequests} / 성공: ${m.postRequests - m.privateErrors} / 에러: ${m.privateErrors} / RL: ${m.postRateLimits}`,
+    );
+
+    if (minuteHistory.length > 0) {
+      lines.push("");
+      lines.push("── 1분 단위 통계 ──");
+      lines.push(
+        "시간 | WS | Pub | Prv | WS에러 | Pub에러 | Prv에러 | PubRL | PrvRL | WSRL",
+      );
+      for (const h of minuteHistory) {
+        lines.push(
+          `${h.startTime} | ${h.wsConnections} | ${h.getRequests} | ${h.postRequests} | ${h.wsErrors} | ${h.publicErrors} | ${h.privateErrors} | ${h.getRateLimits} | ${h.postRateLimits} | ${h.wsRateLimits}`,
+        );
+      }
+    }
+
+    const text = lines.join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   const cellBase = "px-4 py-2 text-center tabular-nums";
   const borderR = "border-r border-zinc-200 dark:border-zinc-700";
@@ -38,6 +82,13 @@ export default function MetricsDashboard({
         {isRunning && (
           <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500" />
         )}
+        <button
+          type="button"
+          onClick={handleExport}
+          className="ml-auto rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-700"
+        >
+          {copied ? "✅ 복사됨" : "📋 클립보드 복사"}
+        </button>
       </div>
       <div className="text-xs text-zinc-500 dark:text-zinc-400">
         {accountAddress && (
