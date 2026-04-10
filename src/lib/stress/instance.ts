@@ -116,47 +116,43 @@ export class StressInstance {
     }
 
     try {
-      // webData2: open orders + position info
-      const sub1 = await this.eventClient.webData2(
-        { user: this.walletAddress as `0x${string}` },
-        (data) => {
-          // Store open orders from the callback
-          this.openOrders = (data.openOrders ?? []).map((o) => ({
-            coin: o.coin,
-            oid: o.oid,
-          }));
+      // activeAssetCtx: BTC context updates (funding, open interest, etc.)
+      const sub1 = await this.eventClient.activeAssetCtx(
+        { coin: "BTC" },
+        () => {
+          // No-op listener — maintaining subscription for stress
         },
       );
       this.subscriptions.push(sub1);
       this.onMetric("channelSubscriptions");
-      this.log("subscribe", "success", "webData2 subscribed");
-    } catch (err) {
-      this.onMetric("wsErrors");
-      this.handleWsRateLimit(err);
-      this.log("subscribe", "fail", `webData2 failed: ${errorMessage(err)}`);
-      this.setState("error");
-      throw err;
-    }
-
-    try {
-      // orderUpdates: order status changes
-      const sub2 = await this.eventClient.orderUpdates(
-        { user: this.walletAddress as `0x${string}` },
-        () => {
-          // No-op listener — we rely on webData2 for open order tracking
-        },
-      );
-      this.subscriptions.push(sub2);
-      this.onMetric("channelSubscriptions");
-      this.log("subscribe", "success", "orderUpdates subscribed");
+      this.log("subscribe", "success", "activeAssetCtx(BTC) subscribed");
     } catch (err) {
       this.onMetric("wsErrors");
       this.handleWsRateLimit(err);
       this.log(
         "subscribe",
         "fail",
-        `orderUpdates failed: ${errorMessage(err)}`,
+        `activeAssetCtx failed: ${errorMessage(err)}`,
       );
+      this.setState("error");
+      throw err;
+    }
+
+    try {
+      // candle: BTC 1m candlestick updates
+      const sub2 = await this.eventClient.candle(
+        { coin: "BTC", interval: "1m" },
+        () => {
+          // No-op listener — maintaining subscription for stress
+        },
+      );
+      this.subscriptions.push(sub2);
+      this.onMetric("channelSubscriptions");
+      this.log("subscribe", "success", "candle(BTC,1m) subscribed");
+    } catch (err) {
+      this.onMetric("wsErrors");
+      this.handleWsRateLimit(err);
+      this.log("subscribe", "fail", `candle failed: ${errorMessage(err)}`);
       this.setState("error");
       throw err;
     }
