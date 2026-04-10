@@ -50,6 +50,10 @@ export default function StressConfig({
   const [pkBalance, setPkBalance] = useState<string | null>(null);
   const [pkVerifying, setPkVerifying] = useState(false);
   const [pkError, setPkError] = useState<string | null>(null);
+  const [pkIp, setPkIp] = useState<string | null>(null);
+  const [pkIsOffice, setPkIsOffice] = useState(false);
+
+  const OFFICE_IPS = ["2a09:bac0:1000:5ef::20b:80", "61.74.181.34"];
 
   const isValidKey = PRIVATE_KEY_REGEX.test(privateKey);
   const showError =
@@ -66,14 +70,34 @@ export default function StressConfig({
     setPkVerified(false);
     setPkAddress(null);
     setPkBalance(null);
+    setPkIp(null);
+    setPkIsOffice(false);
 
     try {
       const normalized = normalizePrivateKey(privateKey);
       const account = privateKeyToAccount(normalized as `0x${string}`);
       setPkAddress(account.address);
 
-      const balance = await getHyperliquidBalance(account.address, true);
+      // 잔액 + IP 동시 조회
+      const [balance, ipv4, ipv6] = await Promise.all([
+        getHyperliquidBalance(account.address, true),
+        fetch("https://api.ipify.org?format=text")
+          .then((r) => r.text())
+          .catch(() => null),
+        fetch("https://api64.ipify.org?format=text")
+          .then((r) => r.text())
+          .catch(() => null),
+      ]);
+
       setPkBalance(balance);
+
+      const parts: string[] = [];
+      if (ipv4) parts.push(`IPv4: ${ipv4}`);
+      if (ipv6 && ipv6 !== ipv4) parts.push(`IPv6: ${ipv6}`);
+      const isOffice = [ipv4, ipv6].some((ip) => ip && OFFICE_IPS.includes(ip));
+      setPkIp(parts.length > 0 ? parts.join(" / ") : "조회 실패");
+      setPkIsOffice(isOffice);
+
       setPkVerified(true);
     } catch (err) {
       setPkError(err instanceof Error ? err.message : String(err));
@@ -230,6 +254,8 @@ export default function StressConfig({
                 setPkVerified(false);
                 setPkAddress(null);
                 setPkBalance(null);
+                setPkIp(null);
+                setPkIsOffice(false);
               }}
               placeholder="0x..."
               autoComplete="off"
@@ -258,15 +284,15 @@ export default function StressConfig({
             disabled={!isValidKey || isRunning || pkVerifying}
             className="mt-1 self-start rounded-md bg-zinc-600 px-3 py-1 text-xs font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-500 dark:hover:bg-zinc-600"
           >
-            {pkVerifying ? "확인 중..." : "키 확인"}
+            {pkVerifying ? "확인 중..." : "테스트 준비 확인"}
           </button>
           {pkError && (
             <p className="text-xs text-red-600 dark:text-red-400">{pkError}</p>
           )}
           {pkVerified && pkAddress && (
-            <div className="flex flex-col gap-1 rounded-md border border-green-300 bg-green-50 p-2 text-xs dark:border-green-700 dark:bg-green-900/20">
-              <span className="text-green-700 dark:text-green-400">
-                ✅ 확인 완료
+            <div className="flex flex-col gap-2 rounded-md border border-green-300 bg-green-50 p-2 text-xs dark:border-green-700 dark:bg-green-900/20">
+              <span className="font-medium text-green-700 dark:text-green-400">
+                ✅ Account 확인 완료
               </span>
               <span className="text-zinc-600 dark:text-zinc-400">
                 Address: <span className="font-mono">{pkAddress}</span>
@@ -274,6 +300,24 @@ export default function StressConfig({
               <span className="text-zinc-600 dark:text-zinc-400">
                 테스트넷 USDC: {pkBalance ?? "조회 실패"}
               </span>
+              <div className="mt-1 border-t border-zinc-200 pt-1 dark:border-zinc-700">
+                <span className="text-zinc-600 dark:text-zinc-400">
+                  IP: <span className="font-mono">{pkIp}</span>
+                </span>
+                {pkIsOffice ? (
+                  <div className="mt-1 rounded bg-yellow-100 px-2 py-1 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                    ⚠️ 준비 미완료 — 사내망 IP가 감지되었습니다. 사내망에서는
+                    Hyperliquid API의 IP rate-limit이 공유되어 정확한 테스트가
+                    어렵습니다. VPN을 끄거나 외부 네트워크에서 테스트해주세요.
+                  </div>
+                ) : (
+                  <div className="mt-1">
+                    <span className="text-green-600 dark:text-green-400">
+                      ✅ 외부 네트워크
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
