@@ -97,7 +97,7 @@ export default function Sidebar() {
         </nav>
 
         <div className="px-4 py-3 text-xs text-zinc-400 dark:text-zinc-600">
-          v1.1.1
+          v1.1.2
         </div>
       </aside>
     </>
