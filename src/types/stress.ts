@@ -73,6 +73,9 @@ export interface MinuteMetrics {
   getRequests: number;
   postRequests: number;
   errors: number;
+  wsErrors: number;
+  publicErrors: number;
+  privateErrors: number;
   getRateLimits: number;
   postRateLimits: number;
   wsRateLimits: number;

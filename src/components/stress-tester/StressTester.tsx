@@ -36,59 +36,103 @@ export default function StressTester() {
   const [error, setError] = useState<string | null>(null);
   const [minuteHistory, setMinuteHistory] = useState<MinuteMetrics[]>([]);
   const [accountAddress, setAccountAddress] = useState<string | undefined>();
+  const [externalIp, setExternalIp] = useState<string>("조회 중...");
 
   const instancesRef = useRef<StressInstance[]>([]);
   const publicClientRef = useRef<PublicClient<HttpTransport> | null>(null);
-  const prevSnapshotRef = useRef<StressMetrics>(createMetrics());
-  const prevMinuteRef = useRef<string>(getMinuteKey());
 
-  // 1분 단위 스냅샷 체크 (1초마다)
+  const fetchExternalIp = async () => {
+    try {
+      const [ipv4, ipv6] = await Promise.all([
+        fetch("https://api.ipify.org?format=text")
+          .then((r) => r.text())
+          .catch(() => null),
+        fetch("https://api64.ipify.org?format=text")
+          .then((r) => r.text())
+          .catch(() => null),
+      ]);
+      const parts: string[] = [];
+      if (ipv4) parts.push(`IPv4: ${ipv4}`);
+      if (ipv6 && ipv6 !== ipv4) parts.push(`IPv6: ${ipv6}`);
+      setExternalIp(parts.length > 0 ? parts.join(" / ") : "조회 실패");
+    } catch {
+      setExternalIp("조회 실패");
+    }
+  };
+
+  // 초기 IP 조회
   useEffect(() => {
-    if (!isRunning) return;
-
-    const interval = setInterval(() => {
-      const currentMinute = getMinuteKey();
-      if (currentMinute !== prevMinuteRef.current) {
-        const prevMinute = prevMinuteRef.current;
-        prevMinuteRef.current = currentMinute;
-
-        // 현재 metrics를 ref로 직접 읽어서 delta 계산
-        setMetrics((currentMetrics) => {
-          const prev = prevSnapshotRef.current;
-          const snap: MinuteMetrics = {
-            startTime: prevMinute,
-            wsConnections: currentMetrics.wsConnections,
-            getRequests: currentMetrics.getRequests - prev.getRequests,
-            postRequests: currentMetrics.postRequests - prev.postRequests,
-            errors: currentMetrics.errors - prev.errors,
-            getRateLimits: currentMetrics.getRateLimits - prev.getRateLimits,
-            postRateLimits: currentMetrics.postRateLimits - prev.postRateLimits,
-            wsRateLimits: currentMetrics.wsRateLimits - prev.wsRateLimits,
-          };
-          prevSnapshotRef.current = { ...currentMetrics };
-          // 별도 queueMicrotask로 history 업데이트 (batching 회피)
-          queueMicrotask(() => {
-            setMinuteHistory((h) => [...h, snap]);
-          });
-          return currentMetrics;
-        });
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isRunning]);
-
-  const handleMetric = useCallback((key: string) => {
-    setMetrics((prev) => {
-      if (key.startsWith("-")) {
-        const realKey = key.slice(1) as
-          | "wsConnections"
-          | "channelSubscriptions";
-        return decrementMetric(prev, realKey);
-      }
-      return incrementMetric(prev, key as keyof StressMetrics);
+    Promise.all([
+      fetch("https://api.ipify.org?format=text")
+        .then((r) => r.text())
+        .catch(() => null),
+      fetch("https://api64.ipify.org?format=text")
+        .then((r) => r.text())
+        .catch(() => null),
+    ]).then(([v4, v6]) => {
+      const p: string[] = [];
+      if (v4) p.push(`IPv4: ${v4}`);
+      if (v6 && v6 !== v4) p.push(`IPv6: ${v6}`);
+      setExternalIp(p.length > 0 ? p.join(" / ") : "조회 실패");
     });
   }, []);
+
+  // 1분 단위 실시간 업데이트 (매 메트릭 변경 시 현재 분 행 업데이트)
+  const currentMinuteRef = useRef<string>(getMinuteKey());
+  const minuteStartMetricsRef = useRef<StressMetrics>(createMetrics());
+
+  const updateMinuteHistory = useCallback((currentMetrics: StressMetrics) => {
+    const now = getMinuteKey();
+
+    if (now !== currentMinuteRef.current) {
+      // 분이 바뀜 → 새 행 시작, 이전 스냅샷 갱신
+      minuteStartMetricsRef.current = { ...currentMetrics };
+      currentMinuteRef.current = now;
+    }
+
+    const start = minuteStartMetricsRef.current;
+    const snap: MinuteMetrics = {
+      startTime: currentMinuteRef.current,
+      wsConnections: currentMetrics.wsConnections,
+      getRequests: currentMetrics.getRequests - start.getRequests,
+      postRequests: currentMetrics.postRequests - start.postRequests,
+      errors: currentMetrics.errors - start.errors,
+      wsErrors: currentMetrics.wsErrors - start.wsErrors,
+      publicErrors: currentMetrics.publicErrors - start.publicErrors,
+      privateErrors: currentMetrics.privateErrors - start.privateErrors,
+      getRateLimits: currentMetrics.getRateLimits - start.getRateLimits,
+      postRateLimits: currentMetrics.postRateLimits - start.postRateLimits,
+      wsRateLimits: currentMetrics.wsRateLimits - start.wsRateLimits,
+    };
+
+    setMinuteHistory((h) => {
+      if (h.length > 0 && h[h.length - 1].startTime === snap.startTime) {
+        // 현재 분 행 업데이트
+        return [...h.slice(0, -1), snap];
+      }
+      // 새 분 행 추가
+      return [...h, snap];
+    });
+  }, []);
+
+  const handleMetric = useCallback(
+    (key: string) => {
+      setMetrics((prev) => {
+        let next: StressMetrics;
+        if (key.startsWith("-")) {
+          const realKey = key.slice(1) as
+            | "wsConnections"
+            | "channelSubscriptions";
+          next = decrementMetric(prev, realKey);
+        } else {
+          next = incrementMetric(prev, key as keyof StressMetrics);
+        }
+        updateMinuteHistory(next);
+        return next;
+      });
+    },
+    [updateMinuteHistory],
+  );
 
   const handleLog = useCallback((entry: LogEntry) => {
     setLogs((prev) => {
@@ -128,8 +172,11 @@ export default function StressTester() {
       const account = privateKeyToAccount(normalizedKey as `0x${string}`);
       setAccountAddress(walletAddress ?? account.address);
 
-      prevSnapshotRef.current = createMetrics();
-      prevMinuteRef.current = getMinuteKey();
+      // IP 재조회
+      fetchExternalIp();
+
+      minuteStartMetricsRef.current = createMetrics();
+      currentMinuteRef.current = getMinuteKey();
 
       if (!publicClientRef.current) {
         publicClientRef.current = createSharedPublicClient();
@@ -219,6 +266,7 @@ export default function StressTester() {
         isRunning={isRunning}
         minuteHistory={minuteHistory}
         accountAddress={accountAddress}
+        externalIp={externalIp}
       />
       <InstanceStatusList instances={instances} />
       <ActivityLog logs={logs} />
