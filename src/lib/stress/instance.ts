@@ -211,6 +211,7 @@ export class StressInstance {
       this.onMetric("postRequests");
       this.log("leverage", "success", `${coin.name} leverage → ${leverage}`);
     } catch (err) {
+      this.onMetric("postRequests");
       this.onMetric("errors");
       this.onMetric("privateErrors");
       this.incrementErrors();
@@ -261,6 +262,7 @@ export class StressInstance {
         this.log("query", "success", "GET meta");
       }
     } catch (err) {
+      this.onMetric("getRequests");
       this.onMetric("errors");
       this.onMetric("publicErrors");
       this.incrementErrors();
@@ -338,6 +340,7 @@ export class StressInstance {
         `${coin.name} buy ${orderSize} @ ${limitPrice}`,
       );
     } catch (err) {
+      this.onMetric("postRequests");
       this.onMetric("errors");
       this.onMetric("privateErrors");
       this.incrementErrors();
