@@ -41,7 +41,7 @@ export default function StressTester() {
   const instancesRef = useRef<StressInstance[]>([]);
   const publicClientRef = useRef<PublicClient<HttpTransport> | null>(null);
 
-  const OFFICE_IPS = ["2a09:bac0:1000:5ef::20b:80", "61.74.181.34"];
+  const OFFICE_IPS = ["61.74.181.34", "104.30.161.29"];
 
   const fetchExternalIp = async () => {
     try {
@@ -56,7 +56,7 @@ export default function StressTester() {
       const parts: string[] = [];
       if (ipv4) parts.push(`IPv4: ${ipv4}`);
       if (ipv6 && ipv6 !== ipv4) parts.push(`IPv6: ${ipv6}`);
-      const isOffice = [ipv4, ipv6].some((ip) => ip && OFFICE_IPS.includes(ip));
+      const isOffice = ipv4 ? OFFICE_IPS.includes(ipv4) : false;
       const label = isOffice ? " (사내망)" : "";
       setExternalIp(parts.length > 0 ? parts.join(" / ") + label : "조회 실패");
     } catch {
@@ -77,7 +77,7 @@ export default function StressTester() {
       const p: string[] = [];
       if (v4) p.push(`IPv4: ${v4}`);
       if (v6 && v6 !== v4) p.push(`IPv6: ${v6}`);
-      const isOffice = [v4, v6].some((ip) => ip && OFFICE_IPS.includes(ip));
+      const isOffice = v4 ? OFFICE_IPS.includes(v4) : false;
       const label = isOffice ? " (사내망)" : "";
       setExternalIp(p.length > 0 ? p.join(" / ") + label : "조회 실패");
     });

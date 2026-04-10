@@ -53,7 +53,7 @@ export default function StressConfig({
   const [pkIp, setPkIp] = useState<string | null>(null);
   const [pkIsOffice, setPkIsOffice] = useState(false);
 
-  const OFFICE_IPS = ["2a09:bac0:1000:5ef::20b:80", "61.74.181.34"];
+  const OFFICE_IPS = ["61.74.181.34", "104.30.161.29"];
 
   const isValidKey = PRIVATE_KEY_REGEX.test(privateKey);
   const showError =
@@ -94,7 +94,7 @@ export default function StressConfig({
       const parts: string[] = [];
       if (ipv4) parts.push(`IPv4: ${ipv4}`);
       if (ipv6 && ipv6 !== ipv4) parts.push(`IPv6: ${ipv6}`);
-      const isOffice = [ipv4, ipv6].some((ip) => ip && OFFICE_IPS.includes(ip));
+      const isOffice = ipv4 ? OFFICE_IPS.includes(ipv4) : false;
       setPkIp(parts.length > 0 ? parts.join(" / ") : "조회 실패");
       setPkIsOffice(isOffice);
 
