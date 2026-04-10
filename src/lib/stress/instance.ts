@@ -131,6 +131,7 @@ export class StressInstance {
       this.onMetric("channelSubscriptions");
       this.log("subscribe", "success", "webData2 subscribed");
     } catch (err) {
+      this.onMetric("wsErrors");
       this.handleWsRateLimit(err);
       this.log("subscribe", "fail", `webData2 failed: ${errorMessage(err)}`);
       this.setState("error");
@@ -149,6 +150,7 @@ export class StressInstance {
       this.onMetric("channelSubscriptions");
       this.log("subscribe", "success", "orderUpdates subscribed");
     } catch (err) {
+      this.onMetric("wsErrors");
       this.handleWsRateLimit(err);
       this.log(
         "subscribe",
@@ -171,6 +173,7 @@ export class StressInstance {
       this.onMetric("channelSubscriptions");
       this.log("subscribe", "success", "l2Book(BTC) subscribed");
     } catch (err) {
+      this.onMetric("wsErrors");
       this.handleWsRateLimit(err);
       this.log("subscribe", "fail", `l2Book failed: ${errorMessage(err)}`);
       this.setState("error");
@@ -209,6 +212,7 @@ export class StressInstance {
       this.log("leverage", "success", `${coin.name} leverage → ${leverage}`);
     } catch (err) {
       this.onMetric("errors");
+      this.onMetric("privateErrors");
       this.incrementErrors();
       this.handleRateLimit(err, "post");
       this.log("leverage", "fail", errorMessage(err));
@@ -258,6 +262,7 @@ export class StressInstance {
       }
     } catch (err) {
       this.onMetric("errors");
+      this.onMetric("publicErrors");
       this.incrementErrors();
       this.handleRateLimit(err, "get");
       this.log("query", "fail", `GET failed: ${errorMessage(err)}`);
@@ -334,6 +339,7 @@ export class StressInstance {
       );
     } catch (err) {
       this.onMetric("errors");
+      this.onMetric("privateErrors");
       this.incrementErrors();
       this.handleRateLimit(err, "post");
       this.log("order", "fail", errorMessage(err));

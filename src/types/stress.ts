@@ -30,6 +30,9 @@ export interface StressMetrics {
   getRequests: number;
   postRequests: number;
   errors: number;
+  wsErrors: number;
+  publicErrors: number;
+  privateErrors: number;
   getRateLimits: number;
   postRateLimits: number;
   wsRateLimits: number;

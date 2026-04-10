@@ -7,7 +7,8 @@ import type {
   LogEntry,
   MinuteMetrics,
 } from "@/types/stress";
-import { PRIVATE_KEY_REGEX } from "@/types/stress";
+import { PRIVATE_KEY_REGEX, normalizePrivateKey } from "@/types/stress";
+import { privateKeyToAccount } from "viem/accounts";
 import { createSharedPublicClient, fetchCoinList } from "@/lib/stress/coins";
 import {
   createMetrics,
@@ -34,6 +35,7 @@ export default function StressTester() {
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [minuteHistory, setMinuteHistory] = useState<MinuteMetrics[]>([]);
+  const [accountAddress, setAccountAddress] = useState<string | undefined>();
 
   const instancesRef = useRef<StressInstance[]>([]);
   const publicClientRef = useRef<PublicClient<HttpTransport> | null>(null);
@@ -120,6 +122,12 @@ export default function StressTester() {
       setMetrics(createMetrics());
       setLogs([]);
       setMinuteHistory([]);
+
+      // account address 도출
+      const normalizedKey = normalizePrivateKey(privateKey);
+      const account = privateKeyToAccount(normalizedKey as `0x${string}`);
+      setAccountAddress(walletAddress ?? account.address);
+
       prevSnapshotRef.current = createMetrics();
       prevMinuteRef.current = getMinuteKey();
 
@@ -210,6 +218,7 @@ export default function StressTester() {
         metrics={metrics}
         isRunning={isRunning}
         minuteHistory={minuteHistory}
+        accountAddress={accountAddress}
       />
       <InstanceStatusList instances={instances} />
       <ActivityLog logs={logs} />

@@ -1,7 +1,7 @@
 export const TESTNET_WS_URL = "wss://api.hyperliquid-testnet.xyz/ws" as const;
 export const TESTNET_HTTP_URL = "https://hyperliquid-testnet.xyz" as const;
-export const LOOP_INTERVAL_MS = 30_000; // 30초 (레버리지/오더)
-export const GET_INTERVAL_MS = 5_000; // 5초 (GET 요청)
+export const LOOP_INTERVAL_MS = 60_000; // 60초 (레버리지/오더 — 각각 분당 1회)
+export const GET_INTERVAL_MS = 30_000; // 30초 (Public GET — 분당 ~4회, 오더 시 추가 GET 포함)
 export const MAX_LOG_ENTRIES = 500;
 export const LEVERAGE_MIN = 1;
 export const LEVERAGE_MAX = 20;
