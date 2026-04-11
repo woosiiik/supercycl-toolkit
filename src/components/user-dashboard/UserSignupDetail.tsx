@@ -208,27 +208,34 @@ async function fetchRecentDates(
   return dates;
 }
 
+function getRangeMs(iv: Interval): number {
+  switch (iv) {
+    case "1h":
+      return 2 * 24 * 60 * 60 * 1000;
+    case "10m":
+      return 4 * 60 * 60 * 1000;
+    case "1m":
+      return 1 * 60 * 60 * 1000;
+  }
+}
+
 export default function UserSignupDetail() {
   const [interval, setInterval_] = useState<Interval>("1h");
+  const [offset, setOffset] = useState(0); // 0 = 현재, -1 = 한 단위 과거, ...
   const [data, setData] = useState<BarPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const fetchData = useCallback(async (iv: Interval) => {
+  const fetchData = useCallback(async (iv: Interval, off: number) => {
     setLoading(true);
     setError(null);
     try {
-      // 인터벌별 조회 범위: 1h=2일, 10m=24시간, 1m=12시간
+      const rangeMs = getRangeMs(iv);
       const now = new Date();
-      const rangeMs =
-        iv === "1h"
-          ? 2 * 24 * 60 * 60 * 1000
-          : iv === "10m"
-            ? 24 * 60 * 60 * 1000
-            : 2 * 60 * 60 * 1000;
-      const sinceUtc = new Date(now.getTime() - rangeMs);
+      const endUtc = new Date(now.getTime() + off * rangeMs);
+      const sinceUtc = new Date(endUtc.getTime() - rangeMs);
       const sinceIso = sinceUtc.toISOString();
 
       const [userDates, ymDates, okxDates] = await Promise.all([
@@ -242,7 +249,7 @@ export default function UserSignupDetail() {
         ymDates,
         okxDates,
         sinceUtc,
-        new Date(),
+        endUtc,
         iv,
       );
       setData(points);
@@ -255,14 +262,22 @@ export default function UserSignupDetail() {
   }, []);
 
   useEffect(() => {
-    fetchData(interval);
-  }, [interval, fetchData]);
+    fetchData(interval, offset);
+  }, [interval, offset, fetchData]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
-    const timer = window.setInterval(() => fetchData(interval), 30_000);
+    if (!autoRefresh || offset !== 0) return; // 과거 보는 중이면 자동 새로고침 안 함
+    const timer = window.setInterval(() => fetchData(interval, 0), 30_000);
     return () => window.clearInterval(timer);
-  }, [autoRefresh, interval, fetchData]);
+  }, [autoRefresh, interval, offset, fetchData]);
+
+  const handleIntervalChange = (iv: Interval) => {
+    setOffset(0);
+    setInterval_(iv);
+  };
+
+  const rangeLabel =
+    interval === "1h" ? "2일" : interval === "10m" ? "4시간" : "1시간";
 
   return (
     <div className="flex flex-col gap-6">
@@ -271,7 +286,7 @@ export default function UserSignupDetail() {
           {INTERVAL_OPTIONS.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => setInterval_(opt.value)}
+              onClick={() => handleIntervalChange(opt.value)}
               className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                 interval === opt.value
                   ? "bg-blue-600 text-white"
@@ -283,13 +298,34 @@ export default function UserSignupDetail() {
           ))}
         </div>
 
+        {/* ◀ ▶ 네비게이션 */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setOffset((o) => o - 1)}
+            disabled={loading}
+            className="rounded-md border border-zinc-300 px-2 py-1 text-sm font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-700"
+          >
+            ◀
+          </button>
+          <button
+            onClick={() => setOffset(0)}
+            disabled={loading || offset === 0}
+            className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-700"
+          >
+            현재
+          </button>
+          <button
+            onClick={() => setOffset((o) => Math.min(o + 1, 0))}
+            disabled={loading || offset >= 0}
+            className="rounded-md border border-zinc-300 px-2 py-1 text-sm font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-700"
+          >
+            ▶
+          </button>
+        </div>
+
         <span className="text-xs text-zinc-400">
-          KST 기준{" "}
-          {interval === "1h"
-            ? "최근 2일"
-            : interval === "10m"
-              ? "최근 24시간"
-              : "최근 2시간"}
+          KST {rangeLabel} 단위
+          {offset !== 0 ? ` (${Math.abs(offset)}단위 전)` : ""}
         </span>
 
         <label className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
@@ -303,7 +339,7 @@ export default function UserSignupDetail() {
         </label>
 
         <button
-          onClick={() => fetchData(interval)}
+          onClick={() => fetchData(interval, offset)}
           disabled={loading}
           className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-700"
         >
