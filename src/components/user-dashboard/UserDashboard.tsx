@@ -16,7 +16,7 @@ const SUPABASE_URL = "https://crliioegbtkgdlrypnap.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNybGlpb2VnYnRrZ2RscnlwbmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjkxNjIsImV4cCI6MjA5MTQ0NTE2Mn0.Yy5pQJoYGiRrDCgJi_a8jEy25vuLstY1TGUeY3GE60c";
 
-type Interval = "10m" | "30m" | "1h" | "1d";
+type Interval = "1m" | "10m" | "30m" | "1h" | "1d";
 
 interface ChartPoint {
   time: string;
@@ -45,6 +45,7 @@ interface UserRow {
 }
 
 const INTERVAL_OPTIONS: { value: Interval; label: string }[] = [
+  { value: "1m", label: "1분" },
   { value: "10m", label: "10분" },
   { value: "30m", label: "30분" },
   { value: "1h", label: "1시간" },
@@ -72,6 +73,8 @@ function bucketKey(date: Date, interval: Interval): string {
   const m = date.getMinutes();
 
   switch (interval) {
+    case "1m":
+      return `${y}/${mo}/${d} ${h}:${String(m).padStart(2, "0")}`;
     case "10m": {
       const bucket = Math.floor(m / 10) * 10;
       return `${y}/${mo}/${d} ${h}:${String(bucket).padStart(2, "0")}`;
@@ -401,7 +404,7 @@ export default function UserDashboard() {
                 interval === opt.value
                   ? "bg-blue-600 text-white"
                   : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-700"
-              } ${opt.value === "10m" ? "rounded-l-md" : ""} ${opt.value === "1d" ? "rounded-r-md" : ""}`}
+              } ${opt.value === "1m" ? "rounded-l-md" : ""} ${opt.value === "1d" ? "rounded-r-md" : ""}`}
             >
               {opt.label}
             </button>
