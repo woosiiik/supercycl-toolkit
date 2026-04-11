@@ -153,7 +153,7 @@ const isLoop = process.argv.includes("--loop");
 
 if (isLoop) {
   runLoop().catch((err) => {
-    console.error("Fatal:", err);
+    console.error("Fatal loop error:", err);
     process.exit(1);
   });
 } else {

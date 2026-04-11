@@ -25,6 +25,24 @@ interface ChartPoint {
   okx: number;
 }
 
+interface AffiliateChartPoint {
+  time: string;
+  youthmeta: number;
+  other: number;
+}
+
+interface SignupMemoChartPoint {
+  time: string;
+  mobile: number;
+  web: number;
+}
+
+interface UserRow {
+  created_at: string;
+  affiliate_no: number | null;
+  signup_memo: string | null;
+}
+
 const INTERVAL_OPTIONS: { value: Interval; label: string }[] = [
   { value: "10m", label: "10분" },
   { value: "30m", label: "30분" },
@@ -32,11 +50,19 @@ const INTERVAL_OPTIONS: { value: Interval; label: string }[] = [
   { value: "1d", label: "일" },
 ];
 
-const headers = {
+const supaHeaders = {
   apikey: SUPABASE_ANON_KEY,
   Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
 };
-// created_at 목록을 시간 버킷별 누적 카운트로 변환
+
+const CHART_TOOLTIP_STYLE = {
+  backgroundColor: "#18181b",
+  border: "1px solid #3f3f46",
+  borderRadius: "6px",
+  fontSize: "13px",
+};
+// ── Bucket helpers ──
+
 function bucketKey(date: Date, interval: Interval): string {
   const mo = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
@@ -59,45 +85,145 @@ function bucketKey(date: Date, interval: Interval): string {
   }
 }
 
+function countByBucket(dates: string[], interval: Interval) {
+  const map = new Map<string, number>();
+  for (const d of dates) {
+    const key = bucketKey(new Date(d), interval);
+    map.set(key, (map.get(key) || 0) + 1);
+  }
+  return map;
+}
+
+// ── Chart builders ──
+
 function buildCumulativeChart(
   users: string[],
   ymUsers: string[],
   okxUsers: string[],
   interval: Interval,
 ): ChartPoint[] {
-  // 모든 시간을 수집하여 버킷별 신규 가입 수 계산
   const allBuckets = new Set<string>();
 
-  const countByBucket = (dates: string[]) => {
-    const map = new Map<string, number>();
-    for (const d of dates) {
-      const key = bucketKey(new Date(d), interval);
-      allBuckets.add(key);
-      map.set(key, (map.get(key) || 0) + 1);
-    }
-    return map;
+  const addBuckets = (dates: string[]) => {
+    for (const d of dates) allBuckets.add(bucketKey(new Date(d), interval));
   };
+  addBuckets(users);
+  addBuckets(ymUsers);
+  addBuckets(okxUsers);
 
-  const totalMap = countByBucket(users);
-  const ymMap = countByBucket(ymUsers);
-  const okxMap = countByBucket(okxUsers);
+  const totalMap = countByBucket(users, interval);
+  const ymMap = countByBucket(ymUsers, interval);
+  const okxMap = countByBucket(okxUsers, interval);
 
-  // 버킷을 시간순 정렬
   const sorted = Array.from(allBuckets).sort();
+  let cumTotal = 0,
+    cumYm = 0,
+    cumOkx = 0;
 
-  // 누적 합계 계산
-  let cumTotal = 0;
-  let cumYm = 0;
-  let cumOkx = 0;
-
-  // 차트 시작 전 이미 존재하는 레코드 수 (첫 버킷 이전)
-  // → 전체 데이터를 가져오므로 0부터 누적하면 됨
   return sorted.map((time) => {
     cumTotal += totalMap.get(time) || 0;
     cumYm += ymMap.get(time) || 0;
     cumOkx += okxMap.get(time) || 0;
     return { time, total: cumTotal, ym: cumYm, okx: cumOkx };
   });
+}
+
+function buildAffiliateChart(
+  userRows: UserRow[],
+  interval: Interval,
+): AffiliateChartPoint[] {
+  const ymDates: string[] = [];
+  const otherDates: string[] = [];
+
+  for (const r of userRows) {
+    if (r.affiliate_no === 1) {
+      ymDates.push(r.created_at);
+    } else {
+      otherDates.push(r.created_at);
+    }
+  }
+
+  const allBuckets = new Set<string>();
+  const addBuckets = (dates: string[]) => {
+    for (const d of dates) allBuckets.add(bucketKey(new Date(d), interval));
+  };
+  addBuckets(ymDates);
+  addBuckets(otherDates);
+
+  const ymMap = countByBucket(ymDates, interval);
+  const otherMap = countByBucket(otherDates, interval);
+
+  const sorted = Array.from(allBuckets).sort();
+  let cumYm = 0,
+    cumOther = 0;
+
+  return sorted.map((time) => {
+    cumYm += ymMap.get(time) || 0;
+    cumOther += otherMap.get(time) || 0;
+    return { time, youthmeta: cumYm, other: cumOther };
+  });
+}
+
+function buildSignupMemoChart(
+  userRows: UserRow[],
+  interval: Interval,
+): SignupMemoChartPoint[] {
+  const mobileDates: string[] = [];
+  const webDates: string[] = [];
+
+  for (const r of userRows) {
+    if (r.signup_memo) {
+      mobileDates.push(r.created_at);
+    } else {
+      webDates.push(r.created_at);
+    }
+  }
+
+  const allBuckets = new Set<string>();
+  const addBuckets = (dates: string[]) => {
+    for (const d of dates) allBuckets.add(bucketKey(new Date(d), interval));
+  };
+  addBuckets(mobileDates);
+  addBuckets(webDates);
+
+  const mobileMap = countByBucket(mobileDates, interval);
+  const webMap = countByBucket(webDates, interval);
+
+  const sorted = Array.from(allBuckets).sort();
+  let cumMobile = 0,
+    cumWeb = 0;
+
+  return sorted.map((time) => {
+    cumMobile += mobileMap.get(time) || 0;
+    cumWeb += webMap.get(time) || 0;
+    return { time, mobile: cumMobile, web: cumWeb };
+  });
+}
+
+// ── Data fetching ──
+
+async function fetchAllUsers(): Promise<UserRow[]> {
+  const rows: UserRow[] = [];
+  let offset = 0;
+  const limit = 1000;
+
+  while (true) {
+    const url =
+      `${SUPABASE_URL}/rest/v1/users` +
+      `?select=created_at,affiliate_no,signup_memo&order=created_at.asc` +
+      `&offset=${offset}&limit=${limit}`;
+
+    const res = await fetch(url, { headers: supaHeaders });
+    if (!res.ok) throw new Error(`HTTP ${res.status} from users`);
+
+    const batch: UserRow[] = await res.json();
+    rows.push(...batch);
+
+    if (batch.length < limit) break;
+    offset += limit;
+  }
+
+  return rows;
 }
 
 async function fetchAllCreatedAt(table: string): Promise<string[]> {
@@ -111,46 +237,80 @@ async function fetchAllCreatedAt(table: string): Promise<string[]> {
       `?select=created_at&order=created_at.asc` +
       `&offset=${offset}&limit=${limit}`;
 
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { headers: supaHeaders });
     if (!res.ok) throw new Error(`HTTP ${res.status} from ${table}`);
 
-    const rows: { created_at: string }[] = await res.json();
-    for (const r of rows) dates.push(r.created_at);
+    const batch: { created_at: string }[] = await res.json();
+    for (const r of batch) dates.push(r.created_at);
 
-    if (rows.length < limit) break;
+    if (batch.length < limit) break;
     offset += limit;
   }
 
   return dates;
 }
 
+// ── Main component ──
+
+type Tab = "overview" | "affiliate" | "signup";
+
 export default function UserDashboard() {
   const [interval, setInterval_] = useState<Interval>("1d");
+  const [tab, setTab] = useState<Tab>("overview");
   const [data, setData] = useState<ChartPoint[]>([]);
+  const [affiliateData, setAffiliateData] = useState<AffiliateChartPoint[]>([]);
+  const [signupData, setSignupData] = useState<SignupMemoChartPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [totalCounts, setTotalCounts] = useState({ total: 0, ym: 0, okx: 0 });
+  const [affiliateCounts, setAffiliateCounts] = useState({
+    youthmeta: 0,
+    other: 0,
+  });
+  const [signupCounts, setSignupCounts] = useState({ mobile: 0, web: 0 });
 
   const fetchData = useCallback(async (iv: Interval) => {
     setLoading(true);
     setError(null);
     try {
-      const [users, ymUsers, okxUsers] = await Promise.all([
-        fetchAllCreatedAt("users"),
+      const [userRows, ymDates, okxDates] = await Promise.all([
+        fetchAllUsers(),
         fetchAllCreatedAt("ym_users"),
         fetchAllCreatedAt("okx_users"),
       ]);
 
+      const allUserDates = userRows.map((r) => r.created_at);
+
       setTotalCounts({
-        total: users.length,
-        ym: ymUsers.length,
-        okx: okxUsers.length,
+        total: userRows.length,
+        ym: ymDates.length,
+        okx: okxDates.length,
       });
 
-      const points = buildCumulativeChart(users, ymUsers, okxUsers, iv);
+      // 전체 통계 차트
+      const points = buildCumulativeChart(allUserDates, ymDates, okxDates, iv);
       setData(points);
+
+      // Affiliate 분석 차트
+      const ymCount = userRows.filter((r) => r.affiliate_no === 1).length;
+      setAffiliateCounts({
+        youthmeta: ymCount,
+        other: userRows.length - ymCount,
+      });
+      const affPoints = buildAffiliateChart(userRows, iv);
+      setAffiliateData(affPoints);
+
+      // Signup memo 분석 차트
+      const mobileCount = userRows.filter((r) => r.signup_memo).length;
+      setSignupCounts({
+        mobile: mobileCount,
+        web: userRows.length - mobileCount,
+      });
+      const signupPoints = buildSignupMemoChart(userRows, iv);
+      setSignupData(signupPoints);
+
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       setError(err instanceof Error ? err.message : "데이터 조회 실패");
@@ -163,7 +323,6 @@ export default function UserDashboard() {
     fetchData(interval);
   }, [interval, fetchData]);
 
-  // 자동 새로고침 (30초)
   useEffect(() => {
     if (!autoRefresh) return;
     const timer = window.setInterval(() => fetchData(interval), 30_000);
@@ -221,14 +380,75 @@ export default function UserDashboard() {
         </div>
       )}
 
-      {/* 현재 수치 카드 */}
+      {/* 탭 */}
+      <div className="flex border-b border-zinc-200 dark:border-zinc-700">
+        <button
+          onClick={() => setTab("overview")}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "overview"
+              ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
+              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          }`}
+        >
+          전체 통계
+        </button>
+        <button
+          onClick={() => setTab("affiliate")}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "affiliate"
+              ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
+              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          }`}
+        >
+          가입 경로 분석
+        </button>
+        <button
+          onClick={() => setTab("signup")}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "signup"
+              ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
+              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          }`}
+        >
+          가입 플랫폼 분석
+        </button>
+      </div>
+
+      {/* 탭 내용 */}
+      {tab === "overview" ? (
+        <OverviewTab data={data} totalCounts={totalCounts} loading={loading} />
+      ) : tab === "affiliate" ? (
+        <AffiliateTab
+          data={affiliateData}
+          counts={affiliateCounts}
+          loading={loading}
+        />
+      ) : (
+        <SignupTab data={signupData} counts={signupCounts} loading={loading} />
+      )}
+    </div>
+  );
+}
+
+// ── Sub-components ──
+
+function OverviewTab({
+  data,
+  totalCounts,
+  loading,
+}: {
+  data: ChartPoint[];
+  totalCounts: { total: number; ym: number; okx: number };
+  loading: boolean;
+}) {
+  return (
+    <>
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="총 가입자" value={totalCounts.total} color="blue" />
         <StatCard label="YM 연동" value={totalCounts.ym} color="emerald" />
         <StatCard label="OKX 연동" value={totalCounts.okx} color="amber" />
       </div>
 
-      {/* 차트 */}
       {data.length > 0 ? (
         <div className="rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-600 dark:bg-zinc-900">
           <ResponsiveContainer width="100%" height={400}>
@@ -245,12 +465,7 @@ export default function UserDashboard() {
               />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: "#18181b",
-                  border: "1px solid #3f3f46",
-                  borderRadius: "6px",
-                  fontSize: "13px",
-                }}
+                contentStyle={CHART_TOOLTIP_STYLE}
                 labelStyle={{ color: "#a1a1aa" }}
               />
               <Legend />
@@ -282,16 +497,152 @@ export default function UserDashboard() {
           </ResponsiveContainer>
         </div>
       ) : (
-        !loading && (
-          <div className="rounded-md border border-zinc-200 p-8 text-center text-sm text-zinc-500 dark:border-zinc-700">
-            데이터가 없습니다. sync 스크립트를 실행해주세요.
-            <br />
-            <code className="mt-2 inline-block rounded bg-zinc-100 px-2 py-1 text-xs dark:bg-zinc-800">
-              npx tsx scripts/sync-user-stats.ts --loop
-            </code>
-          </div>
-        )
+        !loading && <EmptyState />
       )}
+    </>
+  );
+}
+
+function AffiliateTab({
+  data,
+  counts,
+  loading,
+}: {
+  data: AffiliateChartPoint[];
+  counts: { youthmeta: number; other: number };
+  loading: boolean;
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-4">
+        <StatCard
+          label="유스메타 유저 (affiliate_no=1)"
+          value={counts.youthmeta}
+          color="emerald"
+        />
+        <StatCard label="일반 유저" value={counts.other} color="blue" />
+      </div>
+
+      {data.length > 0 ? (
+        <div className="rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-600 dark:bg-zinc-900">
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart data={data}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#374151"
+                opacity={0.2}
+              />
+              <XAxis
+                dataKey="time"
+                tick={{ fontSize: 11 }}
+                interval="preserveStartEnd"
+              />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip
+                contentStyle={CHART_TOOLTIP_STYLE}
+                labelStyle={{ color: "#a1a1aa" }}
+              />
+              <Legend />
+              <Line
+                type="stepAfter"
+                dataKey="youthmeta"
+                name="유스메타 유저"
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="stepAfter"
+                dataKey="other"
+                name="일반 유저"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        !loading && <EmptyState />
+      )}
+    </>
+  );
+}
+
+function SignupTab({
+  data,
+  counts,
+  loading,
+}: {
+  data: SignupMemoChartPoint[];
+  counts: { mobile: number; web: number };
+  loading: boolean;
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-4">
+        <StatCard
+          label="모바일 가입 : ym.supercycl 로 가입"
+          value={counts.mobile}
+          color="emerald"
+        />
+        <StatCard label="일반 가입" value={counts.web} color="blue" />
+      </div>
+
+      {data.length > 0 ? (
+        <div className="rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-600 dark:bg-zinc-900">
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart data={data}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#374151"
+                opacity={0.2}
+              />
+              <XAxis
+                dataKey="time"
+                tick={{ fontSize: 11 }}
+                interval="preserveStartEnd"
+              />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip
+                contentStyle={CHART_TOOLTIP_STYLE}
+                labelStyle={{ color: "#a1a1aa" }}
+              />
+              <Legend />
+              <Line
+                type="stepAfter"
+                dataKey="mobile"
+                name="모바일 가입 (ym.supercycl)"
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="stepAfter"
+                dataKey="web"
+                name="일반 가입"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        !loading && <EmptyState />
+      )}
+    </>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="rounded-md border border-zinc-200 p-8 text-center text-sm text-zinc-500 dark:border-zinc-700">
+      데이터가 없습니다. sync 스크립트를 실행해주세요.
+      <br />
+      <code className="mt-2 inline-block rounded bg-zinc-100 px-2 py-1 text-xs dark:bg-zinc-800">
+        npx tsx scripts/sync-user-stats.ts --loop
+      </code>
     </div>
   );
 }
