@@ -65,6 +65,7 @@ const CHART_TOOLTIP_STYLE = {
 // ── Bucket helpers ──
 
 function bucketKey(date: Date, interval: Interval): string {
+  const y = date.getFullYear();
   const mo = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   const h = String(date.getHours()).padStart(2, "0");
@@ -73,16 +74,16 @@ function bucketKey(date: Date, interval: Interval): string {
   switch (interval) {
     case "10m": {
       const bucket = Math.floor(m / 10) * 10;
-      return `${mo}/${d} ${h}:${String(bucket).padStart(2, "0")}`;
+      return `${y}/${mo}/${d} ${h}:${String(bucket).padStart(2, "0")}`;
     }
     case "30m": {
       const bucket = m < 30 ? "00" : "30";
-      return `${mo}/${d} ${h}:${bucket}`;
+      return `${y}/${mo}/${d} ${h}:${bucket}`;
     }
     case "1h":
-      return `${mo}/${d} ${h}:00`;
+      return `${y}/${mo}/${d} ${h}:00`;
     case "1d":
-      return `${date.getFullYear()}-${mo}-${d}`;
+      return `${y}-${mo}-${d}`;
   }
 }
 
