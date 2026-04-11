@@ -7,6 +7,7 @@ import StressTester from "@/components/stress-tester/StressTester";
 import JweDecoder from "@/components/jwe-decoder/JweDecoder";
 import PostMessageTester from "@/components/postmessage-tester/PostMessageTester";
 import HandoffTester from "@/components/handoff-tester/HandoffTester";
+import UserDashboard from "@/components/user-dashboard/UserDashboard";
 
 export default async function ToolPage({
   params,
@@ -36,6 +37,8 @@ export default async function ToolPage({
           <PostMessageTester />
         ) : slug === "handoff-tester" ? (
           <HandoffTester />
+        ) : slug === "user-dashboard" ? (
+          <UserDashboard />
         ) : (
           <p className="text-gray-500">준비 중입니다.</p>
         )}

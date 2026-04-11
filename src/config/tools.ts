@@ -57,4 +57,13 @@ export const tools: ToolConfig[] = [
       "서버에서 JWE를 쿠키에 저장하고 메인 페이지로 리다이렉트합니다.\n" +
       "참고: https://icon-project.atlassian.net/wiki/spaces/SuperCycl/pages/4168024074/Design+-+UTM+Referral+Affiliate#Youthmeta-%ED%9A%8C%EC%9B%90-%EA%B0%80%EC%9E%85-%EB%B0%8F-%ED%9A%8C%EC%9B%90-%EC%A0%95%EB%B3%B4-%EC%88%98%EB%A0%B9",
   },
+  {
+    slug: "user-dashboard",
+    name: "User Stats Dashboard",
+    description:
+      "Supercycl 프로덕션 DB의 사용자 통계를 시계열 차트로 보여주는 대시보드입니다.\n" +
+      "총 가입자(t_user), YM 연동(t_partner_youthmeta_user), OKX 연동(t_exchange_account) 수를 추적합니다.\n" +
+      "PC에서 sync 스크립트(scripts/sync-user-stats.ts)를 실행하면 10초 간격으로 Supabase에 데이터가 저장됩니다.\n" +
+      "대시보드는 Supabase에서 데이터를 읽어 일/1시간/30분/10분 단위로 차트를 표시합니다.",
+  },
 ];
