@@ -59,11 +59,19 @@ export const tools: ToolConfig[] = [
   },
   {
     slug: "user-dashboard",
-    name: "User Stats Dashboard",
+    name: "가입 현황",
     description:
       "Supercycl 프로덕션 DB의 사용자 통계를 시계열 차트로 보여주는 대시보드입니다.\n" +
       "총 가입자(t_user), YM 연동(t_partner_youthmeta_user), OKX 연동(t_exchange_account) 수를 추적합니다.\n" +
       "PC에서 sync 스크립트(scripts/sync-user-stats.ts)를 실행하면 10초 간격으로 Supabase에 데이터가 저장됩니다.\n" +
       "대시보드는 Supabase에서 데이터를 읽어 일/1시간/30분/10분 단위로 차트를 표시합니다.",
+  },
+  {
+    slug: "user-signup-detail",
+    name: "가입 현황 상세",
+    description:
+      "시간대별 신규 가입자 수를 막대 그래프로 보여주는 상세 대시보드입니다.\n" +
+      "KST 기준 최근 2일치 데이터를 1시간/10분/1분 단위로 표시합니다.\n" +
+      "해당 시간에 가입이 없으면 0으로 표시됩니다.",
   },
 ];

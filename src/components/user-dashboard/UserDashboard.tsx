@@ -65,28 +65,34 @@ const CHART_TOOLTIP_STYLE = {
 };
 // ── Bucket helpers ──
 
+function toKST(date: Date): Date {
+  // UTC → KST (+9시간)
+  return new Date(date.getTime() + 9 * 60 * 60 * 1000);
+}
+
 function bucketKey(date: Date, interval: Interval): string {
-  const y = date.getFullYear();
-  const mo = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  const h = String(date.getHours()).padStart(2, "0");
-  const m = date.getMinutes();
+  const kst = toKST(date);
+  const y = kst.getUTCFullYear();
+  const mo = String(kst.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(kst.getUTCDate()).padStart(2, "0");
+  const h = String(kst.getUTCHours()).padStart(2, "0");
+  const m = kst.getUTCMinutes();
 
   switch (interval) {
     case "1m":
-      return `${y}/${mo}/${d} ${h}:${String(m).padStart(2, "0")}`;
+      return `KST ${y}/${mo}/${d} ${h}:${String(m).padStart(2, "0")}`;
     case "10m": {
       const bucket = Math.floor(m / 10) * 10;
-      return `${y}/${mo}/${d} ${h}:${String(bucket).padStart(2, "0")}`;
+      return `KST ${y}/${mo}/${d} ${h}:${String(bucket).padStart(2, "0")}`;
     }
     case "30m": {
       const bucket = m < 30 ? "00" : "30";
-      return `${y}/${mo}/${d} ${h}:${bucket}`;
+      return `KST ${y}/${mo}/${d} ${h}:${bucket}`;
     }
     case "1h":
-      return `${y}/${mo}/${d} ${h}:00`;
+      return `KST ${y}/${mo}/${d} ${h}:00`;
     case "1d":
-      return `${y}-${mo}-${d}`;
+      return `KST ${y}-${mo}-${d}`;
   }
 }
 

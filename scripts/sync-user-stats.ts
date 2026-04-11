@@ -63,7 +63,7 @@ async function upsertToSupabase(
 
 async function syncUsers(conn: mysql.Connection | mysql.PoolConnection) {
   const [rows] = (await conn.query(
-    "SELECT address, affiliate_no, signup_memo, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%s+09:00') as created_at FROM t_user",
+    "SELECT address, affiliate_no, signup_memo, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%s+00:00') as created_at FROM t_user",
   )) as any;
   const mapped = (rows as any[]).map((r: any) => ({
     address: r.address,
@@ -77,7 +77,7 @@ async function syncUsers(conn: mysql.Connection | mysql.PoolConnection) {
 
 async function syncYmUsers(conn: mysql.Connection | mysql.PoolConnection) {
   const [rows] = (await conn.query(
-    "SELECT mapping_no, address, ym_platform, ym_uid, ym_userid, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%s+09:00') as created_at FROM t_partner_youthmeta_user",
+    "SELECT mapping_no, address, ym_platform, ym_uid, ym_userid, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%s+00:00') as created_at FROM t_partner_youthmeta_user",
   )) as any;
   const mapped = (rows as any[]).map((r: any) => ({
     mapping_no: r.mapping_no,
@@ -93,7 +93,7 @@ async function syncYmUsers(conn: mysql.Connection | mysql.PoolConnection) {
 
 async function syncOkxUsers(conn: mysql.Connection | mysql.PoolConnection) {
   const [rows] = (await conn.query(
-    "SELECT exchange_uid, main_address, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%s+09:00') as created_at FROM t_exchange_account WHERE exchange_uid LIKE 'OKX\\_%'",
+    "SELECT exchange_uid, main_address, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%s+00:00') as created_at FROM t_exchange_account WHERE exchange_uid LIKE 'OKX\\_%'",
   )) as any;
   const mapped = (rows as any[]).map((r: any) => ({
     exchange_uid: r.exchange_uid,
