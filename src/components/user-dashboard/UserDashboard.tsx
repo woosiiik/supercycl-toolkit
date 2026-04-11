@@ -22,6 +22,7 @@ interface ChartPoint {
   time: string;
   total: number;
   ym: number;
+  ymEx: number;
   okx: number;
 }
 
@@ -99,6 +100,7 @@ function countByBucket(dates: string[], interval: Interval) {
 function buildCumulativeChart(
   users: string[],
   ymUsers: string[],
+  ymExDates: string[],
   okxUsers: string[],
   interval: Interval,
 ): ChartPoint[] {
@@ -109,22 +111,26 @@ function buildCumulativeChart(
   };
   addBuckets(users);
   addBuckets(ymUsers);
+  addBuckets(ymExDates);
   addBuckets(okxUsers);
 
   const totalMap = countByBucket(users, interval);
   const ymMap = countByBucket(ymUsers, interval);
+  const ymExMap = countByBucket(ymExDates, interval);
   const okxMap = countByBucket(okxUsers, interval);
 
   const sorted = Array.from(allBuckets).sort();
   let cumTotal = 0,
     cumYm = 0,
+    cumYmEx = 0,
     cumOkx = 0;
 
   return sorted.map((time) => {
     cumTotal += totalMap.get(time) || 0;
     cumYm += ymMap.get(time) || 0;
+    cumYmEx += ymExMap.get(time) || 0;
     cumOkx += okxMap.get(time) || 0;
-    return { time, total: cumTotal, ym: cumYm, okx: cumOkx };
+    return { time, total: cumTotal, ym: cumYm, ymEx: cumYmEx, okx: cumOkx };
   });
 }
 
@@ -250,6 +256,45 @@ async function fetchAllCreatedAt(table: string): Promise<string[]> {
   return dates;
 }
 
+interface YmUserRow {
+  ym_uid: string;
+  created_at: string;
+}
+
+/** ym_uid 기준 unique Ex 계정의 created_at (가장 빠른 것) */
+async function fetchUniqueYmExDates(): Promise<string[]> {
+  const rows: YmUserRow[] = [];
+  let offset = 0;
+  const limit = 1000;
+
+  while (true) {
+    const url =
+      `${SUPABASE_URL}/rest/v1/ym_users` +
+      `?select=ym_uid,created_at&order=created_at.asc` +
+      `&offset=${offset}&limit=${limit}`;
+
+    const res = await fetch(url, { headers: supaHeaders });
+    if (!res.ok) throw new Error(`HTTP ${res.status} from ym_users`);
+
+    const batch: YmUserRow[] = await res.json();
+    rows.push(...batch);
+
+    if (batch.length < limit) break;
+    offset += limit;
+  }
+
+  // ym_uid 기준 첫 등장 시간만 사용 (unique)
+  const seen = new Set<string>();
+  const dates: string[] = [];
+  for (const r of rows) {
+    if (!seen.has(r.ym_uid)) {
+      seen.add(r.ym_uid);
+      dates.push(r.created_at);
+    }
+  }
+  return dates;
+}
+
 // ── Main component ──
 
 type Tab = "overview" | "affiliate" | "signup";
@@ -264,7 +309,12 @@ export default function UserDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [totalCounts, setTotalCounts] = useState({ total: 0, ym: 0, okx: 0 });
+  const [totalCounts, setTotalCounts] = useState({
+    total: 0,
+    ym: 0,
+    ymEx: 0,
+    okx: 0,
+  });
   const [affiliateCounts, setAffiliateCounts] = useState({
     youthmeta: 0,
     other: 0,
@@ -275,9 +325,10 @@ export default function UserDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [userRows, ymDates, okxDates] = await Promise.all([
+      const [userRows, ymDates, ymExDates, okxDates] = await Promise.all([
         fetchAllUsers(),
         fetchAllCreatedAt("ym_users"),
+        fetchUniqueYmExDates(),
         fetchAllCreatedAt("okx_users"),
       ]);
 
@@ -286,11 +337,18 @@ export default function UserDashboard() {
       setTotalCounts({
         total: userRows.length,
         ym: ymDates.length,
+        ymEx: ymExDates.length,
         okx: okxDates.length,
       });
 
       // 전체 통계 차트
-      const points = buildCumulativeChart(allUserDates, ymDates, okxDates, iv);
+      const points = buildCumulativeChart(
+        allUserDates,
+        ymDates,
+        ymExDates,
+        okxDates,
+        iv,
+      );
       setData(points);
 
       // Affiliate 분석 차트
@@ -438,15 +496,16 @@ function OverviewTab({
   loading,
 }: {
   data: ChartPoint[];
-  totalCounts: { total: number; ym: number; okx: number };
+  totalCounts: { total: number; ym: number; ymEx: number; okx: number };
   loading: boolean;
 }) {
   return (
     <>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="총 가입자" value={totalCounts.total} color="blue" />
-        <StatCard label="YM 연동" value={totalCounts.ym} color="emerald" />
-        <StatCard label="OKX 연동" value={totalCounts.okx} color="amber" />
+        <StatCard label="YM 가입자" value={totalCounts.ym} color="emerald" />
+        <StatCard label="연동 Ex 계정" value={totalCounts.ymEx} color="amber" />
+        <StatCard label="등록 OKX 계정" value={totalCounts.okx} color="amber" />
       </div>
 
       {data.length > 0 ? (
@@ -480,15 +539,23 @@ function OverviewTab({
               <Line
                 type="stepAfter"
                 dataKey="ym"
-                name="YM 연동"
+                name="YM 가입자"
                 stroke="#10b981"
                 strokeWidth={2}
                 dot={false}
               />
               <Line
                 type="stepAfter"
+                dataKey="ymEx"
+                name="연동 Ex 계정"
+                stroke="#f97316"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="stepAfter"
                 dataKey="okx"
-                name="OKX 연동"
+                name="등록 OKX 계정"
                 stroke="#f59e0b"
                 strokeWidth={2}
                 dot={false}
