@@ -74,4 +74,11 @@ export const tools: ToolConfig[] = [
       "KST 기준 최근 2일치 데이터를 1시간/10분/1분 단위로 표시합니다.\n" +
       "해당 시간에 가입이 없으면 0으로 표시됩니다.",
   },
+  {
+    slug: "user-export",
+    name: "사용자 데이터 Export",
+    description:
+      "프로덕션 DB에서 사용자 데이터를 조회하여 테이블로 미리보기하고 CSV로 내보내는 도구입니다.\n" +
+      "⚠️ localhost에서만 동작합니다 (VPN 연결 필요).",
+  },
 ];

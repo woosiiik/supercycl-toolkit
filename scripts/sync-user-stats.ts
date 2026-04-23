@@ -27,7 +27,27 @@ const MYSQL_CONFIG = {
 
 const BATCH_SIZE = 500;
 
-// ── Supabase upsert helper ──
+// ── Supabase helpers ──
+
+async function deleteAllFromSupabase(
+  table: string,
+  pkColumn: string,
+  pkType: "text" | "number" = "text",
+) {
+  const filter =
+    pkType === "number" ? `${pkColumn}=gt.0` : `${pkColumn}=neq.IMPOSSIBLE`;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+    method: "DELETE",
+    headers: {
+      apikey: SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase delete ${table} failed: ${res.status} ${text}`);
+  }
+}
 
 async function upsertToSupabase(
   table: string,
@@ -109,6 +129,11 @@ async function syncOkxUsers(conn: mysql.Connection | mysql.PoolConnection) {
 const LOOP_INTERVAL = 10_000; // 10초
 
 async function syncAll(conn: mysql.Connection | mysql.PoolConnection) {
+  // 기존 데이터 삭제 후 새로 삽입 (origin에서 삭제된 레코드 반영)
+  await deleteAllFromSupabase("users", "address");
+  await deleteAllFromSupabase("ym_users", "mapping_no", "number");
+  await deleteAllFromSupabase("okx_users", "exchange_uid");
+
   const userCount = await syncUsers(conn);
   const ymCount = await syncYmUsers(conn);
   const okxCount = await syncOkxUsers(conn);
