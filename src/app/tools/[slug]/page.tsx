@@ -10,6 +10,7 @@ import HandoffTester from "@/components/handoff-tester/HandoffTester";
 import UserDashboard from "@/components/user-dashboard/UserDashboard";
 import UserSignupDetail from "@/components/user-dashboard/UserSignupDetail";
 import UserExport from "@/components/user-export/UserExport";
+import OkxRebate from "@/components/okx-rebate/OkxRebate";
 
 export default async function ToolPage({
   params,
@@ -45,6 +46,8 @@ export default async function ToolPage({
           <UserSignupDetail />
         ) : slug === "user-export" ? (
           <UserExport />
+        ) : slug === "okx-rebate" ? (
+          <OkxRebate />
         ) : (
           <p className="text-gray-500">준비 중입니다.</p>
         )}

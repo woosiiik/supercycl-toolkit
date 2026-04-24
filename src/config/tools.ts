@@ -81,4 +81,13 @@ export const tools: ToolConfig[] = [
       "프로덕션 DB에서 사용자 데이터를 조회하여 테이블로 미리보기하고 CSV로 내보내는 도구입니다.\n" +
       "⚠️ localhost에서만 동작합니다 (VPN 연결 필요).",
   },
+  {
+    slug: "okx-rebate",
+    name: "OKX 리베이트 조회",
+    description:
+      "OKX 브로커 프로그램에서 받은 리베이트 리워드를 조회하는 도구입니다.\n" +
+      "OKX API를 통해 리베이트 상세 CSV를 다운로드하고, PNL DB(t_trade_history)와 매핑하여 주소별 리베이트 현황을 분석합니다.\n" +
+      "⚠️ localhost에서만 동작합니다 (PNL DB VPN 연결 필요).\n" +
+      "⚠️ OKX API Rate Limit: CSV 생성 요청 1회/60분, 링크 조회 2회/분, CSV 생성 소요 최대 2시간. 한 번 다운로드하면 캐시되어 재호출 불필요.",
+  },
 ];
