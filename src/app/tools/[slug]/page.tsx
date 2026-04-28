@@ -10,6 +10,7 @@ import HandoffTester from "@/components/handoff-tester/HandoffTester";
 import UserDashboard from "@/components/user-dashboard/UserDashboard";
 import UserSignupDetail from "@/components/user-dashboard/UserSignupDetail";
 import UserExport from "@/components/user-export/UserExport";
+import YmSignupStats from "@/components/ym-signup-stats/YmSignupStats";
 import OkxRebate from "@/components/okx-rebate/OkxRebate";
 
 export default async function ToolPage({
@@ -46,6 +47,8 @@ export default async function ToolPage({
           <UserSignupDetail />
         ) : slug === "user-export" ? (
           <UserExport />
+        ) : slug === "ym-signup-stats" ? (
+          <YmSignupStats />
         ) : slug === "okx-rebate" ? (
           <OkxRebate />
         ) : (

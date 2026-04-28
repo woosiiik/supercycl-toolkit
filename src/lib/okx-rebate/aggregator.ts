@@ -12,6 +12,9 @@ export function aggregateByAddress(
   csvRows: OkxRebateRow[],
   trades: TradeRecord[],
   unmappedOrderIds: string[],
+  exAccountIdMap: Record<string, string>,
+  registeredDateMap: Record<string, string>,
+  exchangeUidToAddress: Record<string, string>,
 ): {
   addressSummaries: AddressRebateSummary[];
   unmatchedOrders: UnmatchedOrder[];
@@ -33,11 +36,21 @@ export function aggregateByAddress(
   }
 
   const unmappedSet = new Set(unmappedOrderIds);
-  // orderId → address (첫 trade에서 추출)
-  const orderToAddress = new Map<string, string | null>();
+
+  // orderId → 직접 address (t_trade_history 원본)
+  const orderToDirectAddress = new Map<string, string | null>();
+  // orderId → 표시용 address (직접 또는 유추)
+  const orderToDisplayAddress = new Map<string, string | null>();
+  const orderToExchangeUid = new Map<string, string | null>();
   for (const t of trades) {
-    if (!orderToAddress.has(t.orderId)) {
-      orderToAddress.set(t.orderId, t.address);
+    if (!orderToDirectAddress.has(t.orderId)) {
+      orderToDirectAddress.set(t.orderId, t.address);
+      let displayAddr = t.address;
+      if (!displayAddr && t.exchangeUid) {
+        displayAddr = exchangeUidToAddress[t.exchangeUid] || null;
+      }
+      orderToDisplayAddress.set(t.orderId, displayAddr);
+      orderToExchangeUid.set(t.orderId, t.exchangeUid);
     }
   }
 
@@ -47,9 +60,22 @@ export function aggregateByAddress(
 
   for (const csvRow of csvRows) {
     const isMapped = !unmappedSet.has(csvRow.orderId);
-    const address = orderToAddress.get(csvRow.orderId) ?? null;
+    const directAddress = orderToDirectAddress.get(csvRow.orderId) ?? null;
+    const displayAddress = orderToDisplayAddress.get(csvRow.orderId) ?? null;
+    const exchangeUid = orderToExchangeUid.get(csvRow.orderId) ?? null;
 
-    // allOrders에 항상 추가
+    // 매핑 = t_trade_history에서 address를 직접 찾은 경우만
+    const mapped = isMapped && !!directAddress;
+
+    // 미매핑 사유 판별
+    let unmapReason: AllOrderRow["unmapReason"] = null;
+    if (!isMapped) {
+      unmapReason = "no_trade";
+    } else if (!directAddress) {
+      unmapReason = "no_address";
+    }
+
+    // allOrders에 항상 추가 (address는 유추 포함 표시용)
     allOrders.push({
       orderId: csvRow.orderId,
       instId: csvRow.instId,
@@ -62,8 +88,10 @@ export function aggregateByAddress(
       affiliated: csvRow.affiliated,
       derivativeTradeAmt: csvRow.derivativeTradeAmt,
       ts: csvRow.ts,
-      mapped: isMapped && !!address,
-      address,
+      mapped,
+      address: displayAddress,
+      exchangeUid,
+      unmapReason,
     });
 
     // 미매핑 처리
@@ -80,7 +108,7 @@ export function aggregateByAddress(
     }
 
     const orderTrades = tradesByOrderId.get(csvRow.orderId);
-    if (!orderTrades || orderTrades.length === 0 || !address) {
+    if (!orderTrades || orderTrades.length === 0 || !directAddress) {
       unmatchedOrders.push({
         orderId: csvRow.orderId,
         instId: csvRow.instId,
@@ -89,28 +117,29 @@ export function aggregateByAddress(
         derivativeTradeAmt: csvRow.derivativeTradeAmt,
         ts: csvRow.ts,
       });
-      // 이미 allOrders에 추가됨 — mapped=false로 업데이트
-      allOrders[allOrders.length - 1].mapped = false;
       continue;
     }
 
-    let entry = addressMap.get(address);
+    let entry = addressMap.get(directAddress);
     if (!entry) {
       entry = {
-        address,
+        address: directAddress,
+        exAccountId: exAccountIdMap[directAddress] || "",
         totalRebate: 0,
         totalFee: 0,
         totalVolume: 0,
         tradeCount: 0,
         orderCount: 0,
+        registeredDate: registeredDateMap[directAddress] || "",
         details: [],
       };
-      addressMap.set(address, entry);
+      addressMap.set(directAddress, entry);
     }
 
-    // rebate/fee는 order 단위 (CSV 기준, 중복 합산 안 함)
+    // rebate/fee/volume은 order 단위 (CSV 기준, 중복 합산 안 함)
     entry.totalRebate += csvRow.brokerRebate;
     entry.totalFee += Math.abs(csvRow.fee);
+    entry.totalVolume += csvRow.derivativeTradeAmt;
     entry.orderCount += 1;
 
     // 각 trade를 detail로 추가 (rebate/fee는 첫 trade에만, 나머지 0)
@@ -120,7 +149,6 @@ export function aggregateByAddress(
       const quantity = parseFloat(t.quantity) || 0;
       const isFirst = ti === 0;
       entry.tradeCount += 1;
-      entry.totalVolume += price * quantity;
       entry.details.push({
         orderId: t.orderId,
         tradeId: t.tradeId,

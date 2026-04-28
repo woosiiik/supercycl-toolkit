@@ -51,11 +51,13 @@ export interface TradeDetail {
 /** 주소별 집계 결과 */
 export interface AddressRebateSummary {
   address: string;
+  exAccountId: string; // t_partner_youthmeta_user.ym_userid
   totalRebate: number;
   totalFee: number; // CSV fee 부호 반전 양수
   totalVolume: number; // price × quantity 합산
   tradeCount: number; // trade 건수 (DB 기준)
   orderCount: number; // order 건수 (CSV 기준)
+  registeredDate: string; // t_user.created (YYYY-MM-DD)
   details: TradeDetail[];
 }
 
@@ -68,6 +70,9 @@ export interface UnmatchedOrder {
   derivativeTradeAmt: number;
   ts: number;
 }
+
+/** 미매핑 사유 */
+export type UnmapReason = "no_trade" | "no_address" | null;
 
 /** 전체 주문 (원본 CSV + 매핑 여부) */
 export interface AllOrderRow {
@@ -84,6 +89,8 @@ export interface AllOrderRow {
   ts: number;
   mapped: boolean;
   address: string | null;
+  exchangeUid: string | null;
+  unmapReason: UnmapReason;
 }
 
 /** 전체 요약 */

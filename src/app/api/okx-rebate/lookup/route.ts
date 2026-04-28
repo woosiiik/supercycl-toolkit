@@ -82,7 +82,72 @@ export async function POST(request: Request) {
       (r) => r.address,
     );
 
-    return NextResponse.json({ trades, unmappedOrderIds, affiliateUsers });
+    // address가 없는 trade의 exchange_uid로 t_exchange_account.main_address 유추
+    const exchangeUidToAddress: Record<string, string> = {};
+    const noAddrUids = new Set<string>();
+    for (const t of trades) {
+      if (!t.address && t.exchangeUid) noAddrUids.add(t.exchangeUid);
+    }
+    if (noAddrUids.size > 0) {
+      const uidList = Array.from(noAddrUids);
+      for (let i = 0; i < uidList.length; i += DB_BATCH_SIZE) {
+        const batch = uidList.slice(i, i + DB_BATCH_SIZE);
+        const ph = batch.map(() => "?").join(",");
+        const [rows] = await conn.query(
+          `SELECT exchange_uid, main_address FROM t_exchange_account
+           WHERE exchange_uid IN (${ph}) AND main_address != ''`,
+          batch,
+        );
+        for (const r of rows as Array<{ exchange_uid: string; main_address: string }>) {
+          exchangeUidToAddress[r.exchange_uid] = r.main_address;
+        }
+      }
+    }
+
+    // 매핑된 주소 목록 수집 (유추된 주소 포함)
+    const addressSet = new Set<string>();
+    for (const t of trades) {
+      const addr = t.address || (t.exchangeUid ? exchangeUidToAddress[t.exchangeUid] : null);
+      if (addr) addressSet.add(addr);
+    }
+    const addresses = Array.from(addressSet);
+
+    // t_partner_youthmeta_user → address → ym_userid 매핑
+    const exAccountIdMap: Record<string, string> = {};
+    if (addresses.length > 0) {
+      for (let i = 0; i < addresses.length; i += DB_BATCH_SIZE) {
+        const batch = addresses.slice(i, i + DB_BATCH_SIZE);
+        const ph = batch.map(() => "?").join(",");
+        const [rows] = await conn.query(
+          `SELECT address, ym_userid, status FROM t_partner_youthmeta_user
+           WHERE address IN (${ph})
+           ORDER BY FIELD(status, 'ACTIVE', 'UNLINKED')`,
+          batch,
+        );
+        for (const r of rows as Array<{ address: string; ym_userid: string; status: string }>) {
+          if (!exAccountIdMap[r.address]) exAccountIdMap[r.address] = r.ym_userid;
+        }
+      }
+    }
+
+    // t_user → address → created (가입일자) 매핑
+    const registeredDateMap: Record<string, string> = {};
+    if (addresses.length > 0) {
+      for (let i = 0; i < addresses.length; i += DB_BATCH_SIZE) {
+        const batch = addresses.slice(i, i + DB_BATCH_SIZE);
+        const ph = batch.map(() => "?").join(",");
+        const [rows] = await conn.query(
+          `SELECT address, DATE_FORMAT(created_at, '%Y-%m-%d') AS reg_date FROM t_user
+           WHERE address IN (${ph})`,
+          batch,
+        );
+        for (const r of rows as Array<{ address: string; reg_date: string }>) {
+          registeredDateMap[r.address] = r.reg_date;
+        }
+      }
+    }
+
+    return NextResponse.json({ trades, unmappedOrderIds, affiliateUsers, exAccountIdMap, registeredDateMap, exchangeUidToAddress });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });

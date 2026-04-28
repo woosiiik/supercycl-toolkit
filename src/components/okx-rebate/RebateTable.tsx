@@ -9,13 +9,28 @@ interface RebateTableProps {
   onExportDetailCsv: () => void;
 }
 
-type SortKey = "address" | "totalRebate" | "totalVolume" | "totalFee" | "tradeCount";
+type SortKey = "address" | "exAccountId" | "totalVolume" | "totalFee" | "totalRebate" | "rebateFeeRatio" | "rebateVolumeRatio" | "registeredDate";
 
 function fmt(n: number): string {
   return n.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 6,
   });
+}
+
+function fmtPct(n: number): string {
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }) + "%";
+}
+
+function rebateFeeRatio(row: AddressRebateSummary): number {
+  return row.totalFee > 0 ? (row.totalRebate / row.totalFee) * 100 : 0;
+}
+
+function rebateVolumeRatio(row: AddressRebateSummary): number {
+  return row.totalVolume > 0 ? (row.totalRebate / row.totalVolume) * 100 : 0;
 }
 
 function fmtTime(dateStr: string | null): string {
@@ -43,6 +58,14 @@ export default function RebateTable({ rows, onExportSummaryCsv, onExportDetailCs
     let cmp: number;
     if (sortKey === "address") {
       cmp = a.address.localeCompare(b.address);
+    } else if (sortKey === "exAccountId") {
+      cmp = a.exAccountId.localeCompare(b.exAccountId);
+    } else if (sortKey === "registeredDate") {
+      cmp = a.registeredDate.localeCompare(b.registeredDate);
+    } else if (sortKey === "rebateFeeRatio") {
+      cmp = rebateFeeRatio(a) - rebateFeeRatio(b);
+    } else if (sortKey === "rebateVolumeRatio") {
+      cmp = rebateVolumeRatio(a) - rebateVolumeRatio(b);
     } else {
       cmp = a[sortKey] - b[sortKey];
     }
@@ -90,17 +113,26 @@ export default function RebateTable({ rows, onExportSummaryCsv, onExportDetailCs
               <th className={`${thCls} ${borderR}`} onClick={() => handleSort("address")}>
                 Address{indicator("address")}
               </th>
-              <th className={`${thCls} ${borderR} text-right`} onClick={() => handleSort("totalRebate")}>
-                Rebate{indicator("totalRebate")}
+              <th className={`${thCls} ${borderR}`} onClick={() => handleSort("exAccountId")}>
+                EX 계정 ID{indicator("exAccountId")}
               </th>
               <th className={`${thCls} ${borderR} text-right`} onClick={() => handleSort("totalVolume")}>
-                Volume{indicator("totalVolume")}
+                누적 거래량(USD){indicator("totalVolume")}
               </th>
               <th className={`${thCls} ${borderR} text-right`} onClick={() => handleSort("totalFee")}>
-                Fee (원본 CSV){indicator("totalFee")}
+                누적 수수료(USD){indicator("totalFee")}
               </th>
-              <th className={`${thCls} text-right`} onClick={() => handleSort("tradeCount")}>
-                Trades{indicator("tradeCount")}
+              <th className={`${thCls} ${borderR} text-right`} onClick={() => handleSort("totalRebate")}>
+                누적 브로커피(USD){indicator("totalRebate")}
+              </th>
+              <th className={`${thCls} ${borderR} text-right`} onClick={() => handleSort("rebateFeeRatio")}>
+                브로커피/수수료{indicator("rebateFeeRatio")}
+              </th>
+              <th className={`${thCls} ${borderR} text-right`} onClick={() => handleSort("rebateVolumeRatio")}>
+                브로커피/거래량{indicator("rebateVolumeRatio")}
+              </th>
+              <th className={`${thCls}`} onClick={() => handleSort("registeredDate")}>
+                가입일자{indicator("registeredDate")}
               </th>
             </tr>
           </thead>
@@ -122,8 +154,8 @@ export default function RebateTable({ rows, onExportSummaryCsv, onExportDetailCs
                   <td className={`${tdCls} ${borderR} font-mono text-xs`}>
                     {row.address}
                   </td>
-                  <td className={`${tdCls} ${borderR} text-right tabular-nums text-green-600 dark:text-green-400`}>
-                    {fmt(row.totalRebate)}
+                  <td className={`${tdCls} ${borderR} text-xs`}>
+                    {row.exAccountId || "-"}
                   </td>
                   <td className={`${tdCls} ${borderR} text-right tabular-nums`}>
                     {fmt(row.totalVolume)}
@@ -131,14 +163,23 @@ export default function RebateTable({ rows, onExportSummaryCsv, onExportDetailCs
                   <td className={`${tdCls} ${borderR} text-right tabular-nums`}>
                     {fmt(row.totalFee)}
                   </td>
-                  <td className={`${tdCls} text-right tabular-nums`}>
-                    {row.tradeCount.toLocaleString()}
+                  <td className={`${tdCls} ${borderR} text-right tabular-nums text-green-600 dark:text-green-400`}>
+                    {fmt(row.totalRebate)}
+                  </td>
+                  <td className={`${tdCls} ${borderR} text-right tabular-nums`}>
+                    {fmtPct(rebateFeeRatio(row))}
+                  </td>
+                  <td className={`${tdCls} ${borderR} text-right tabular-nums`}>
+                    {fmtPct(rebateVolumeRatio(row))}
+                  </td>
+                  <td className={`${tdCls} tabular-nums text-xs`}>
+                    {row.registeredDate || "-"}
                   </td>
                 </tr>
                 {expandedAddr === row.address && (
                   <tr key={`${row.address}-detail`}>
                     <td
-                      colSpan={6}
+                      colSpan={9}
                       className="border-t border-zinc-100 bg-zinc-50/50 p-0 dark:border-zinc-800 dark:bg-zinc-900/50"
                     >
                       <DetailTable details={row.details} />

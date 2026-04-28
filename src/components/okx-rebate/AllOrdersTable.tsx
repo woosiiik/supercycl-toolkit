@@ -39,11 +39,11 @@ export default function AllOrdersTable({
   const totalRebate = filtered.reduce((s, r) => s + r.brokerRebate, 0);
   const totalFee = filtered.reduce((s, r) => s + Math.abs(r.fee), 0);
   const totalNetFee = filtered.reduce((s, r) => s + Math.abs(r.netFee), 0);
-  const totalUserRebate = filtered.reduce((s, r) => s + r.userRebate, 0);
   const totalVolume = filtered.reduce((s, r) => s + r.derivativeTradeAmt, 0);
-  const affiliatedCount = filtered.filter((r) => r.affiliated).length;
   const mappedCount = rows.filter((r) => r.mapped).length;
   const unmappedCount = rows.filter((r) => !r.mapped).length;
+  const noTradeCount = filtered.filter((r) => r.unmapReason === "no_trade").length;
+  const noAddressCount = filtered.filter((r) => r.unmapReason === "no_address").length;
 
   const thCls =
     "px-3 py-2 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400";
@@ -74,12 +74,6 @@ export default function AllOrdersTable({
           </p>
         </div>
         <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-700">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">UserRebate</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-purple-600 dark:text-purple-400">
-            {fmt(totalUserRebate)}
-          </p>
-        </div>
-        <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-700">
           <p className="text-xs text-zinc-500 dark:text-zinc-400">Fee</p>
           <p className="mt-1 text-lg font-semibold tabular-nums text-blue-600 dark:text-blue-400">
             {fmt(totalFee)}
@@ -98,9 +92,15 @@ export default function AllOrdersTable({
           </p>
         </div>
         <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-700">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Affiliated</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-            {affiliatedCount} <span className="text-sm font-normal text-zinc-400">/ {filtered.length}</span>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">DB 미존재</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-red-500">
+            {noTradeCount}
+          </p>
+        </div>
+        <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-700">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">주소 없음</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-amber-500">
+            {noAddressCount}
           </p>
         </div>
       </div>
@@ -138,15 +138,14 @@ export default function AllOrdersTable({
               <tr>
                 <th className={`${thCls} ${borderR} w-8`}>#</th>
                 <th className={`${thCls} ${borderR}`}>상태</th>
+                <th className={`${thCls} ${borderR}`}>미매핑 사유</th>
                 <th className={`${thCls} ${borderR}`}>OrderId</th>
                 <th className={`${thCls} ${borderR}`}>종목</th>
-                <th className={`${thCls} ${borderR}`}>Level</th>
                 <th className={`${thCls} ${borderR} text-right`}>Fee</th>
                 <th className={`${thCls} ${borderR} text-right`}>NetFee</th>
                 <th className={`${thCls} ${borderR} text-right`}>BrokerRebate</th>
-                <th className={`${thCls} ${borderR} text-right`}>UserRebate</th>
-                <th className={`${thCls} ${borderR} text-center`}>Affil.</th>
                 <th className={`${thCls} ${borderR} text-right`}>거래량</th>
+                <th className={`${thCls} ${borderR}`}>ExchangeUID</th>
                 <th className={`${thCls} ${borderR}`}>Address</th>
                 <th className={thCls}>시각 (KST)</th>
               </tr>
@@ -171,11 +170,19 @@ export default function AllOrdersTable({
                       {r.mapped ? "매핑" : "미매핑"}
                     </span>
                   </td>
+                  <td className={`${tdCls} ${borderR} text-center text-xs`}>
+                    {r.unmapReason === "no_trade" ? (
+                      <span className="text-red-500">DB 미존재</span>
+                    ) : r.unmapReason === "no_address" ? (
+                      <span className="text-amber-500">주소 없음</span>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                   <td className={`${tdCls} ${borderR} font-mono text-xs`}>
                     {r.orderId}
                   </td>
                   <td className={`${tdCls} ${borderR}`}>{r.instId}</td>
-                  <td className={`${tdCls} ${borderR}`}>{r.level || "-"}</td>
                   <td className={`${tdCls} ${borderR} text-right tabular-nums`}>
                     {fmt(Math.abs(r.fee))}
                   </td>
@@ -185,18 +192,11 @@ export default function AllOrdersTable({
                   <td className={`${tdCls} ${borderR} text-right tabular-nums text-green-600 dark:text-green-400`}>
                     {fmt(r.brokerRebate)}
                   </td>
-                  <td className={`${tdCls} ${borderR} text-right tabular-nums text-purple-600 dark:text-purple-400`}>
-                    {r.userRebate > 0 ? fmt(r.userRebate) : "-"}
-                  </td>
-                  <td className={`${tdCls} ${borderR} text-center`}>
-                    {r.affiliated ? (
-                      <span className="text-amber-600 dark:text-amber-400">Y</span>
-                    ) : (
-                      <span className="text-zinc-300 dark:text-zinc-600">-</span>
-                    )}
-                  </td>
                   <td className={`${tdCls} ${borderR} text-right tabular-nums`}>
                     {fmt(r.derivativeTradeAmt)}
+                  </td>
+                  <td className={`${tdCls} ${borderR} font-mono text-xs`}>
+                    {r.exchangeUid || "-"}
                   </td>
                   <td className={`${tdCls} ${borderR} font-mono text-xs`}>
                     {r.address || "-"}

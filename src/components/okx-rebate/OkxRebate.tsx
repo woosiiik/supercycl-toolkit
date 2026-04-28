@@ -137,11 +137,14 @@ export default function OkxRebate() {
     const trades = lookupData.trades as TradeRecord[];
     const unmappedOrderIds = lookupData.unmappedOrderIds as string[];
     const affUsers = lookupData.affiliateUsers as string[];
+    const exAccountIdMap = (lookupData.exAccountIdMap || {}) as Record<string, string>;
+    const registeredDateMap = (lookupData.registeredDateMap || {}) as Record<string, string>;
+    const exchangeUidToAddress = (lookupData.exchangeUidToAddress || {}) as Record<string, string>;
     setAffiliateUsers(new Set(affUsers));
     updateStep(3, { state: "done", detail: `${orderIds.length} orders → ${trades.length} trades` });
 
     updateStep(4, { state: "running" });
-    const result = aggregateByAddress(csvRows, trades, unmappedOrderIds);
+    const result = aggregateByAddress(csvRows, trades, unmappedOrderIds, exAccountIdMap, registeredDateMap, exchangeUidToAddress);
     setAddressSummaries(result.addressSummaries);
     setUnmatchedOrders(result.unmatchedOrders);
     setAllOrders(result.allOrders);
@@ -328,11 +331,13 @@ export default function OkxRebate() {
   }
 
   function handleExportSummaryCsv() {
-    const header = "Address,Rebate(USDT),Volume(USDT),Fee(USDT),TradeCount,OrderCount";
+    const header = "Address,EX 계정 ID,누적 거래량(USD),누적 수수료(USD),누적 브로커피(USD),브로커피/수수료(%),브로커피/거래량(%),가입일자";
     const lines = [header];
     for (const r of displayRows) {
+      const rebateFeeRatio = r.totalFee > 0 ? ((r.totalRebate / r.totalFee) * 100).toFixed(4) : "0";
+      const rebateVolumeRatio = r.totalVolume > 0 ? ((r.totalRebate / r.totalVolume) * 100).toFixed(4) : "0";
       lines.push(
-        `${r.address},${csvNum(r.totalRebate)},${csvNum(r.totalVolume)},${csvNum(r.totalFee)},${r.tradeCount},${r.orderCount}`,
+        `${r.address},${r.exAccountId},${csvNum(r.totalVolume)},${csvNum(r.totalFee)},${csvNum(r.totalRebate)},${rebateFeeRatio},${rebateVolumeRatio},${r.registeredDate}`,
       );
     }
     downloadCsvFile(
@@ -358,11 +363,13 @@ export default function OkxRebate() {
   }
 
   function handleExportAllOrdersCsv(filtered: AllOrderRow[]) {
-    const header = "Status,OrderId,InstId,Level,Fee,NetFee,BrokerRebate,UserRebate,Affiliated,DerivativeTradeAmt,Address,TS";
+    const header = "상태,미매핑 사유,OrderId,종목,Fee,NetFee,BrokerRebate,거래량,ExchangeUID,Address,시각(KST)";
     const lines = [header];
     for (const r of filtered) {
+      const reason = r.unmapReason === "no_trade" ? "DB 미존재" : r.unmapReason === "no_address" ? "주소 없음" : "";
+      const kst = new Date(r.ts + 9 * 60 * 60 * 1000).toISOString().replace("T", " ").slice(0, 19);
       lines.push(
-        `${r.mapped ? "mapped" : "unmapped"},${r.orderId},${r.instId},${r.level},${csvNum(Math.abs(r.fee))},${csvNum(Math.abs(r.netFee))},${csvNum(r.brokerRebate)},${csvNum(r.userRebate)},${r.affiliated},${csvNum(r.derivativeTradeAmt)},${r.address || ""},${r.ts}`,
+        `${r.mapped ? "매핑" : "미매핑"},${reason},${r.orderId},${r.instId},${csvNum(Math.abs(r.fee))},${csvNum(Math.abs(r.netFee))},${csvNum(r.brokerRebate)},${csvNum(r.derivativeTradeAmt)},${r.exchangeUid || ""},${r.address || ""},${kst}`,
       );
     }
     downloadCsvFile(

@@ -82,6 +82,13 @@ export const tools: ToolConfig[] = [
       "⚠️ localhost에서만 동작합니다 (VPN 연결 필요).",
   },
   {
+    slug: "ym-signup-stats",
+    name: "유스메타 가입 현황",
+    description:
+      "유스메타 일일/누적 가입자 수와 EX 연동 현황을 조회하여 CSV로 다운로드하는 도구입니다.\n" +
+      "⚠️ localhost에서만 동작합니다 (PNL DB VPN 연결 필요).",
+  },
+  {
     slug: "okx-rebate",
     name: "OKX 리베이트 조회",
     description:
