@@ -91,6 +91,20 @@ export interface AllOrderRow {
   address: string | null;
   exchangeUid: string | null;
   unmapReason: UnmapReason;
+  crossCheck?: CrossCheckResult;
+}
+
+/** cross-env DB 존재 여부 */
+export interface CrossCheckResult {
+  mainnetOrder: boolean;
+  mainnetTrade: boolean;
+  devnetOrder: boolean;
+  devnetTrade: boolean;
+  stagingOrder: boolean;
+  stagingTrade: boolean;
+  resolvedAddress: string | null;
+  resolvedExchangeUid: string | null;
+  resolvedSource: string | null;
 }
 
 /** 전체 요약 */

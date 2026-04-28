@@ -140,11 +140,12 @@ export default function OkxRebate() {
     const exAccountIdMap = (lookupData.exAccountIdMap || {}) as Record<string, string>;
     const registeredDateMap = (lookupData.registeredDateMap || {}) as Record<string, string>;
     const exchangeUidToAddress = (lookupData.exchangeUidToAddress || {}) as Record<string, string>;
+    const crossCheckMap = (lookupData.crossCheckMap || {}) as Record<string, import("@/lib/okx-rebate/types").CrossCheckResult>;
     setAffiliateUsers(new Set(affUsers));
     updateStep(3, { state: "done", detail: `${orderIds.length} orders → ${trades.length} trades` });
 
     updateStep(4, { state: "running" });
-    const result = aggregateByAddress(csvRows, trades, unmappedOrderIds, exAccountIdMap, registeredDateMap, exchangeUidToAddress);
+    const result = aggregateByAddress(csvRows, trades, unmappedOrderIds, exAccountIdMap, registeredDateMap, exchangeUidToAddress, crossCheckMap);
     setAddressSummaries(result.addressSummaries);
     setUnmatchedOrders(result.unmatchedOrders);
     setAllOrders(result.allOrders);

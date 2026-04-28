@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { AllOrderRow } from "@/lib/okx-rebate/types";
 
 type Filter = "all" | "mapped" | "unmapped";
+type SortKey = "mapped" | "instId" | "fee" | "brokerRebate" | "derivativeTradeAmt" | "exchangeUid" | "address" | null;
 
 interface AllOrdersTableProps {
   rows: AllOrderRow[];
@@ -18,9 +19,7 @@ function fmt(n: number): string {
 }
 
 function fmtTime(ts: number): string {
-  const d = new Date(ts);
-  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return kst.toISOString().replace("T", " ").slice(0, 19);
+  return new Date(ts).toISOString().replace("T", " ").slice(0, 19);
 }
 
 export default function AllOrdersTable({
@@ -28,13 +27,59 @@ export default function AllOrdersTable({
   onExportCsv,
 }: AllOrdersTableProps) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [sortKey, setSortKey] = useState<SortKey>(null);
+  const [sortAsc, setSortAsc] = useState(true);
 
-  const filtered =
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortKey(key);
+      setSortAsc(key === "instId" || key === "exchangeUid" || key === "address");
+    }
+  }
+
+  const indicator = (key: SortKey) =>
+    sortKey === key ? (sortAsc ? " \u2191" : " \u2193") : "";
+
+  const preFiltered =
     filter === "all"
       ? rows
       : filter === "mapped"
         ? rows.filter((r) => r.mapped)
         : rows.filter((r) => !r.mapped);
+
+  const filtered = sortKey
+    ? [...preFiltered].sort((a, b) => {
+        let cmp: number;
+        switch (sortKey) {
+          case "mapped":
+            cmp = (a.mapped ? 1 : 0) - (b.mapped ? 1 : 0);
+            break;
+          case "instId":
+            cmp = (a.instId || "").localeCompare(b.instId || "");
+            break;
+          case "fee":
+            cmp = Math.abs(a.fee) - Math.abs(b.fee);
+            break;
+          case "brokerRebate":
+            cmp = a.brokerRebate - b.brokerRebate;
+            break;
+          case "derivativeTradeAmt":
+            cmp = a.derivativeTradeAmt - b.derivativeTradeAmt;
+            break;
+          case "exchangeUid":
+            cmp = (a.exchangeUid || "").localeCompare(b.exchangeUid || "");
+            break;
+          case "address":
+            cmp = (a.address || "").localeCompare(b.address || "");
+            break;
+          default:
+            cmp = 0;
+        }
+        return sortAsc ? cmp : -cmp;
+      })
+    : preFiltered;
 
   const totalRebate = filtered.reduce((s, r) => s + r.brokerRebate, 0);
   const totalFee = filtered.reduce((s, r) => s + Math.abs(r.fee), 0);
@@ -46,7 +91,9 @@ export default function AllOrdersTable({
   const noAddressCount = filtered.filter((r) => r.unmapReason === "no_address").length;
 
   const thCls =
-    "px-3 py-2 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400";
+    "px-3 py-2 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 select-none";
+  const thSortCls =
+    "px-3 py-2 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-200 select-none";
   const tdCls = "px-3 py-2 text-sm";
   const borderR = "border-r border-zinc-200 dark:border-zinc-700";
 
@@ -132,22 +179,28 @@ export default function AllOrdersTable({
           해당 주문이 없습니다.
         </div>
       ) : (
-        <div className="max-h-[500px] overflow-auto rounded-md border border-zinc-200 dark:border-zinc-700">
+        <div className="max-h-[80vh] overflow-auto rounded-md border border-zinc-200 dark:border-zinc-700">
           <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
             <thead className="sticky top-0 bg-zinc-100 dark:bg-zinc-800">
               <tr>
                 <th className={`${thCls} ${borderR} w-8`}>#</th>
-                <th className={`${thCls} ${borderR}`}>상태</th>
+                <th className={`${thSortCls} ${borderR}`} onClick={() => handleSort("mapped")}>상태{indicator("mapped")}</th>
                 <th className={`${thCls} ${borderR}`}>노트</th>
                 <th className={`${thCls} ${borderR}`}>OrderId</th>
-                <th className={`${thCls} ${borderR}`}>종목</th>
-                <th className={`${thCls} ${borderR} text-right`}>Fee</th>
+                <th className={`${thSortCls} ${borderR}`} onClick={() => handleSort("instId")}>종목{indicator("instId")}</th>
+                <th className={`${thSortCls} ${borderR} text-right`} onClick={() => handleSort("fee")}>Fee{indicator("fee")}</th>
                 <th className={`${thCls} ${borderR} text-right`}>NetFee</th>
-                <th className={`${thCls} ${borderR} text-right`}>BrokerRebate</th>
-                <th className={`${thCls} ${borderR} text-right`}>거래량</th>
-                <th className={`${thCls} ${borderR}`}>ExchangeUID</th>
-                <th className={`${thCls} ${borderR}`}>Address</th>
-                <th className={thCls}>시각 (KST)</th>
+                <th className={`${thSortCls} ${borderR} text-right`} onClick={() => handleSort("brokerRebate")}>BrokerRebate{indicator("brokerRebate")}</th>
+                <th className={`${thSortCls} ${borderR} text-right`} onClick={() => handleSort("derivativeTradeAmt")}>거래량{indicator("derivativeTradeAmt")}</th>
+                <th className={`${thSortCls} ${borderR}`} onClick={() => handleSort("exchangeUid")}>ExchangeUID{indicator("exchangeUid")}</th>
+                <th className={`${thSortCls} ${borderR}`} onClick={() => handleSort("address")}>Address{indicator("address")}</th>
+                <th className={`${thCls} ${borderR} text-center`}>Main Order</th>
+                <th className={`${thCls} ${borderR} text-center`}>Main Trade</th>
+                <th className={`${thCls} ${borderR} text-center`}>Dev Order</th>
+                <th className={`${thCls} ${borderR} text-center`}>Dev Trade</th>
+                <th className={`${thCls} ${borderR} text-center`}>Stg Order</th>
+                <th className={`${thCls} ${borderR} text-center`}>Stg Trade</th>
+                <th className={thCls}>시각 (UTC)</th>
               </tr>
             </thead>
             <tbody>
@@ -197,11 +250,35 @@ export default function AllOrdersTable({
                   </td>
                   <td className={`${tdCls} ${borderR} font-mono text-xs`}>
                     {r.exchangeUid || "-"}
+                    {!r.mapped && r.crossCheck?.resolvedSource && r.exchangeUid && !r.crossCheck.mainnetTrade && (
+                      <span className="ml-1 text-[10px] text-blue-400">({r.crossCheck.resolvedSource})</span>
+                    )}
                   </td>
                   <td className={`${tdCls} ${borderR} font-mono text-xs`}>
                     {r.address || "-"}
+                    {!r.mapped && r.crossCheck?.resolvedSource && r.address && (
+                      <span className="ml-1 text-[10px] text-blue-400">({r.crossCheck.resolvedSource})</span>
+                    )}
                   </td>
-                  <td className={`${tdCls} tabular-nums`}>
+                  <td className={`${tdCls} ${borderR} text-center`}>
+                    {r.crossCheck ? (r.crossCheck.mainnetOrder ? <span className="text-green-500">O</span> : <span className="text-zinc-300 dark:text-zinc-600">-</span>) : ""}
+                  </td>
+                  <td className={`${tdCls} ${borderR} text-center`}>
+                    {r.crossCheck ? (r.crossCheck.mainnetTrade ? <span className="text-green-500">O</span> : <span className="text-zinc-300 dark:text-zinc-600">-</span>) : ""}
+                  </td>
+                  <td className={`${tdCls} ${borderR} text-center`}>
+                    {r.crossCheck ? (r.crossCheck.devnetOrder ? <span className="text-green-500">O</span> : <span className="text-zinc-300 dark:text-zinc-600">-</span>) : ""}
+                  </td>
+                  <td className={`${tdCls} ${borderR} text-center`}>
+                    {r.crossCheck ? (r.crossCheck.devnetTrade ? <span className="text-green-500">O</span> : <span className="text-zinc-300 dark:text-zinc-600">-</span>) : ""}
+                  </td>
+                  <td className={`${tdCls} ${borderR} text-center`}>
+                    {r.crossCheck ? (r.crossCheck.stagingOrder ? <span className="text-green-500">O</span> : <span className="text-zinc-300 dark:text-zinc-600">-</span>) : ""}
+                  </td>
+                  <td className={`${tdCls} ${borderR} text-center`}>
+                    {r.crossCheck ? (r.crossCheck.stagingTrade ? <span className="text-green-500">O</span> : <span className="text-zinc-300 dark:text-zinc-600">-</span>) : ""}
+                  </td>
+                  <td className={`${tdCls} tabular-nums text-xs`}>
                     {fmtTime(r.ts)}
                   </td>
                 </tr>
