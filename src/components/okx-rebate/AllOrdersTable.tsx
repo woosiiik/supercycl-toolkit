@@ -98,7 +98,7 @@ export default function AllOrdersTable({
           </p>
         </div>
         <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-700">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">주소 없음</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">주소 유추</p>
           <p className="mt-1 text-lg font-semibold tabular-nums text-amber-500">
             {noAddressCount}
           </p>
@@ -138,7 +138,7 @@ export default function AllOrdersTable({
               <tr>
                 <th className={`${thCls} ${borderR} w-8`}>#</th>
                 <th className={`${thCls} ${borderR}`}>상태</th>
-                <th className={`${thCls} ${borderR}`}>미매핑 사유</th>
+                <th className={`${thCls} ${borderR}`}>노트</th>
                 <th className={`${thCls} ${borderR}`}>OrderId</th>
                 <th className={`${thCls} ${borderR}`}>종목</th>
                 <th className={`${thCls} ${borderR} text-right`}>Fee</th>
@@ -174,7 +174,7 @@ export default function AllOrdersTable({
                     {r.unmapReason === "no_trade" ? (
                       <span className="text-red-500">DB 미존재</span>
                     ) : r.unmapReason === "no_address" ? (
-                      <span className="text-amber-500">주소 없음</span>
+                      <span className="text-amber-500">주소 유추</span>
                     ) : (
                       "-"
                     )}

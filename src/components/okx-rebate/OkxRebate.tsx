@@ -363,10 +363,10 @@ export default function OkxRebate() {
   }
 
   function handleExportAllOrdersCsv(filtered: AllOrderRow[]) {
-    const header = "상태,미매핑 사유,OrderId,종목,Fee,NetFee,BrokerRebate,거래량,ExchangeUID,Address,시각(KST)";
+    const header = "상태,노트,OrderId,종목,Fee,NetFee,BrokerRebate,거래량,ExchangeUID,Address,시각(KST)";
     const lines = [header];
     for (const r of filtered) {
-      const reason = r.unmapReason === "no_trade" ? "DB 미존재" : r.unmapReason === "no_address" ? "주소 없음" : "";
+      const reason = r.unmapReason === "no_trade" ? "DB 미존재" : r.unmapReason === "no_address" ? "주소 유추" : "";
       const kst = new Date(r.ts + 9 * 60 * 60 * 1000).toISOString().replace("T", " ").slice(0, 19);
       lines.push(
         `${r.mapped ? "매핑" : "미매핑"},${reason},${r.orderId},${r.instId},${csvNum(Math.abs(r.fee))},${csvNum(Math.abs(r.netFee))},${csvNum(r.brokerRebate)},${csvNum(r.derivativeTradeAmt)},${r.exchangeUid || ""},${r.address || ""},${kst}`,

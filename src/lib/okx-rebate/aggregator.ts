@@ -61,21 +61,23 @@ export function aggregateByAddress(
   for (const csvRow of csvRows) {
     const isMapped = !unmappedSet.has(csvRow.orderId);
     const directAddress = orderToDirectAddress.get(csvRow.orderId) ?? null;
-    const displayAddress = orderToDisplayAddress.get(csvRow.orderId) ?? null;
+    const resolvedAddress = orderToDisplayAddress.get(csvRow.orderId) ?? null;
     const exchangeUid = orderToExchangeUid.get(csvRow.orderId) ?? null;
 
-    // 매핑 = t_trade_history에서 address를 직접 찾은 경우만
-    const mapped = isMapped && !!directAddress;
+    // 매핑 = DB에서 찾았고 주소가 있음 (직접 또는 유추)
+    const mapped = isMapped && !!resolvedAddress;
 
-    // 미매핑 사유 판별
+    // 노트: 주소를 유추한 경우 표시
     let unmapReason: AllOrderRow["unmapReason"] = null;
     if (!isMapped) {
       unmapReason = "no_trade";
-    } else if (!directAddress) {
+    } else if (!directAddress && resolvedAddress) {
+      unmapReason = "no_address"; // 매핑되었지만 주소는 유추됨
+    } else if (!directAddress && !resolvedAddress) {
       unmapReason = "no_address";
     }
 
-    // allOrders에 항상 추가 (address는 유추 포함 표시용)
+    // allOrders에 항상 추가
     allOrders.push({
       orderId: csvRow.orderId,
       instId: csvRow.instId,
@@ -89,12 +91,12 @@ export function aggregateByAddress(
       derivativeTradeAmt: csvRow.derivativeTradeAmt,
       ts: csvRow.ts,
       mapped,
-      address: displayAddress,
+      address: resolvedAddress,
       exchangeUid,
       unmapReason,
     });
 
-    // 미매핑 처리
+    // 미매핑 처리: DB에 없는 경우만
     if (!isMapped) {
       unmatchedOrders.push({
         orderId: csvRow.orderId,
@@ -108,7 +110,7 @@ export function aggregateByAddress(
     }
 
     const orderTrades = tradesByOrderId.get(csvRow.orderId);
-    if (!orderTrades || orderTrades.length === 0 || !directAddress) {
+    if (!orderTrades || orderTrades.length === 0 || !resolvedAddress) {
       unmatchedOrders.push({
         orderId: csvRow.orderId,
         instId: csvRow.instId,
@@ -117,23 +119,25 @@ export function aggregateByAddress(
         derivativeTradeAmt: csvRow.derivativeTradeAmt,
         ts: csvRow.ts,
       });
+      // 주소를 못 찾으면 미매핑
+      allOrders[allOrders.length - 1].mapped = false;
       continue;
     }
 
-    let entry = addressMap.get(directAddress);
+    let entry = addressMap.get(resolvedAddress);
     if (!entry) {
       entry = {
-        address: directAddress,
-        exAccountId: exAccountIdMap[directAddress] || "",
+        address: resolvedAddress,
+        exAccountId: exAccountIdMap[resolvedAddress] || "",
         totalRebate: 0,
         totalFee: 0,
         totalVolume: 0,
         tradeCount: 0,
         orderCount: 0,
-        registeredDate: registeredDateMap[directAddress] || "",
+        registeredDate: registeredDateMap[resolvedAddress] || "",
         details: [],
       };
-      addressMap.set(directAddress, entry);
+      addressMap.set(resolvedAddress, entry);
     }
 
     // rebate/fee/volume은 order 단위 (CSV 기준, 중복 합산 안 함)
