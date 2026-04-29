@@ -12,6 +12,7 @@ import UserSignupDetail from "@/components/user-dashboard/UserSignupDetail";
 import UserExport from "@/components/user-export/UserExport";
 import YmSignupStats from "@/components/ym-signup-stats/YmSignupStats";
 import OkxRebate from "@/components/okx-rebate/OkxRebate";
+import JasyptCrypto from "@/components/jasypt-crypto/JasyptCrypto";
 
 export default async function ToolPage({
   params,
@@ -51,6 +52,8 @@ export default async function ToolPage({
           <YmSignupStats />
         ) : slug === "okx-rebate" ? (
           <OkxRebate />
+        ) : slug === "jasypt-crypto" ? (
+          <JasyptCrypto />
         ) : (
           <p className="text-gray-500">준비 중입니다.</p>
         )}

@@ -97,4 +97,12 @@ export const tools: ToolConfig[] = [
       "⚠️ localhost에서만 동작합니다 (PNL DB VPN 연결 필요).\n" +
       "⚠️ OKX API Rate Limit: CSV 생성 요청 1회/60분, 링크 조회 2회/분, CSV 생성 소요 최대 2시간. 한 번 다운로드하면 캐시되어 재호출 불필요.",
   },
+  {
+    slug: "jasypt-crypto",
+    name: "Jasypt 암복호화",
+    description:
+      "Jasypt(PBEWITHHMACSHA512ANDAES_256) 호환 암복호화 도구입니다.\n" +
+      "Java jasypt-1.9.3과 동일한 알고리즘으로 동작하며, 브라우저에서 바로 실행됩니다 (서버 전송 없음).\n" +
+      "PBKDF2(HMAC-SHA512, 1000회) + AES-256-CBC, RandomIvGenerator 방식.",
+  },
 ];
