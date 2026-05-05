@@ -98,6 +98,14 @@ export const tools: ToolConfig[] = [
       "⚠️ OKX API Rate Limit: CSV 생성 요청 1회/60분, 링크 조회 2회/분, CSV 생성 소요 최대 2시간. 한 번 다운로드하면 캐시되어 재호출 불필요.",
   },
   {
+    slug: "aes-gcm-crypto",
+    name: "AES-256-GCM 암복호화",
+    description:
+      "AES-256-GCM 암복호화 도구입니다.\n" +
+      "키: 64자리 hex (256bit), IV: 12바이트 랜덤 생성, 출력: base64(IV + ciphertext + authTag).\n" +
+      "브라우저 Web Crypto API로 동작하며 서버 전송 없음.",
+  },
+  {
     slug: "jasypt-crypto",
     name: "Jasypt 암복호화",
     description:

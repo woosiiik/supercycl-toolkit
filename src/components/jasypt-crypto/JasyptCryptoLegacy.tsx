@@ -2,58 +2,75 @@
 
 import { useState } from "react";
 
-const IV_SIZE = 12; // GCM 표준 nonce 크기
+const SALT_SIZE = 16;
+const IV_SIZE = 16;
+const ITERATIONS = 1000;
+const KEY_BITS = 256;
 
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
+async function deriveKey(
+  password: string,
+  salt: Uint8Array,
+  usage: KeyUsage[],
+): Promise<CryptoKey> {
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveKey"],
+  );
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: salt as BufferSource, iterations: ITERATIONS, hash: "SHA-512" },
+    keyMaterial,
+    { name: "AES-CBC", length: KEY_BITS },
+    false,
+    usage,
+  );
 }
 
-async function importKey(hexKey: string, usage: KeyUsage[]): Promise<CryptoKey> {
-  const keyBytes = hexToBytes(hexKey);
-  return crypto.subtle.importKey("raw", keyBytes as BufferSource, "AES-GCM", false, usage);
-}
-
-async function aesGcmEncrypt(plaintext: string, hexKey: string): Promise<string> {
+async function jasyptEncrypt(
+  plaintext: string,
+  password: string,
+): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_SIZE));
   const iv = crypto.getRandomValues(new Uint8Array(IV_SIZE));
-  const key = await importKey(hexKey, ["encrypt"]);
+  const key = await deriveKey(password, salt, ["encrypt"]);
 
   const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-CBC", iv },
     key,
     new TextEncoder().encode(plaintext),
   );
 
-  // IV(12) + ciphertext + authTag(16) — GCM은 authTag를 ciphertext 뒤에 붙여서 반환
-  const result = new Uint8Array(IV_SIZE + ciphertext.byteLength);
-  result.set(iv, 0);
-  result.set(new Uint8Array(ciphertext), IV_SIZE);
+  const result = new Uint8Array(
+    SALT_SIZE + IV_SIZE + ciphertext.byteLength,
+  );
+  result.set(salt, 0);
+  result.set(iv, SALT_SIZE);
+  result.set(new Uint8Array(ciphertext), SALT_SIZE + IV_SIZE);
 
   return btoa(String.fromCharCode(...result));
 }
 
-async function aesGcmDecrypt(base64Input: string, hexKey: string): Promise<string> {
+async function jasyptDecrypt(
+  base64Input: string,
+  password: string,
+): Promise<string> {
   const data = Uint8Array.from(atob(base64Input), (c) => c.charCodeAt(0));
 
-  const iv = data.slice(0, IV_SIZE);
-  const ciphertext = data.slice(IV_SIZE); // ciphertext + authTag
+  const salt = data.slice(0, SALT_SIZE);
+  const iv = data.slice(SALT_SIZE, SALT_SIZE + IV_SIZE);
+  const ciphertext = data.slice(SALT_SIZE + IV_SIZE);
 
-  const key = await importKey(hexKey, ["decrypt"]);
+  const key = await deriveKey(password, salt, ["decrypt"]);
 
   const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-CBC", iv },
     key,
     ciphertext,
   );
 
   return new TextDecoder().decode(decrypted);
-}
-
-function isValidHexKey(hex: string): boolean {
-  return /^[0-9a-fA-F]{64}$/.test(hex);
 }
 
 interface ResultRow {
@@ -62,9 +79,9 @@ interface ResultRow {
   error?: string;
 }
 
-export default function AesGcmCrypto() {
-  const [hexKey, setHexKey] = useState("");
-  const [showKey, setShowKey] = useState(false);
+export default function JasyptCryptoLegacy() {
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [encryptInput, setEncryptInput] = useState("");
   const [encryptResults, setEncryptResults] = useState<ResultRow[]>([]);
   const [decryptInput, setDecryptInput] = useState("");
@@ -80,12 +97,8 @@ export default function AesGcmCrypto() {
     setError(null);
     setEncryptResults([]);
     const lines = parseLines(encryptInput);
-    if (!isValidHexKey(hexKey)) {
-      setError("키는 64자리 hex 문자열이어야 합니다 (256bit).");
-      return;
-    }
-    if (lines.length === 0) {
-      setError("암호화할 텍스트를 입력하세요.");
+    if (!password || lines.length === 0) {
+      setError("Password와 암호화할 텍스트를 입력하세요.");
       return;
     }
     setProcessing(true);
@@ -93,7 +106,7 @@ export default function AesGcmCrypto() {
       const results: ResultRow[] = [];
       for (const line of lines) {
         try {
-          const output = await aesGcmEncrypt(line, hexKey);
+          const output = await jasyptEncrypt(line, password);
           results.push({ input: line, output });
         } catch (err) {
           results.push({ input: line, output: "", error: err instanceof Error ? err.message : String(err) });
@@ -109,12 +122,8 @@ export default function AesGcmCrypto() {
     setError(null);
     setDecryptResults([]);
     const lines = parseLines(decryptInput);
-    if (!isValidHexKey(hexKey)) {
-      setError("키는 64자리 hex 문자열이어야 합니다 (256bit).");
-      return;
-    }
-    if (lines.length === 0) {
-      setError("복호화할 텍스트를 입력하세요.");
+    if (!password || lines.length === 0) {
+      setError("Password와 복호화할 텍스트를 입력하세요.");
       return;
     }
     setProcessing(true);
@@ -122,7 +131,7 @@ export default function AesGcmCrypto() {
       const results: ResultRow[] = [];
       for (const line of lines) {
         try {
-          const output = await aesGcmDecrypt(line, hexKey);
+          const output = await jasyptDecrypt(line, password);
           results.push({ input: line, output });
         } catch (err) {
           results.push({ input: line, output: "", error: err instanceof Error ? err.message : String(err) });
@@ -141,12 +150,6 @@ export default function AesGcmCrypto() {
 
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
-  }
-
-  function generateRandomKey() {
-    const bytes = crypto.getRandomValues(new Uint8Array(32));
-    const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
-    setHexKey(hex);
   }
 
   const inputCls =
@@ -208,31 +211,23 @@ export default function AesGcmCrypto() {
     );
   }
 
-  const keyLen = hexKey.replace(/[^0-9a-fA-F]/g, "").length;
-
   return (
     <div className="flex flex-col gap-6">
-      {/* Key */}
-      <div>
+      {/* Password */}
+      <div className="max-w-2xl">
         <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          AES-256 Key (64자리 hex)
-          <span className={`ml-2 text-xs ${keyLen === 64 ? "text-green-500" : "text-zinc-400"}`}>
-            {keyLen}/64
-          </span>
+          JASYPT_ENCRYPTOR_PASSWORD
         </label>
         <div className="flex gap-2">
           <input
-            type={showKey ? "text" : "password"}
-            value={hexKey}
-            onChange={(e) => setHexKey(e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 64))}
-            placeholder="64자리 hex (256bit)"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="암복호화에 사용할 비밀번호"
             className={inputCls}
           />
-          <button type="button" onClick={() => setShowKey(!showKey)} className={smallBtnCls}>
-            {showKey ? "숨기기" : "보기"}
-          </button>
-          <button type="button" onClick={generateRandomKey} className={smallBtnCls}>
-            랜덤 생성
+          <button type="button" onClick={() => setShowPassword(!showPassword)} className={smallBtnCls}>
+            {showPassword ? "숨기기" : "보기"}
           </button>
         </div>
       </div>

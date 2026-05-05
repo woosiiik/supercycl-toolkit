@@ -12,7 +12,8 @@ import UserSignupDetail from "@/components/user-dashboard/UserSignupDetail";
 import UserExport from "@/components/user-export/UserExport";
 import YmSignupStats from "@/components/ym-signup-stats/YmSignupStats";
 import OkxRebate from "@/components/okx-rebate/OkxRebate";
-import JasyptCrypto from "@/components/jasypt-crypto/JasyptCrypto";
+import AesGcmCrypto from "@/components/jasypt-crypto/JasyptCrypto";
+import JasyptCrypto from "@/components/jasypt-crypto/JasyptCryptoLegacy";
 
 export default async function ToolPage({
   params,
@@ -52,6 +53,8 @@ export default async function ToolPage({
           <YmSignupStats />
         ) : slug === "okx-rebate" ? (
           <OkxRebate />
+        ) : slug === "aes-gcm-crypto" ? (
+          <AesGcmCrypto />
         ) : slug === "jasypt-crypto" ? (
           <JasyptCrypto />
         ) : (

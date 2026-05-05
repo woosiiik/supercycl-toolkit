@@ -16,7 +16,7 @@ const SUPABASE_URL = "https://crliioegbtkgdlrypnap.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNybGlpb2VnYnRrZ2RscnlwbmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjkxNjIsImV4cCI6MjA5MTQ0NTE2Mn0.Yy5pQJoYGiRrDCgJi_a8jEy25vuLstY1TGUeY3GE60c";
 
-type Interval = "1m" | "10m" | "1h";
+type Interval = "1m" | "10m" | "1h" | "1d" | "1w";
 
 interface BarPoint {
   time: string;
@@ -29,6 +29,8 @@ const INTERVAL_OPTIONS: { value: Interval; label: string }[] = [
   { value: "1m", label: "1분" },
   { value: "10m", label: "10분" },
   { value: "1h", label: "1시간" },
+  { value: "1d", label: "일별" },
+  { value: "1w", label: "주별" },
 ];
 
 const supaHeaders = {
@@ -73,6 +75,15 @@ function bucketLabel(date: Date, interval: Interval): string {
     }
     case "1h":
       return `${mo}/${d} ${h}:00`;
+    case "1d":
+      return `${mo}/${d}`;
+    case "1w": {
+      const day = kst.getUTCDay(); // 0=Sun
+      const mon = new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) - day * 86_400_000 + 86_400_000);
+      const wmo = String(mon.getUTCMonth() + 1).padStart(2, "0");
+      const wd = String(mon.getUTCDate()).padStart(2, "0");
+      return `${wmo}/${wd}~`;
+    }
   }
 }
 
@@ -91,6 +102,14 @@ function bucketMs(date: Date, interval: Interval): number {
       return Date.UTC(y, mo, d, h, Math.floor(min / 10) * 10);
     case "1h":
       return Date.UTC(y, mo, d, h);
+    case "1d":
+      return Date.UTC(y, mo, d);
+    case "1w": {
+      const dayOfWeek = kst.getUTCDay(); // 0=Sun
+      // 월요일 기준 주 시작
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      return Date.UTC(y, mo, d + mondayOffset);
+    }
   }
 }
 
@@ -102,6 +121,10 @@ function intervalMs(interval: Interval): number {
       return 600_000;
     case "1h":
       return 3_600_000;
+    case "1d":
+      return 86_400_000;
+    case "1w":
+      return 7 * 86_400_000;
   }
 }
 
@@ -139,6 +162,12 @@ function generateAllBuckets(
         break;
       case "1h":
         map.set(ms, `${mo}/${dd} ${h}:00`);
+        break;
+      case "1d":
+        map.set(ms, `${mo}/${dd}`);
+        break;
+      case "1w":
+        map.set(ms, `${mo}/${dd}~`);
         break;
     }
   }
@@ -210,6 +239,10 @@ async function fetchRecentDates(
 
 function getRangeMs(iv: Interval): number {
   switch (iv) {
+    case "1w":
+      return 12 * 7 * 24 * 60 * 60 * 1000; // 12주
+    case "1d":
+      return 30 * 24 * 60 * 60 * 1000; // 30일
     case "1h":
       return 2 * 24 * 60 * 60 * 1000;
     case "10m":
@@ -220,7 +253,7 @@ function getRangeMs(iv: Interval): number {
 }
 
 export default function UserSignupDetail() {
-  const [interval, setInterval_] = useState<Interval>("1h");
+  const [interval, setInterval_] = useState<Interval>("1d");
   const [offset, setOffset] = useState(0); // 0 = 현재, -1 = 한 단위 과거, ...
   const [data, setData] = useState<BarPoint[]>([]);
   const [loading, setLoading] = useState(false);
@@ -277,7 +310,15 @@ export default function UserSignupDetail() {
   };
 
   const rangeLabel =
-    interval === "1h" ? "2일" : interval === "10m" ? "4시간" : "1시간";
+    interval === "1w"
+      ? "12주"
+      : interval === "1d"
+        ? "30일"
+        : interval === "1h"
+          ? "2일"
+          : interval === "10m"
+            ? "4시간"
+            : "1시간";
 
   return (
     <div className="flex flex-col gap-6">
@@ -291,7 +332,7 @@ export default function UserSignupDetail() {
                 interval === opt.value
                   ? "bg-blue-600 text-white"
                   : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-700"
-              } ${opt.value === "1m" ? "rounded-l-md" : ""} ${opt.value === "1h" ? "rounded-r-md" : ""}`}
+              } ${opt.value === "1m" ? "rounded-l-md" : ""} ${opt.value === "1w" ? "rounded-r-md" : ""}`}
             >
               {opt.label}
             </button>
