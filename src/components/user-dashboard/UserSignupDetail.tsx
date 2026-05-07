@@ -44,27 +44,11 @@ const CHART_TOOLTIP_STYLE = {
   borderRadius: "6px",
   fontSize: "13px",
 };
-function toKST(date: Date): Date {
-  return new Date(date.getTime() + 9 * 60 * 60 * 1000);
-}
-
-/** KST 기준 오늘 00:00 UTC timestamp */
-function getKSTStartOfToday(): Date {
-  const now = new Date();
-  const kst = toKST(now);
-  // KST 기준 오늘 00:00 → UTC로 변환 (-9h)
-  const y = kst.getUTCFullYear();
-  const m = kst.getUTCMonth();
-  const d = kst.getUTCDate();
-  return new Date(Date.UTC(y, m, d) - 9 * 60 * 60 * 1000);
-}
-
 function bucketLabel(date: Date, interval: Interval): string {
-  const kst = toKST(date);
-  const mo = String(kst.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(kst.getUTCDate()).padStart(2, "0");
-  const h = String(kst.getUTCHours()).padStart(2, "0");
-  const min = kst.getUTCMinutes();
+  const mo = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  const h = String(date.getUTCHours()).padStart(2, "0");
+  const min = date.getUTCMinutes();
 
   switch (interval) {
     case "1m":
@@ -78,8 +62,8 @@ function bucketLabel(date: Date, interval: Interval): string {
     case "1d":
       return `${mo}/${d}`;
     case "1w": {
-      const day = kst.getUTCDay(); // 0=Sun
-      const mon = new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) - day * 86_400_000 + 86_400_000);
+      const day = date.getUTCDay(); // 0=Sun
+      const mon = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) - day * 86_400_000 + 86_400_000);
       const wmo = String(mon.getUTCMonth() + 1).padStart(2, "0");
       const wd = String(mon.getUTCDate()).padStart(2, "0");
       return `${wmo}/${wd}~`;
@@ -88,12 +72,11 @@ function bucketLabel(date: Date, interval: Interval): string {
 }
 
 function bucketMs(date: Date, interval: Interval): number {
-  const kst = toKST(date);
-  const y = kst.getUTCFullYear();
-  const mo = kst.getUTCMonth();
-  const d = kst.getUTCDate();
-  const h = kst.getUTCHours();
-  const min = kst.getUTCMinutes();
+  const y = date.getUTCFullYear();
+  const mo = date.getUTCMonth();
+  const d = date.getUTCDate();
+  const h = date.getUTCHours();
+  const min = date.getUTCMinutes();
 
   switch (interval) {
     case "1m":
@@ -105,8 +88,7 @@ function bucketMs(date: Date, interval: Interval): number {
     case "1d":
       return Date.UTC(y, mo, d);
     case "1w": {
-      const dayOfWeek = kst.getUTCDay(); // 0=Sun
-      // 월요일 기준 주 시작
+      const dayOfWeek = date.getUTCDay(); // 0=Sun
       const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
       return Date.UTC(y, mo, d + mondayOffset);
     }
@@ -135,18 +117,16 @@ function generateAllBuckets(
 ): Map<number, string> {
   const step = intervalMs(interval);
   const startMs = bucketMs(startUtc, interval);
-  const kstNow = toKST(endUtc);
   const endMs = Date.UTC(
-    kstNow.getUTCFullYear(),
-    kstNow.getUTCMonth(),
-    kstNow.getUTCDate(),
-    kstNow.getUTCHours(),
-    kstNow.getUTCMinutes(),
+    endUtc.getUTCFullYear(),
+    endUtc.getUTCMonth(),
+    endUtc.getUTCDate(),
+    endUtc.getUTCHours(),
+    endUtc.getUTCMinutes(),
   );
 
   const map = new Map<number, string>();
   for (let ms = startMs; ms <= endMs; ms += step) {
-    // ms는 KST 기준 bucket timestamp
     const d = new Date(ms);
     const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
     const dd = String(d.getUTCDate()).padStart(2, "0");
@@ -365,7 +345,7 @@ export default function UserSignupDetail() {
         </div>
 
         <span className="text-xs text-zinc-400">
-          KST {rangeLabel} 단위
+          UTC {rangeLabel} 단위
           {offset !== 0 ? ` (${Math.abs(offset)}단위 전)` : ""}
         </span>
 

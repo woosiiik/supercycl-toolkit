@@ -9,15 +9,13 @@ interface UnmatchedTableProps {
 
 function fmt(n: number): string {
   return n.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
   });
 }
 
 function fmtTime(ts: number): string {
-  const d = new Date(ts);
-  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return kst.toISOString().replace("T", " ").slice(0, 19);
+  return new Date(ts).toISOString().replace("T", " ").slice(0, 19);
 }
 
 export default function UnmatchedTable({
@@ -65,7 +63,7 @@ export default function UnmatchedTable({
                 <th className={`${thCls} ${borderR} text-right`}>Fee</th>
                 <th className={`${thCls} ${borderR} text-right`}>Rebate</th>
                 <th className={`${thCls} ${borderR} text-right`}>거래량</th>
-                <th className={thCls}>시각 (KST)</th>
+                <th className={thCls}>시각 (UTC)</th>
               </tr>
             </thead>
             <tbody>

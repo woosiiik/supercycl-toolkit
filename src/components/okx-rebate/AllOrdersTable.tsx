@@ -13,8 +13,8 @@ interface AllOrdersTableProps {
 
 function fmt(n: number): string {
   return n.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
   });
 }
 

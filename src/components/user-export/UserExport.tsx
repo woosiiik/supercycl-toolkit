@@ -12,17 +12,6 @@ interface ExportRow {
   affiliateNo: number | null;
 }
 
-function toKSTString(iso: string): string {
-  const d = new Date(iso);
-  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  const y = kst.getUTCFullYear();
-  const mo = String(kst.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(kst.getUTCDate()).padStart(2, "0");
-  const h = String(kst.getUTCHours()).padStart(2, "0");
-  const mi = String(kst.getUTCMinutes()).padStart(2, "0");
-  const s = String(kst.getUTCSeconds()).padStart(2, "0");
-  return `${y}-${mo}-${dd} ${h}:${mi}:${s}`;
-}
 
 export default function UserExport() {
   const [rows, setRows] = useState<ExportRow[]>([]);
@@ -54,7 +43,7 @@ export default function UserExport() {
 
   function handleExportCsv() {
     const header =
-      "Supercycl Account,EX 연동 유무,EX 계정 ID,OKX 연동 유무,Supercycl 최초 가입 경로,Supercycl 가입 시기 (KST)";
+      "Supercycl Account,EX 연동 유무,EX 계정 ID,OKX 연동 유무,Supercycl 최초 가입 경로,Supercycl 가입 시기 (UTC)";
     const lines = [header];
     for (const r of filteredRows) {
       lines.push(
@@ -141,7 +130,7 @@ export default function UserExport() {
                 <th className={thClass}>OKX 연동</th>
                 <th className={thClass}>가입 경로</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  가입 시기 (KST)
+                  가입 시기 (UTC)
                 </th>
               </tr>
             </thead>

@@ -13,8 +13,8 @@ type SortKey = "address" | "exAccountId" | "totalVolume" | "totalFee" | "totalRe
 
 function fmt(n: number): string {
   return n.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
   });
 }
 
@@ -35,9 +35,7 @@ function rebateVolumeRatio(row: AddressRebateSummary): number {
 
 function fmtTime(dateStr: string | null): string {
   if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return kst.toISOString().replace("T", " ").slice(0, 19);
+  return new Date(dateStr).toISOString().replace("T", " ").slice(0, 19);
 }
 
 export default function RebateTable({ rows, onExportSummaryCsv, onExportDetailCsv }: RebateTableProps) {
@@ -188,6 +186,25 @@ export default function RebateTable({ rows, onExportSummaryCsv, onExportDetailCs
                 )}
               </>
             ))}
+            {/* 합계 행 */}
+            {rows.length > 0 && (() => {
+              const totVolume = rows.reduce((s, r) => s + r.totalVolume, 0);
+              const totFee = rows.reduce((s, r) => s + r.totalFee, 0);
+              const totRebate = rows.reduce((s, r) => s + r.totalRebate, 0);
+              return (
+                <tr className="border-t-2 border-zinc-400 bg-zinc-50 font-medium dark:border-zinc-500 dark:bg-zinc-800">
+                  <td className={`${tdCls} ${borderR}`}></td>
+                  <td className={`${tdCls} ${borderR} text-xs`}>합계 ({rows.length}개 주소)</td>
+                  <td className={`${tdCls} ${borderR}`}></td>
+                  <td className={`${tdCls} ${borderR} text-right tabular-nums`}>{fmt(totVolume)}</td>
+                  <td className={`${tdCls} ${borderR} text-right tabular-nums`}>{fmt(totFee)}</td>
+                  <td className={`${tdCls} ${borderR} text-right tabular-nums text-green-600 dark:text-green-400`}>{fmt(totRebate)}</td>
+                  <td className={`${tdCls} ${borderR} text-right tabular-nums`}>{totFee > 0 ? fmtPct((totRebate / totFee) * 100) : "-"}</td>
+                  <td className={`${tdCls} ${borderR} text-right tabular-nums`}>{totVolume > 0 ? fmtPct((totRebate / totVolume) * 100) : "-"}</td>
+                  <td className={tdCls}></td>
+                </tr>
+              );
+            })()}
           </tbody>
         </table>
       </div>
@@ -220,7 +237,7 @@ function DetailTable({ details }: { details: TradeDetail[] }) {
             <th className={`${thCls} text-right`}>Volume</th>
             <th className={`${thCls} text-right`}>Fee (CSV)</th>
             <th className={`${thCls} text-right`}>Rebate</th>
-            <th className={thCls}>시각 (KST)</th>
+            <th className={thCls}>시각 (UTC)</th>
           </tr>
         </thead>
         <tbody>

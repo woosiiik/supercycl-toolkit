@@ -30,8 +30,9 @@ import SummaryPanel from "./SummaryPanel";
 import RebateTable from "./RebateTable";
 import AllOrdersTable from "./AllOrdersTable";
 import CacheManager from "./CacheManager";
+import DailyStatsTable from "./DailyStatsTable";
 
-type Tab = "result" | "allorders" | "cache";
+type Tab = "result" | "daily" | "allorders" | "cache";
 
 function makeSteps(overrides?: Partial<Record<number, Partial<StepStatus>>>): StepStatus[] {
   const defaults: StepStatus[] = [
@@ -67,14 +68,14 @@ function downloadCsvFile(filename: string, content: string) {
 
 function fmtNum(n: number): string {
   return n.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
   });
 }
 
 // CSV용 — 콤마 없이 숫자만
 function csvNum(n: number): string {
-  return n.toFixed(6);
+  return n.toFixed(4);
 }
 
 export default function OkxRebate() {
@@ -83,6 +84,7 @@ export default function OkxRebate() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("result");
   const [affiliateOnly, setAffiliateOnly] = useState(false);
+  const [exFilter, setExFilter] = useState<"all" | "with_ex" | "without_ex">("all");
 
   // 데이터
   const [addressSummaries, setAddressSummaries] = useState<AddressRebateSummary[]>([]);
@@ -100,13 +102,17 @@ export default function OkxRebate() {
     setCachedRanges(loadCacheIndex());
   }, []);
 
-  // affiliate 필터 적용된 데이터
-  const displayRows = affiliateOnly
-    ? filterByAffiliate(addressSummaries, affiliateUsers)
-    : addressSummaries;
+  // affiliate + EX 필터 적용된 데이터
+  const displayRows = (() => {
+    let filtered = addressSummaries;
+    if (affiliateOnly) filtered = filterByAffiliate(filtered, affiliateUsers);
+    if (exFilter === "with_ex") filtered = filtered.filter((r) => r.exAccountId !== "");
+    else if (exFilter === "without_ex") filtered = filtered.filter((r) => r.exAccountId === "");
+    return filtered;
+  })();
 
   const displaySummary =
-    affiliateOnly && summary
+    (affiliateOnly || exFilter !== "all") && summary
       ? recalculateSummary(displayRows, unmatchedOrders)
       : summary;
 
@@ -364,13 +370,13 @@ export default function OkxRebate() {
   }
 
   function handleExportAllOrdersCsv(filtered: AllOrderRow[]) {
-    const header = "상태,노트,OrderId,종목,Fee,NetFee,BrokerRebate,거래량,ExchangeUID,Address,시각(KST)";
+    const header = "상태,노트,OrderId,종목,Fee,NetFee,BrokerRebate,거래량,ExchangeUID,Address,시각(UTC)";
     const lines = [header];
     for (const r of filtered) {
       const reason = r.unmapReason === "no_trade" ? "DB 미존재" : r.unmapReason === "no_address" ? "주소 유추" : "";
-      const kst = new Date(r.ts + 9 * 60 * 60 * 1000).toISOString().replace("T", " ").slice(0, 19);
+      const utc = new Date(r.ts).toISOString().replace("T", " ").slice(0, 19);
       lines.push(
-        `${r.mapped ? "매핑" : "미매핑"},${reason},${r.orderId},${r.instId},${csvNum(Math.abs(r.fee))},${csvNum(Math.abs(r.netFee))},${csvNum(r.brokerRebate)},${csvNum(r.derivativeTradeAmt)},${r.exchangeUid || ""},${r.address || ""},${kst}`,
+        `${r.mapped ? "매핑" : "미매핑"},${reason},${r.orderId},${r.instId},${csvNum(Math.abs(r.fee))},${csvNum(Math.abs(r.netFee))},${csvNum(r.brokerRebate)},${csvNum(r.derivativeTradeAmt)},${r.exchangeUid || ""},${r.address || ""},${utc}`,
       );
     }
     downloadCsvFile(
@@ -382,6 +388,51 @@ export default function OkxRebate() {
   function handleSelectCache(beginDate: string, endDate: string) {
     // 캐시 데이터로 바로 조회 (OKX API 호출 없음)
     handleSubmit({ beginDate, endDate, forceDownload: false });
+  }
+
+  async function handleSelectMultipleCache(keys: string[]) {
+    setRunning(true);
+    setError(null);
+    setSteps(makeSteps({
+      0: { state: "done", detail: "캐시 합산" },
+      1: { state: "done", detail: "캐시 합산" },
+      2: { state: "done", detail: `${keys.length}건 병합` },
+    }));
+    setAddressSummaries([]);
+    setUnmatchedOrders([]);
+    setAllOrders([]);
+    setSummary(null);
+
+    try {
+      // 선택된 캐시들의 CSV rows를 모두 합침
+      const allRows: OkxRebateRow[] = [];
+      const ranges: string[] = [];
+      for (const key of keys) {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const data = JSON.parse(raw) as { meta: CachedRange; rows: OkxRebateRow[] };
+        allRows.push(...data.rows);
+        ranges.push(`${data.meta.beginDate}~${data.meta.endDate}`);
+      }
+
+      if (allRows.length === 0) throw new Error("선택된 캐시에 데이터가 없습니다.");
+
+      setDateRange({ begin: ranges[0].split("~")[0], end: ranges[ranges.length - 1].split("~")[1] });
+      setRawCsvRows(allRows);
+      updateStep(2, { state: "done", detail: `${allRows.length}행 (${keys.length}건 합산)` });
+
+      await processAfterCsv(allRows);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      setSteps((prev) =>
+        prev.map((s) =>
+          s.state === "running" ? { ...s, state: "error", detail: msg } : s,
+        ),
+      );
+    } finally {
+      setRunning(false);
+    }
   }
 
   function handleDeleteCache(key: string) {
@@ -433,6 +484,9 @@ export default function OkxRebate() {
               <button className={tabCls("result")} onClick={() => setTab("result")}>
                 매핑 결과
               </button>
+              <button className={tabCls("daily")} onClick={() => setTab("daily")}>
+                일별 통계
+              </button>
               <button className={tabCls("allorders")} onClick={() => setTab("allorders")}>
                 전체 주문 ({allOrders.length})
               </button>
@@ -450,15 +504,26 @@ export default function OkxRebate() {
                 </button>
               )}
               {tab === "result" && (
-                <label className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-                  <input
-                    type="checkbox"
-                    checked={affiliateOnly}
-                    onChange={(e) => setAffiliateOnly(e.target.checked)}
-                    className="rounded"
-                  />
-                  affiliate_no=1 만
-                </label>
+                <>
+                  <label className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+                    <input
+                      type="checkbox"
+                      checked={affiliateOnly}
+                      onChange={(e) => setAffiliateOnly(e.target.checked)}
+                      className="rounded"
+                    />
+                    affiliate_no=1 만
+                  </label>
+                  <select
+                    value={exFilter}
+                    onChange={(e) => setExFilter(e.target.value as "all" | "with_ex" | "without_ex")}
+                    className="rounded-md border border-zinc-300 px-2 py-1 text-sm text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                  >
+                    <option value="all">EX 계정: 전체</option>
+                    <option value="with_ex">EX 계정 있음</option>
+                    <option value="without_ex">EX 계정 없음</option>
+                  </select>
+                </>
               )}
             </div>
           </div>
@@ -474,6 +539,14 @@ export default function OkxRebate() {
             </div>
           )}
 
+          {tab === "daily" && (
+            <DailyStatsTable
+              rows={addressSummaries}
+              affiliateUsers={affiliateUsers}
+              dateRange={dateRange}
+            />
+          )}
+
           {tab === "allorders" && (
             <AllOrdersTable
               rows={allOrders}
@@ -485,8 +558,10 @@ export default function OkxRebate() {
             <CacheManager
               entries={cachedRanges}
               onSelect={handleSelectCache}
+              onSelectMultiple={handleSelectMultipleCache}
               onDelete={handleDeleteCache}
               onClearAll={handleClearAllCache}
+              disabled={running}
             />
           )}
         </>
@@ -501,8 +576,10 @@ export default function OkxRebate() {
           <CacheManager
             entries={cachedRanges}
             onSelect={handleSelectCache}
+            onSelectMultiple={handleSelectMultipleCache}
             onDelete={handleDeleteCache}
             onClearAll={handleClearAllCache}
+            disabled={running}
           />
         </div>
       )}

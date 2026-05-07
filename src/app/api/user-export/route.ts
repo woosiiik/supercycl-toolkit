@@ -15,7 +15,7 @@ export async function GET() {
     conn = await mysql.createConnection(MYSQL_CONFIG);
 
     const [users] = (await conn.query(
-      "SELECT address, signup_memo, affiliate_no, DATE_FORMAT(DATE_ADD(created_at, INTERVAL 9 HOUR), '%Y-%m-%d %H:%i:%s') as created_at FROM t_user ORDER BY created_at DESC",
+      "SELECT address, signup_memo, affiliate_no, DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at FROM t_user ORDER BY created_at DESC",
     )) as any;
 
     const [ymRows] = (await conn.query(

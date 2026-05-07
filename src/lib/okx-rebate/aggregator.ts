@@ -162,8 +162,25 @@ export function aggregateByAddress(
     entry.totalVolume += csvRow.derivativeTradeAmt;
     entry.orderCount += 1;
 
-    // trade가 없는 경우 (mainnet order 승격 등) detail 생략
-    if (!orderTrades || orderTrades.length === 0) continue;
+    if (!orderTrades || orderTrades.length === 0) {
+      // trade_history에 없지만 order_history로 매핑된 경우 CSV 정보로 detail 생성
+      entry.tradeCount += 1;
+      entry.details.push({
+        orderId: csvRow.orderId,
+        tradeId: "",
+        symbol: csvRow.instId,
+        direction: "",
+        price: 0,
+        quantity: 0,
+        tradedAt: null,
+        instId: csvRow.instId,
+        brokerRebate: csvRow.brokerRebate,
+        derivativeTradeAmt: csvRow.derivativeTradeAmt,
+        csvFee: csvRow.fee,
+        ts: csvRow.ts,
+      });
+      continue;
+    }
 
     // 각 trade를 detail로 추가 (rebate/fee는 첫 trade에만, 나머지 0)
     for (let ti = 0; ti < orderTrades.length; ti++) {

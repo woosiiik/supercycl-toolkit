@@ -16,7 +16,7 @@ export async function GET() {
   try {
     conn = await mysql.createConnection(getDbConfig());
 
-    // 일일 가입자 수 (affiliate_no = 1, 2026-04-11부터)
+    // 일일 가입자 수 (affiliate_no = 1, 2026-04-11부터, UTC)
     const [signupRows] = await conn.query(
       `SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS dt, COUNT(*) AS cnt
        FROM t_user
@@ -25,17 +25,27 @@ export async function GET() {
        ORDER BY dt`,
     );
 
-    // 일일 EX 연동자 수 (ym_platform = 'ex', 2026-04-11부터)
+    // 일일 YM 가입자 수 (UNLINKED 포함, 2026-04-11부터, UTC)
+    const [ymRows] = await conn.query(
+      `SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS dt, COUNT(*) AS cnt
+       FROM t_partner_youthmeta_user
+       WHERE created_at >= '2026-04-11'
+       GROUP BY dt
+       ORDER BY dt`,
+    );
+
+    // 일일 EX 연동자 수 (ym_platform = 'ex', UNLINKED 제외, 2026-04-11부터, UTC)
     const [exRows] = await conn.query(
       `SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS dt, COUNT(*) AS cnt
        FROM t_partner_youthmeta_user
-       WHERE ym_platform = 'ex' AND created_at >= '2026-04-11'
+       WHERE ym_platform = 'ex' AND status != 'UNLINKED' AND created_at >= '2026-04-11'
        GROUP BY dt
        ORDER BY dt`,
     );
 
     return NextResponse.json({
       signups: signupRows as Array<{ dt: string; cnt: number }>,
+      ymSignups: ymRows as Array<{ dt: string; cnt: number }>,
       exLinks: exRows as Array<{ dt: string; cnt: number }>,
     });
   } catch (err) {

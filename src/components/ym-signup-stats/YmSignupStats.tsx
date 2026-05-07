@@ -5,9 +5,11 @@ import { useState } from "react";
 interface DayRow {
   date: string;
   dailySignup: number;
+  dailyYm: number;
   dailyEx: number;
   dailyExRate: string;
   cumSignup: number;
+  cumYm: number;
   cumEx: number;
   cumExRate: string;
 }
@@ -49,6 +51,11 @@ export default function YmSignupStats() {
         signupMap.set(r.dt, Number(r.cnt));
       }
 
+      const ymMap = new Map<string, number>();
+      for (const r of data.ymSignups as Array<{ dt: string; cnt: number }>) {
+        ymMap.set(r.dt, Number(r.cnt));
+      }
+
       const exMap = new Map<string, number>();
       for (const r of data.exLinks as Array<{ dt: string; cnt: number }>) {
         exMap.set(r.dt, Number(r.cnt));
@@ -64,23 +71,28 @@ export default function YmSignupStats() {
       }
 
       let cumSignup = 0;
+      let cumYm = 0;
       let cumEx = 0;
       const result: DayRow[] = [];
 
       for (const date of allDates) {
         const dailySignup = signupMap.get(date) || 0;
+        const dailyYm = ymMap.get(date) || 0;
         const dailyEx = exMap.get(date) || 0;
         cumSignup += dailySignup;
+        cumYm += dailyYm;
         cumEx += dailyEx;
 
         result.push({
           date,
           dailySignup,
+          dailyYm,
           dailyEx,
-          dailyExRate: pct(dailyEx, dailySignup),
+          dailyExRate: pct(dailyEx, dailyYm),
           cumSignup,
+          cumYm,
           cumEx,
-          cumExRate: pct(cumEx, cumSignup),
+          cumExRate: pct(cumEx, cumYm),
         });
       }
 
@@ -93,11 +105,11 @@ export default function YmSignupStats() {
   }
 
   function handleExportCsv() {
-    const header = "일자,일일 가입자 수,일일 EX 연동자 수,일일 EX 연동률,누적 가입자,누적 EX 연동자,누적 EX 연동률";
+    const header = "일자,일일 가입자 수,일일 YM 가입자 수,일일 EX 연동자 수,일일 EX 연동률,누적 가입자,누적 YM 가입자,누적 EX 연동자,누적 EX 연동률";
     const lines = [header];
     for (const r of rows) {
       lines.push(
-        `${r.date},${r.dailySignup},${r.dailyEx},${r.dailyExRate},${r.cumSignup},${r.cumEx},${r.cumExRate}`,
+        `${r.date},${r.dailySignup},${r.dailyYm},${r.dailyEx},${r.dailyExRate},${r.cumSignup},${r.cumYm},${r.cumEx},${r.cumExRate}`,
       );
     }
     downloadCsvFile("ym-signup-stats.csv", lines.join("\n"));
@@ -141,9 +153,11 @@ export default function YmSignupStats() {
               <tr>
                 <th className={`${thCls} ${borderR}`}>일자</th>
                 <th className={`${thCls} ${borderR} text-right`}>일일 가입자 수</th>
+                <th className={`${thCls} ${borderR} text-right`}>일일 YM 가입자 수</th>
                 <th className={`${thCls} ${borderR} text-right`}>일일 EX 연동자 수</th>
                 <th className={`${thCls} ${borderR} text-right`}>일일 EX 연동률</th>
                 <th className={`${thCls} ${borderR} text-right`}>누적 가입자</th>
+                <th className={`${thCls} ${borderR} text-right`}>누적 YM 가입자</th>
                 <th className={`${thCls} ${borderR} text-right`}>누적 EX 연동자</th>
                 <th className={`${thCls} text-right`}>누적 EX 연동률</th>
               </tr>
@@ -156,9 +170,11 @@ export default function YmSignupStats() {
                 >
                   <td className={`${tdCls} ${borderR} tabular-nums`}>{r.date}</td>
                   <td className={`${tdCls} ${borderR} text-right tabular-nums`}>{r.dailySignup}</td>
+                  <td className={`${tdCls} ${borderR} text-right tabular-nums`}>{r.dailyYm}</td>
                   <td className={`${tdCls} ${borderR} text-right tabular-nums`}>{r.dailyEx}</td>
                   <td className={`${tdCls} ${borderR} text-right tabular-nums`}>{r.dailyExRate}</td>
                   <td className={`${tdCls} ${borderR} text-right tabular-nums font-medium`}>{r.cumSignup}</td>
+                  <td className={`${tdCls} ${borderR} text-right tabular-nums font-medium`}>{r.cumYm}</td>
                   <td className={`${tdCls} ${borderR} text-right tabular-nums font-medium`}>{r.cumEx}</td>
                   <td className={`${tdCls} text-right tabular-nums font-medium`}>{r.cumExRate}</td>
                 </tr>

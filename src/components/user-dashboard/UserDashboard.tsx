@@ -65,34 +65,28 @@ const CHART_TOOLTIP_STYLE = {
 };
 // ── Bucket helpers ──
 
-function toKST(date: Date): Date {
-  // UTC → KST (+9시간)
-  return new Date(date.getTime() + 9 * 60 * 60 * 1000);
-}
-
 function bucketKey(date: Date, interval: Interval): string {
-  const kst = toKST(date);
-  const y = kst.getUTCFullYear();
-  const mo = String(kst.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(kst.getUTCDate()).padStart(2, "0");
-  const h = String(kst.getUTCHours()).padStart(2, "0");
-  const m = kst.getUTCMinutes();
+  const y = date.getUTCFullYear();
+  const mo = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  const h = String(date.getUTCHours()).padStart(2, "0");
+  const m = date.getUTCMinutes();
 
   switch (interval) {
     case "1m":
-      return `KST ${y}/${mo}/${d} ${h}:${String(m).padStart(2, "0")}`;
+      return `${y}/${mo}/${d} ${h}:${String(m).padStart(2, "0")}`;
     case "10m": {
       const bucket = Math.floor(m / 10) * 10;
-      return `KST ${y}/${mo}/${d} ${h}:${String(bucket).padStart(2, "0")}`;
+      return `${y}/${mo}/${d} ${h}:${String(bucket).padStart(2, "0")}`;
     }
     case "30m": {
       const bucket = m < 30 ? "00" : "30";
-      return `KST ${y}/${mo}/${d} ${h}:${bucket}`;
+      return `${y}/${mo}/${d} ${h}:${bucket}`;
     }
     case "1h":
-      return `KST ${y}/${mo}/${d} ${h}:00`;
+      return `${y}/${mo}/${d} ${h}:00`;
     case "1d":
-      return `KST ${y}-${mo}-${d}`;
+      return `${y}-${mo}-${d}`;
   }
 }
 
@@ -266,42 +260,28 @@ async function fetchAllCreatedAt(table: string): Promise<string[]> {
   return dates;
 }
 
-interface YmUserRow {
-  ym_uid: string;
-  created_at: string;
-}
-
-/** ym_uid 기준 unique Ex 계정의 created_at (가장 빠른 것) */
-async function fetchUniqueYmExDates(): Promise<string[]> {
-  const rows: YmUserRow[] = [];
+/** ym_platform=ex, UNLINKED 제외 */
+async function fetchYmExDates(): Promise<string[]> {
+  const dates: string[] = [];
   let offset = 0;
   const limit = 1000;
 
   while (true) {
     const url =
       `${SUPABASE_URL}/rest/v1/ym_users` +
-      `?select=ym_uid,created_at&order=created_at.asc` +
+      `?select=created_at&ym_platform=eq.ex&status=neq.UNLINKED&order=created_at.asc` +
       `&offset=${offset}&limit=${limit}`;
 
     const res = await fetch(url, { headers: supaHeaders });
     if (!res.ok) throw new Error(`HTTP ${res.status} from ym_users`);
 
-    const batch: YmUserRow[] = await res.json();
-    rows.push(...batch);
+    const batch: { created_at: string }[] = await res.json();
+    for (const r of batch) dates.push(r.created_at);
 
     if (batch.length < limit) break;
     offset += limit;
   }
 
-  // ym_uid 기준 첫 등장 시간만 사용 (unique)
-  const seen = new Set<string>();
-  const dates: string[] = [];
-  for (const r of rows) {
-    if (!seen.has(r.ym_uid)) {
-      seen.add(r.ym_uid);
-      dates.push(r.created_at);
-    }
-  }
   return dates;
 }
 
@@ -338,7 +318,7 @@ export default function UserDashboard() {
       const [userRows, ymDates, ymExDates, okxDates] = await Promise.all([
         fetchAllUsers(),
         fetchAllCreatedAt("ym_users"),
-        fetchUniqueYmExDates(),
+        fetchYmExDates(),
         fetchAllCreatedAt("okx_users"),
       ]);
 

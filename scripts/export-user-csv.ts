@@ -74,16 +74,9 @@ async function main() {
       const route =
         user.signup_memo === "Youthmeta-event-20260411" ? "Mobile" : "PC";
 
-      // KST로 변환 (+9h)
+      // UTC 그대로 출력
       const utc = new Date(user.created_at);
-      const kst = new Date(utc.getTime() + 9 * 60 * 60 * 1000);
-      const y = kst.getUTCFullYear();
-      const mo = String(kst.getUTCMonth() + 1).padStart(2, "0");
-      const d = String(kst.getUTCDate()).padStart(2, "0");
-      const h = String(kst.getUTCHours()).padStart(2, "0");
-      const mi = String(kst.getUTCMinutes()).padStart(2, "0");
-      const s = String(kst.getUTCSeconds()).padStart(2, "0");
-      const timeStr = `${y}-${mo}-${d} ${h}:${mi}:${s}`;
+      const timeStr = utc.toISOString().replace("T", " ").slice(0, 19);
 
       lines.push(
         `${addr},${exLinked ? "O" : "X"},${exId},${okxLinked ? "O" : "X"},${route},${timeStr}`,
