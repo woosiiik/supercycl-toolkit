@@ -113,4 +113,12 @@ export const tools: ToolConfig[] = [
       "Java jasypt-1.9.3과 동일한 알고리즘으로 동작하며, 브라우저에서 바로 실행됩니다 (서버 전송 없음).\n" +
       "PBKDF2(HMAC-SHA512, 1000회) + AES-256-CBC, RandomIvGenerator 방식.",
   },
+  {
+    slug: "push-tester",
+    name: "Push Tester",
+    description:
+      "PWA Web Push 알림 테스트 도구입니다.\n" +
+      "VAPID Public Key 조회 → Service Worker 등록 → Push 구독 → WAS를 통한 메시지 전송까지 전체 흐름을 테스트합니다.\n" +
+      "로컬 WAS(localhost:8080)가 실행 중이어야 합니다.",
+  },
 ];

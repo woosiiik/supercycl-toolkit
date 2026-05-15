@@ -14,6 +14,7 @@ import YmSignupStats from "@/components/ym-signup-stats/YmSignupStats";
 import OkxRebate from "@/components/okx-rebate/OkxRebate";
 import AesGcmCrypto from "@/components/jasypt-crypto/JasyptCrypto";
 import JasyptCrypto from "@/components/jasypt-crypto/JasyptCryptoLegacy";
+import PushTester from "@/components/push-tester/PushTester";
 
 export default async function ToolPage({
   params,
@@ -57,6 +58,8 @@ export default async function ToolPage({
           <AesGcmCrypto />
         ) : slug === "jasypt-crypto" ? (
           <JasyptCrypto />
+        ) : slug === "push-tester" ? (
+          <PushTester />
         ) : (
           <p className="text-gray-500">준비 중입니다.</p>
         )}
