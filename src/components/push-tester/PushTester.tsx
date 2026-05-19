@@ -16,17 +16,17 @@ const btnCls =
 const TEST_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJHYXRlaW8iOiIxMjQxODE5OSIsIkh5cGVybGlxdWlkIjoiMHgzYjVlNzlhMDVlN2U0YjFhOGQ3YmNmMTUzZWVhYWJkNTIwZDViN2JhIiwidmVyc2lvbiI6InRlc3QiLCJPS1giOiI2NDQ3OTQ2MTg0NTQxNTMzNTIiLCJtYXN0ZXIiOiIweDNiNWU3OWEwNWU3ZTRiMWE4ZDdiY2YxNTNlZWFhYmQ1MjBkNWI3YmEiLCJleHAiOjE4MDcwODg5MTJ9.rI0tVHzIIZIs_Ots6t03xZEiPQUO8lKGLRjA9pDs5U4";
 
-const WAS_ENVS = [
+const WAS_ENVS: { label: string; url: string; defaultJwt: string }[] = [
   { label: "Local", url: "http://localhost:8080", defaultJwt: TEST_JWT },
   { label: "Dev", url: "https://pnl-dev.supercycl.io", defaultJwt: TEST_JWT },
   { label: "Staging", url: "https://pnl-stg.supercycl.io", defaultJwt: "" },
   { label: "Production", url: "https://pnl.supercycl.io", defaultJwt: "" },
-] as const;
+];
 
 export default function PushTester() {
-  const [wasUrl, setWasUrl] = useState(WAS_ENVS[0].url);
+  const [wasUrl, setWasUrl] = useState("http://localhost:8080");
   const [vapidPublicKey, setVapidPublicKey] = useState("");
-  const [jwt, setJwt] = useState(WAS_ENVS[0].defaultJwt);
+  const [jwt, setJwt] = useState(TEST_JWT);
   const [subscription, setSubscription] = useState<PushSubscriptionJSON | null>(
     null,
   );
@@ -83,11 +83,11 @@ export default function PushTester() {
         log("ℹ️ 기존 구독 해제 후 재구독");
       }
 
-      const applicationServerKey = decodeVapidPublicKey(vapidPublicKey);
+      const applicationServerKey = base64ToUint8Array(vapidPublicKey);
 
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey,
+        applicationServerKey: applicationServerKey.buffer as ArrayBuffer,
       });
 
       const subJson = sub.toJSON() as PushSubscriptionJSON;
@@ -381,20 +381,6 @@ function base64ToUint8Array(b64: string): Uint8Array {
   const out = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
-}
-
-/**
- * VAPID public key를 applicationServerKey용 Uint8Array(65바이트)로 변환.
- * - 65바이트 raw key (Base64 URL-safe): 그대로 사용
- * - 91바이트 X.509 SubjectPublicKeyInfo (DER): 뒤 65바이트 추출
- */
-function decodeVapidPublicKey(key: string): Uint8Array {
-  const bytes = base64ToUint8Array(key);
-  // X.509 DER 래퍼(91바이트)면 뒤 65바이트가 raw EC point
-  if (bytes.length === 91 && bytes[0] === 0x30) {
-    return bytes.slice(26);
-  }
-  return bytes;
 }
 
 /** JWT payload에서 master 주소 추출 */

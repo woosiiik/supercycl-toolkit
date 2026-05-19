@@ -15,6 +15,10 @@ import OkxRebate from "@/components/okx-rebate/OkxRebate";
 import AesGcmCrypto from "@/components/jasypt-crypto/JasyptCrypto";
 import JasyptCrypto from "@/components/jasypt-crypto/JasyptCryptoLegacy";
 import PushTester from "@/components/push-tester/PushTester";
+import SymbolMapping from "@/components/symbol-mapping/SymbolMapping";
+import YmSignalTester from "@/components/ym-signal-tester/YmSignalTester";
+import YmSignalStatus from "@/components/ym-signal-status/YmSignalStatus";
+import YmPushStatus from "@/components/ym-push-status/YmPushStatus";
 
 export default async function ToolPage({
   params,
@@ -58,8 +62,16 @@ export default async function ToolPage({
           <AesGcmCrypto />
         ) : slug === "jasypt-crypto" ? (
           <JasyptCrypto />
+        ) : slug === "symbol-mapping" ? (
+          <SymbolMapping />
         ) : slug === "push-tester" ? (
           <PushTester />
+        ) : slug === "ym-signal-tester" ? (
+          <YmSignalTester />
+        ) : slug === "ym-signal-status" ? (
+          <YmSignalStatus />
+        ) : slug === "ym-push-status" ? (
+          <YmPushStatus />
         ) : (
           <p className="text-gray-500">준비 중입니다.</p>
         )}

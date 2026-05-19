@@ -114,11 +114,43 @@ export const tools: ToolConfig[] = [
       "PBKDF2(HMAC-SHA512, 1000회) + AES-256-CBC, RandomIvGenerator 방식.",
   },
   {
+    slug: "symbol-mapping",
+    name: "유스메타 심볼 매핑 관리",
+    description:
+      "유스메타-거래소 심볼 매핑(t_ym_symbol_mapping)을 조회/추가/수정/삭제하는 관리 도구입니다.\n" +
+      "유스메타 심볼과 각 거래소(Bitget, Bybit, Gateio, Hyperliquid, OKX)의 심볼 매핑을 관리합니다.\n" +
+      "⚠️ localhost에서만 동작합니다 (DB VPN 연결 필요).",
+  },
+  {
     slug: "push-tester",
-    name: "Push Tester",
+    name: "유스메타 푸시 알림 테스터",
     description:
       "PWA Web Push 알림 테스트 도구입니다.\n" +
       "VAPID Public Key 조회 → Service Worker 등록 → Push 구독 → WAS를 통한 메시지 전송까지 전체 흐름을 테스트합니다.\n" +
       "로컬 WAS(localhost:8080)가 실행 중이어야 합니다.",
+  },
+  {
+    slug: "ym-signal-tester",
+    name: "유스메타 시그널 전송 테스트",
+    description:
+      "유스메타 시그널 전송 및 회원 정보 변경 테스트 도구입니다.\n" +
+      "RSA-OAEP + A256GCM JWE 암호화를 적용하여 실시간/확정 시그널 전송, 회원 정보 업데이트(member/notify)를 테스트합니다.\n" +
+      "Local/Dev 환경은 Public Key가 하드코딩되어 있으며, Staging/Production은 별도 입력이 필요합니다.",
+  },
+  {
+    slug: "ym-signal-status",
+    name: "유스메타 시그널 상태 조회",
+    description:
+      "유스메타 시그널의 현재 상태와 수신 이력을 조회하는 도구입니다.\n" +
+      "Redis에서 현재 유효한 Premium/Smart 시그널을 조회하고, MySQL(t_ym_signal_history)에서 시그널 수신 이력을 확인합니다.\n" +
+      "⚠️ Local/Dev 환경만 지원합니다. Redis 및 DB VPN 연결이 필요합니다.",
+  },
+  {
+    slug: "ym-push-status",
+    name: "유스메타 Push 수신 상태 조회",
+    description:
+      "특정 사용자(지갑 주소 또는 OKX UID)의 유스메타 시그널 Push 수신 조건을 종합 점검하는 도구입니다.\n" +
+      "YM 회원 상태, 워치리스트, Push 구독, 알림 설정, 거래소 연동, 보유 포지션을 조회하여 미확정/확정/반대 포지션 시그널 수신 가능 여부를 판정합니다.\n" +
+      "⚠️ Local/Dev 환경만 지원합니다. Redis 및 DB VPN 연결이 필요합니다.",
   },
 ];
