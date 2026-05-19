@@ -12,6 +12,7 @@ function getDbConfig(env: DbEnv) {
       user: process.env.MYSQL_USER_DEV || "root",
       password: process.env.MYSQL_PASSWORD_DEV || "",
       database: process.env.MYSQL_DATABASE_DEV || "pnl_db",
+      timezone: "+00:00",
     };
   }
   return {
@@ -20,6 +21,7 @@ function getDbConfig(env: DbEnv) {
     user: process.env.MYSQL_USER || "root",
     password: process.env.MYSQL_PASSWORD || "",
     database: process.env.MYSQL_DATABASE || "pnl_db",
+    timezone: "+00:00",
   };
 }
 

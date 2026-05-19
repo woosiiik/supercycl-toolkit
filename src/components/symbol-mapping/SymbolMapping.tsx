@@ -20,7 +20,7 @@ const DB_ENVS = [
 ] as const;
 
 const inputCls =
-  "p-2 bg-gray-800 border border-gray-600 rounded text-white text-sm";
+  "p-2 bg-white border border-zinc-300 rounded text-zinc-900 text-sm";
 const btnCls =
   "rounded-md px-3 py-1.5 text-sm font-medium text-white";
 
@@ -151,7 +151,7 @@ export default function SymbolMapping() {
     <div className="space-y-6 max-w-5xl">
       {/* 환경 선택 */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-400">DB 환경:</span>
+        <span className="text-sm text-zinc-500">DB 환경:</span>
         {DB_ENVS.map((e) => (
           <button
             key={e.value}
@@ -159,7 +159,7 @@ export default function SymbolMapping() {
             className={`px-3 py-1.5 text-sm rounded-md border ${
               env === e.value
                 ? "bg-blue-600 border-blue-600 text-white"
-                : "bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400"
+                : "bg-white border-zinc-300 text-zinc-500 hover:border-zinc-400"
             }`}
           >
             {e.label}
@@ -167,25 +167,25 @@ export default function SymbolMapping() {
         ))}
         <button
           onClick={fetchData}
-          className={`${btnCls} bg-gray-600 hover:bg-gray-500 ml-2`}
+          className={`${btnCls} bg-zinc-200 hover:bg-zinc-300 text-zinc-700 ml-2`}
         >
           새로고침
         </button>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-900/50 border border-red-700 rounded text-sm text-red-300">
+        <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
           {error}
-          <button onClick={() => setError("")} className="ml-2 text-red-400 hover:text-red-200">✕</button>
+          <button onClick={() => setError("")} className="ml-2 text-red-600 hover:text-red-800">✕</button>
         </div>
       )}
 
       {/* 추가 폼 */}
-      <div className="border border-gray-700 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-gray-300 mb-3">매핑 추가</h3>
+      <div className="border border-zinc-200 rounded-lg p-4 bg-white">
+        <h3 className="text-sm font-semibold text-zinc-900 mb-3">매핑 추가</h3>
         <div className="flex gap-2 items-end flex-wrap">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">YM 심볼</label>
+            <label className="block text-xs text-zinc-500 mb-1">YM 심볼</label>
             <input
               className={inputCls}
               value={newYmSymbol}
@@ -194,7 +194,7 @@ export default function SymbolMapping() {
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">거래소</label>
+            <label className="block text-xs text-zinc-500 mb-1">거래소</label>
             <select
               className={`${inputCls} min-w-[140px]`}
               value={newExchange}
@@ -206,7 +206,7 @@ export default function SymbolMapping() {
             </select>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">거래소 심볼</label>
+            <label className="block text-xs text-zinc-500 mb-1">거래소 심볼</label>
             <input
               className={inputCls}
               value={newExSymbol}
@@ -225,14 +225,14 @@ export default function SymbolMapping() {
 
       {/* 테이블 */}
       {loading ? (
-        <p className="text-gray-500 text-sm">로딩 중...</p>
+        <p className="text-zinc-500 text-sm">로딩 중...</p>
       ) : mappings.length === 0 ? (
-        <p className="text-gray-500 text-sm">데이터가 없습니다.</p>
+        <p className="text-zinc-500 text-sm">데이터가 없습니다.</p>
       ) : (
-        <div className="border border-gray-700 rounded-lg overflow-hidden">
+        <div className="border border-zinc-200 rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-800 text-gray-400 text-left">
+              <tr className="bg-zinc-50 text-zinc-500 text-left">
                 <th className="px-4 py-3 font-medium">YM 심볼</th>
                 <th className="px-4 py-3 font-medium">거래소</th>
                 <th className="px-4 py-3 font-medium">거래소 심볼</th>
@@ -244,14 +244,14 @@ export default function SymbolMapping() {
                 items.map((m, idx) => (
                   <tr
                     key={m.mapping_no}
-                    className={`border-t border-gray-700 ${
-                      idx === 0 && "border-t-gray-600"
-                    } hover:bg-gray-800/50`}
+                    className={`border-t border-zinc-200 ${
+                      idx === 0 && "border-t-zinc-300"
+                    } hover:bg-zinc-50`}
                   >
                     {/* YM 심볼: 그룹 첫 행에만 표시 */}
                     {idx === 0 ? (
                       <td
-                        className="px-4 py-2 font-mono font-semibold text-yellow-400 align-top"
+                        className="px-4 py-2 font-mono font-semibold text-yellow-600 align-top"
                         rowSpan={items.length}
                       >
                         {ymSymbol}
@@ -288,7 +288,7 @@ export default function SymbolMapping() {
                             </button>
                             <button
                               onClick={() => setEditingNo(null)}
-                              className={`${btnCls} bg-gray-600 hover:bg-gray-500`}
+                              className={`${btnCls} bg-zinc-200 hover:bg-zinc-300 text-zinc-700`}
                             >
                               취소
                             </button>
@@ -297,13 +297,13 @@ export default function SymbolMapping() {
                       </>
                     ) : (
                       <>
-                        <td className="px-4 py-2 text-gray-300">{m.exchange_name}</td>
-                        <td className="px-4 py-2 font-mono text-gray-300">{m.exchange_symbol}</td>
+                        <td className="px-4 py-2 text-zinc-700">{m.exchange_name}</td>
+                        <td className="px-4 py-2 font-mono text-zinc-700">{m.exchange_symbol}</td>
                         <td className="px-4 py-2">
                           <div className="flex gap-1">
                             <button
                               onClick={() => startEdit(m)}
-                              className={`${btnCls} bg-gray-600 hover:bg-gray-500`}
+                              className={`${btnCls} bg-zinc-200 hover:bg-zinc-300 text-zinc-700`}
                             >
                               수정
                             </button>
@@ -325,7 +325,7 @@ export default function SymbolMapping() {
         </div>
       )}
 
-      <p className="text-xs text-gray-600">
+      <p className="text-xs text-zinc-600">
         총 {mappings.length}건 · {grouped.size}개 YM 심볼
       </p>
     </div>

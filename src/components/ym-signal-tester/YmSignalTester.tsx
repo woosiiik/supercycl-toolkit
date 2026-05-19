@@ -48,9 +48,9 @@ const btnCls =
 const btnRedCls =
   "rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700";
 const btnGrayCls =
-  "rounded-md bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-600";
+  "rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-200";
 const inputCls =
-  "w-full p-2 bg-gray-800 border border-gray-600 rounded text-white text-sm font-mono";
+  "w-full p-2 bg-white border border-zinc-300 rounded text-zinc-900 text-sm font-mono";
 
 async function encryptJwe(plaintext: string, publicKeyPem: string): Promise<string> {
   const key = await importSPKI(publicKeyPem, "RSA-OAEP");
@@ -198,14 +198,14 @@ export default function YmSignalTester() {
               className={`px-3 py-1.5 text-sm rounded-md border ${
                 wasUrl === env.url
                   ? "bg-blue-600 border-blue-600 text-white"
-                  : "bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400"
+                  : "bg-white border-zinc-300 text-zinc-500 hover:border-zinc-400"
               }`}
             >
               {env.label}
             </button>
           ))}
         </div>
-        <p className="mt-1 text-xs text-gray-500 font-mono">{wasUrl}</p>
+        <p className="mt-1 text-xs text-zinc-500 font-mono">{wasUrl}</p>
       </Section>
 
       {/* RSA Public Key */}
@@ -216,7 +216,7 @@ export default function YmSignalTester() {
           onChange={(e) => setPublicKey(e.target.value)}
           placeholder="-----BEGIN PUBLIC KEY-----&#10;...&#10;-----END PUBLIC KEY-----"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-zinc-500">
           RSA 2048bit PEM. 알고리즘: RSA-OAEP + A256GCM
         </p>
       </Section>
@@ -236,7 +236,7 @@ export default function YmSignalTester() {
               className={`px-4 py-2 text-sm rounded-md border ${
                 apiMode === opt.value
                   ? "bg-blue-600 border-blue-600 text-white"
-                  : "bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400"
+                  : "bg-white border-zinc-300 text-zinc-500 hover:border-zinc-400"
               }`}
             >
               {opt.label}
@@ -265,7 +265,7 @@ export default function YmSignalTester() {
                   className={`px-4 py-2 text-sm rounded-md border ${
                     signalType === opt.value
                       ? "bg-blue-600 border-blue-600 text-white"
-                      : "bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400"
+                      : "bg-white border-zinc-300 text-zinc-500 hover:border-zinc-400"
                   }`}
                 >
                   {opt.label}
@@ -286,7 +286,7 @@ export default function YmSignalTester() {
                 onChange={(e) => setUseNow(e.target.checked)}
                 className="w-4 h-4 accent-blue-600"
               />
-              <span className="text-sm text-gray-300">전송 시 현재 시간 사용</span>
+              <span className="text-sm text-zinc-700">전송 시 현재 시간 사용</span>
             </label>
             {!useNow && (
               <div className="flex items-center gap-3">
@@ -299,7 +299,7 @@ export default function YmSignalTester() {
                 <button onClick={setNow} className={btnGrayCls}>
                   현재 시간
                 </button>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-zinc-500">
                   {new Date(timestamp * 1000).toLocaleString("ko-KR", {
                     timeZone: "Asia/Seoul",
                   })}{" "}
@@ -343,7 +343,7 @@ export default function YmSignalTester() {
         <Section title="회원 정보 (member/notify)">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">uid</label>
+              <label className="block text-xs text-zinc-500 mb-1">uid</label>
               <input
                 className={inputCls}
                 value={memberUid}
@@ -351,7 +351,7 @@ export default function YmSignalTester() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">userid</label>
+              <label className="block text-xs text-zinc-500 mb-1">userid</label>
               <input
                 className={inputCls}
                 value={memberUserid}
@@ -359,7 +359,7 @@ export default function YmSignalTester() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">end_date</label>
+              <label className="block text-xs text-zinc-500 mb-1">end_date</label>
               <input
                 type="date"
                 className={inputCls}
@@ -382,7 +382,7 @@ export default function YmSignalTester() {
                     onChange={(e) => opt.set(e.target.checked ? "Y" : "N")}
                     className="w-4 h-4 accent-blue-600"
                   />
-                  <span className="text-sm text-gray-300">{opt.label}</span>
+                  <span className="text-sm text-zinc-700">{opt.label}</span>
                 </label>
               ))}
             </div>
@@ -392,8 +392,8 @@ export default function YmSignalTester() {
 
       {/* Request Preview & Send */}
       <Section title="요청 미리보기">
-        <pre className="p-3 bg-gray-900 rounded text-xs text-gray-300 overflow-auto max-h-48 mb-4">
-          <span className="text-blue-400">POST</span>{" "}
+        <pre className="p-3 bg-zinc-50 rounded text-xs text-zinc-700 overflow-auto max-h-48 mb-4">
+          <span className="text-blue-600">POST</span>{" "}
           {wasUrl}
           {apiMode === "signal"
             ? signalType === "realtime"
@@ -401,7 +401,7 @@ export default function YmSignalTester() {
               : "/v1/partner/ym/signal/confirmed"
             : "/v1/partner/ym/member/notify"}
           {"\n"}
-          <span className="text-gray-500">{"// JWE 암호화되어 { \"encrypted\": \"...\" } 로 전송"}</span>
+          <span className="text-zinc-500">{"// JWE 암호화되어 { \"encrypted\": \"...\" } 로 전송"}</span>
           {"\n\n"}
           {JSON.stringify(
             apiMode === "signal" ? buildSignalPayload() : buildMemberPayload(),
@@ -424,12 +424,12 @@ export default function YmSignalTester() {
 
       {/* Logs */}
       <Section title="로그">
-        <div className="bg-gray-900 rounded p-3 h-64 overflow-auto font-mono text-xs whitespace-pre-wrap">
+        <div className="bg-zinc-50 rounded p-3 h-64 overflow-auto font-mono text-xs whitespace-pre-wrap">
           {logs.length === 0 ? (
-            <span className="text-gray-500">로그가 여기에 표시됩니다...</span>
+            <span className="text-zinc-500">로그가 여기에 표시됩니다...</span>
           ) : (
             logs.map((l, i) => (
-              <div key={i} className="text-gray-300 mb-1">
+              <div key={i} className="text-zinc-700 mb-1">
                 {l}
               </div>
             ))
@@ -438,7 +438,7 @@ export default function YmSignalTester() {
         {logs.length > 0 && (
           <button
             onClick={() => setLogs([])}
-            className="mt-2 text-xs text-gray-500 hover:text-gray-300"
+            className="mt-2 text-xs text-zinc-500 hover:text-zinc-700"
           >
             로그 지우기
           </button>
@@ -498,7 +498,7 @@ function SignalList({
             placeholder="BTCUSDT"
           />
           <select
-            className="p-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+            className="p-2 bg-white border border-zinc-300 rounded text-zinc-900 text-sm"
             value={sig.position}
             onChange={(e) => update(i, "position", e.target.value)}
           >
@@ -514,7 +514,7 @@ function SignalList({
               className={`px-3 py-1.5 text-xs font-medium rounded-md border ${
                 sig.nonce === "cancel"
                   ? "bg-orange-600 border-orange-600 text-white"
-                  : "bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400"
+                  : "bg-white border-zinc-300 text-zinc-500 hover:border-zinc-400"
               }`}
             >
               cancel
@@ -542,8 +542,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-gray-700 rounded-lg p-4">
-      <h3 className="text-sm font-semibold text-gray-300 mb-3">{title}</h3>
+    <div className="border border-zinc-200 rounded-lg p-4 bg-white">
+      <h3 className="text-sm font-semibold text-zinc-900 mb-3">{title}</h3>
       {children}
     </div>
   );

@@ -209,7 +209,7 @@ export default function PushTester() {
     <div className="space-y-6 max-w-3xl">
       {/* WAS 환경 + JWT */}
       <Section title="WAS 설정">
-        <label className="block text-sm text-gray-400 mb-1">환경</label>
+        <label className="block text-sm text-zinc-500 mb-1">환경</label>
         <div className="flex gap-2">
           {WAS_ENVS.map((env) => (
             <button
@@ -218,26 +218,26 @@ export default function PushTester() {
               className={`px-3 py-1.5 text-sm rounded-md border ${
                 wasUrl === env.url
                   ? "bg-blue-600 border-blue-600 text-white"
-                  : "bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400"
+                  : "bg-white border-zinc-300 text-zinc-500 hover:border-zinc-400"
               }`}
             >
               {env.label}
             </button>
           ))}
         </div>
-        <p className="mt-1 text-xs text-gray-500 font-mono">{wasUrl}</p>
-        <label className="block text-sm text-gray-400 mt-3 mb-1">
+        <p className="mt-1 text-xs text-zinc-500 font-mono">{wasUrl}</p>
+        <label className="block text-sm text-zinc-500 mt-3 mb-1">
           JWT Token (Bind, Send-Test에 필요)
         </label>
         <input
-          className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white font-mono text-sm"
+          className="w-full p-2 bg-white border border-zinc-300 rounded text-zinc-900 font-mono text-sm"
           value={jwt}
           onChange={(e) => setJwt(e.target.value)}
           placeholder="eyJhbGciOiJIUzI1NiIs..."
         />
         {jwt && parseJwtMaster(jwt) && (
-          <p className="mt-1 text-xs text-gray-400">
-            master: <span className="text-green-400 font-mono">{parseJwtMaster(jwt)}</span>
+          <p className="mt-1 text-xs text-zinc-500">
+            master: <span className="text-green-600 font-mono">{parseJwtMaster(jwt)}</span>
           </p>
         )}
       </Section>
@@ -248,7 +248,7 @@ export default function PushTester() {
           WAS에서 VAPID Public Key 가져오기
         </button>
         {vapidPublicKey && (
-          <pre className="mt-2 p-2 bg-gray-900 rounded text-xs text-green-400 break-all">
+          <pre className="mt-2 p-2 bg-zinc-50 rounded text-xs text-green-600 break-all">
             {vapidPublicKey}
           </pre>
         )}
@@ -260,10 +260,10 @@ export default function PushTester() {
           Service Worker 등록 + Push 구독
         </button>
         {swRegistered && (
-          <span className="ml-3 text-sm text-green-400">SW 등록됨</span>
+          <span className="ml-3 text-sm text-green-600">SW 등록됨</span>
         )}
         {subscription && (
-          <pre className="mt-2 p-2 bg-gray-900 rounded text-xs text-blue-400 break-all max-h-32 overflow-auto">
+          <pre className="mt-2 p-2 bg-zinc-50 rounded text-xs text-blue-600 break-all max-h-32 overflow-auto">
             {JSON.stringify(subscription, null, 2)}
           </pre>
         )}
@@ -271,14 +271,14 @@ export default function PushTester() {
 
       {/* Step 3 */}
       <Section title="Step 3. 계정 바인딩 (Bind)">
-        <p className="text-xs text-gray-500 mb-2">
+        <p className="text-xs text-zinc-500 mb-2">
           JWT의 address와 디바이스(endpoint)를 연결합니다.
         </p>
         <button onClick={bindPush} className={btnCls}>
           Bind
         </button>
         {bound && (
-          <span className="ml-3 text-sm text-green-400">바인딩 완료</span>
+          <span className="ml-3 text-sm text-green-600">바인딩 완료</span>
         )}
       </Section>
 
@@ -287,17 +287,17 @@ export default function PushTester() {
         <div className="space-y-2">
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">title</label>
+              <label className="block text-xs text-zinc-500 mb-1">title</label>
               <input
-                className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+                className="w-full p-2 bg-white border border-zinc-300 rounded text-zinc-900 text-sm"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">url</label>
+              <label className="block text-xs text-zinc-500 mb-1">url</label>
               <input
-                className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+                className="w-full p-2 bg-white border border-zinc-300 rounded text-zinc-900 text-sm"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
               />
@@ -305,9 +305,9 @@ export default function PushTester() {
           </div>
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">body</label>
+              <label className="block text-xs text-zinc-500 mb-1">body</label>
               <input
-                className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+                className="w-full p-2 bg-white border border-zinc-300 rounded text-zinc-900 text-sm"
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
               />
@@ -334,12 +334,12 @@ export default function PushTester() {
 
       {/* Logs */}
       <Section title="로그">
-        <div className="bg-gray-900 rounded p-3 h-64 overflow-auto font-mono text-xs">
+        <div className="bg-zinc-50 rounded p-3 h-64 overflow-auto font-mono text-xs">
           {logs.length === 0 ? (
-            <span className="text-gray-500">로그가 여기에 표시됩니다...</span>
+            <span className="text-zinc-500">로그가 여기에 표시됩니다...</span>
           ) : (
             logs.map((l, i) => (
-              <div key={i} className="text-gray-300 mb-1">
+              <div key={i} className="text-zinc-700 mb-1">
                 {l}
               </div>
             ))
@@ -348,7 +348,7 @@ export default function PushTester() {
         {logs.length > 0 && (
           <button
             onClick={() => setLogs([])}
-            className="mt-2 text-xs text-gray-500 hover:text-gray-300"
+            className="mt-2 text-xs text-zinc-500 hover:text-zinc-700"
           >
             로그 지우기
           </button>
@@ -366,8 +366,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-gray-700 rounded-lg p-4">
-      <h3 className="text-sm font-semibold text-gray-300 mb-3">{title}</h3>
+    <div className="border border-zinc-200 rounded-lg p-4 bg-white">
+      <h3 className="text-sm font-semibold text-zinc-900 mb-3">{title}</h3>
       {children}
     </div>
   );

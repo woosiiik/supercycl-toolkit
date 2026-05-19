@@ -27,14 +27,16 @@ interface HistoryRow {
 const btnCls =
   "rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700";
 const btnGrayCls =
-  "rounded-md bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-600";
+  "rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-200";
 
 function formatTs(ts: number) {
   return new Date(ts * 1000).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
 }
 
 function formatDatetime(dt: string) {
-  return new Date(dt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+  // DB에 UTC로 저장되어 있으므로 UTC로 파싱 후 KST 변환
+  const utcDate = dt.endsWith("Z") ? dt : dt.replace(" ", "T") + "Z";
+  return new Date(utcDate).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
 }
 
 export default function YmSignalStatus() {
@@ -114,7 +116,7 @@ export default function YmSignalStatus() {
               className={`px-3 py-1.5 text-sm rounded-md border ${
                 env === e
                   ? "bg-blue-600 border-blue-600 text-white"
-                  : "bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400"
+                  : "bg-white border-zinc-300 text-zinc-500 hover:border-zinc-400"
               }`}
             >
               {e === "local" ? "Local" : "Dev"}
@@ -133,26 +135,26 @@ export default function YmSignalStatus() {
           {redisLoading ? "조회 중..." : "조회"}
         </button>
         {redisError && (
-          <p className="text-red-400 text-sm mb-3">{redisError}</p>
+          <p className="text-red-600 text-sm mb-3">{redisError}</p>
         )}
 
         {(premium.length > 0 || smart.length > 0) && (
           <div className="grid grid-cols-2 gap-4">
             {/* Premium */}
             <div>
-              <h4 className="text-xs font-semibold text-gray-400 mb-2 uppercase">
+              <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase">
                 ym:signal:premium ({premium.length})
               </h4>
               {premium.length === 0 ? (
-                <p className="text-xs text-gray-500">(empty)</p>
+                <p className="text-xs text-zinc-500">(empty)</p>
               ) : (
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="text-left text-gray-500 border-b border-gray-700">
+                    <tr className="text-left text-zinc-500 border-b border-zinc-200">
                       <th className="pb-1 pr-2">Symbol</th>
                       <th className="pb-1 pr-2">Position</th>
                       <th className="pb-1 pr-2">Confirmed</th>
-                      <th className="pb-1">Timestamp</th>
+                      <th className="pb-1">Timestamp (KST)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -164,17 +166,17 @@ export default function YmSignalStatus() {
                           .map((sig, i) => (
                             <tr
                               key={`${symbol}:${sig.position}`}
-                              className="border-b border-gray-800"
+                              className="border-b border-zinc-100"
                             >
-                              <td className="py-1 pr-2 text-gray-300 font-mono">
+                              <td className="py-1 pr-2 text-zinc-700 font-mono">
                                 {i === 0 ? symbol : ""}
                               </td>
                               <td className="py-1 pr-2">
                                 <span
                                   className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                                     sig.position.startsWith("L")
-                                      ? "bg-green-900 text-green-300"
-                                      : "bg-red-900 text-red-300"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
                                   }`}
                                 >
                                   {sig.position}
@@ -182,12 +184,12 @@ export default function YmSignalStatus() {
                               </td>
                               <td className="py-1 pr-2">
                                 {sig.confirmed ? (
-                                  <span className="text-green-400">Y</span>
+                                  <span className="text-green-600">Y</span>
                                 ) : (
-                                  <span className="text-yellow-400">N</span>
+                                  <span className="text-yellow-600">N</span>
                                 )}
                               </td>
-                              <td className="py-1 text-gray-500">
+                              <td className="py-1 text-zinc-500">
                                 {formatTs(sig.timestamp)}
                               </td>
                             </tr>
@@ -200,18 +202,18 @@ export default function YmSignalStatus() {
 
             {/* Smart */}
             <div>
-              <h4 className="text-xs font-semibold text-gray-400 mb-2 uppercase">
+              <h4 className="text-xs font-semibold text-zinc-500 mb-2 uppercase">
                 ym:signal:smart ({smart.length})
               </h4>
               {smart.length === 0 ? (
-                <p className="text-xs text-gray-500">(empty)</p>
+                <p className="text-xs text-zinc-500">(empty)</p>
               ) : (
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="text-left text-gray-500 border-b border-gray-700">
+                    <tr className="text-left text-zinc-500 border-b border-zinc-200">
                       <th className="pb-1 pr-2">Symbol</th>
                       <th className="pb-1 pr-2">Position</th>
-                      <th className="pb-1">Timestamp</th>
+                      <th className="pb-1">Timestamp (KST)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -220,23 +222,23 @@ export default function YmSignalStatus() {
                       .map((sig) => (
                         <tr
                           key={sig.symbol}
-                          className="border-b border-gray-800"
+                          className="border-b border-zinc-100"
                         >
-                          <td className="py-1 pr-2 text-gray-300 font-mono">
+                          <td className="py-1 pr-2 text-zinc-700 font-mono">
                             {sig.symbol}
                           </td>
                           <td className="py-1 pr-2">
                             <span
                               className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                                 sig.position === "LL"
-                                  ? "bg-green-900 text-green-300"
-                                  : "bg-red-900 text-red-300"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
                               }`}
                             >
                               {sig.position}
                             </span>
                           </td>
-                          <td className="py-1 text-gray-500">
+                          <td className="py-1 text-zinc-500">
                             {formatTs(sig.timestamp)}
                           </td>
                         </tr>
@@ -259,23 +261,24 @@ export default function YmSignalStatus() {
           {historyLoading ? "조회 중..." : "조회"}
         </button>
         {historyError && (
-          <p className="text-red-400 text-sm mb-3">{historyError}</p>
+          <p className="text-red-600 text-sm mb-3">{historyError}</p>
         )}
 
         {history.length > 0 && (
           <div className="flex gap-4">
             {/* 왼쪽: 테이블 + 페이징 */}
             <div className={selectedRow ? "w-1/2" : "w-full"}>
-              <p className="text-xs text-gray-500 mb-2">
+              <p className="text-xs text-zinc-500 mb-2">
                 총 {historyTotal}건 (Page {historyPage}/{totalPages})
               </p>
               <div className="overflow-auto max-h-[600px]">
                 <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-gray-900">
-                    <tr className="text-left text-gray-500 border-b border-gray-700">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="text-left text-zinc-500 border-b border-zinc-200">
                       <th className="pb-1 pr-2 w-16">No</th>
                       <th className="pb-1 pr-2 w-28">Type</th>
-                      <th className="pb-1 w-40">Created At</th>
+                      <th className="pb-1 pr-2 w-44">Signal Time (KST)</th>
+                      <th className="pb-1 w-44">Created At (KST)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -289,19 +292,22 @@ export default function YmSignalStatus() {
                               : row,
                           )
                         }
-                        className={`border-b border-gray-800 cursor-pointer hover:bg-gray-800 ${
+                        className={`border-b border-zinc-100 cursor-pointer hover:bg-zinc-50 ${
                           selectedRow?.signal_history_no === row.signal_history_no
-                            ? "bg-blue-900/30"
+                            ? "bg-blue-50"
                             : ""
                         }`}
                       >
-                        <td className="py-1.5 pr-2 text-gray-400">
+                        <td className="py-1.5 pr-2 text-zinc-500">
                           {row.signal_history_no}
                         </td>
                         <td className="py-1.5 pr-2">
                           <TypeBadge type={row.signal_type} />
                         </td>
-                        <td className="py-1.5 text-gray-500">
+                        <td className="py-1.5 pr-2 text-zinc-700 font-medium">
+                          {extractSignalTime(row.raw_data)}
+                        </td>
+                        <td className="py-1.5 text-zinc-500">
                           {formatDatetime(row.created_at)}
                         </td>
                       </tr>
@@ -333,21 +339,21 @@ export default function YmSignalStatus() {
 
             {/* 오른쪽: 상세 보기 */}
             {selectedRow && (
-              <div className="w-1/2 border border-gray-700 rounded-lg p-4 sticky top-0 self-start">
+              <div className="w-1/2 border border-zinc-200 rounded-lg p-4 sticky top-0 self-start">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-semibold text-gray-400">
+                  <h4 className="text-xs font-semibold text-zinc-500">
                     #{selectedRow.signal_history_no} —{" "}
                     <TypeBadge type={selectedRow.signal_type} /> —{" "}
                     {formatDatetime(selectedRow.created_at)}
                   </h4>
                   <button
                     onClick={() => setSelectedRow(null)}
-                    className="text-xs text-gray-500 hover:text-gray-300"
+                    className="text-xs text-zinc-500 hover:text-zinc-900"
                   >
                     닫기
                   </button>
                 </div>
-                <pre className="bg-gray-900 rounded p-3 text-xs text-gray-300 overflow-auto max-h-[540px] whitespace-pre-wrap">
+                <pre className="bg-zinc-50 rounded p-3 text-xs text-zinc-700 overflow-auto max-h-[540px] whitespace-pre-wrap">
                   {formatRawData(selectedRow.raw_data)}
                 </pre>
               </div>
@@ -361,17 +367,26 @@ export default function YmSignalStatus() {
 
 function TypeBadge({ type }: { type: string }) {
   const colors: Record<string, string> = {
-    REALTIME: "bg-blue-900 text-blue-300",
-    CONFIRMED: "bg-purple-900 text-purple-300",
-    MEMBER_NOTIFY: "bg-yellow-900 text-yellow-300",
+    REALTIME: "bg-blue-100 text-blue-800",
+    CONFIRMED: "bg-purple-100 text-purple-800",
+    MEMBER_NOTIFY: "bg-yellow-100 text-yellow-800",
   };
   return (
     <span
-      className={`px-1.5 py-0.5 rounded text-xs font-medium ${colors[type] || "bg-gray-700 text-gray-300"}`}
+      className={`px-1.5 py-0.5 rounded text-xs font-medium ${colors[type] || "bg-zinc-100 text-zinc-700"}`}
     >
       {type}
     </span>
   );
+}
+
+function extractSignalTime(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw);
+    const ts = parsed?.data?.timestamp;
+    if (ts) return formatTs(ts);
+  } catch {}
+  return "-";
 }
 
 function formatRawData(raw: string): string {
@@ -390,8 +405,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-gray-700 rounded-lg p-4">
-      <h3 className="text-sm font-semibold text-gray-300 mb-3">{title}</h3>
+    <div className="border border-zinc-200 rounded-lg p-4 bg-white">
+      <h3 className="text-sm font-semibold text-zinc-900 mb-3">{title}</h3>
       {children}
     </div>
   );
