@@ -55,7 +55,7 @@ const inputCls =
   "w-full p-2 border border-zinc-300 rounded text-zinc-900 text-sm font-mono bg-white";
 
 export default function YmPushStatus() {
-  const [env, setEnv] = useState<DbEnv>("local");
+  const [env, setEnv] = useState<DbEnv>("dev");
   const [addressInput, setAddressInput] = useState("");
   const [uidInput, setUidInput] = useState("");
   const [loading, setLoading] = useState(false);
