@@ -15,11 +15,12 @@ function getDbConfig(env: DbEnv) {
     };
   }
   return {
-    host: process.env.MYSQL_HOST || "127.0.0.1",
-    port: Number(process.env.MYSQL_PORT || 3306),
-    user: process.env.MYSQL_USER || "root",
-    password: process.env.MYSQL_PASSWORD || "",
-    database: process.env.MYSQL_DATABASE || "pnl_db",
+    host: "127.0.0.1",
+    port: 3307,
+    user: "pnl",
+    password: "password",
+    database: "pnl_db",
+    timezone: "+00:00",
   };
 }
 

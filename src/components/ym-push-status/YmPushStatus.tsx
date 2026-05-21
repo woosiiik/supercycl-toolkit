@@ -222,6 +222,7 @@ function StatusView({
 
   const checks = {
     userExists: !!user,
+    affiliateOk: user?.affiliate_no === 1,
     ymUserExists: !!ymUser,
     ymUserActive: ymUser?.status === "ACTIVE",
     ymNotExpired: ymUser ? new Date(ymUser.ym_end_date) >= new Date(new Date().toISOString().split("T")[0]) : false,
@@ -236,12 +237,12 @@ function StatusView({
   };
 
   const canReceivePremiumRealtime =
-    checks.userExists && checks.ymUserExists && checks.ymUserActive && checks.ymNotExpired &&
+    checks.userExists && checks.affiliateOk && checks.ymUserExists && checks.ymUserActive && checks.ymNotExpired &&
     checks.isPremium && checks.hasWatchlist && checks.hasPushSub &&
     checks.signalEnabled && checks.signalOccur;
 
   const canReceiveConfirmed =
-    checks.userExists && checks.ymUserExists && checks.ymUserActive && checks.ymNotExpired &&
+    checks.userExists && checks.affiliateOk && checks.ymUserExists && checks.ymUserActive && checks.ymNotExpired &&
     (checks.isPremium || checks.isSmart) && checks.hasWatchlist && checks.hasPushSub &&
     checks.signalEnabled && checks.signalConfirm;
 
@@ -283,7 +284,7 @@ function StatusView({
               <div className={selectedCheck ? "w-1/2" : "w-full"}>
                 <table className="w-full text-sm">
                   <tbody>
-                    <CheckRow id="user" label="t_user 존재" ok={checks.userExists} detail={user ? `affiliate_no=${user.affiliate_no ?? "NULL"}` : "NOT FOUND"} selected={selectedCheck === "user"} onSelect={setSelectedCheck} />
+                    <CheckRow id="user" label="t_user 파트너 (affiliate) 번호" ok={checks.affiliateOk} detail={user ? `affiliate_no=${user.affiliate_no ?? "NULL"}` : "NOT FOUND"} selected={selectedCheck === "user"} onSelect={setSelectedCheck} />
                     <CheckRow id="ymUser" label="t_partner_youthmeta_user 존재" ok={checks.ymUserExists} detail={ymUser ? `uid=${ymUser.ym_uid}, userid=${ymUser.ym_userid}` : "NOT FOUND"} selected={selectedCheck === "ymUser"} onSelect={setSelectedCheck} />
                     <CheckRow id="ymStatus" label="YM 상태 ACTIVE" ok={checks.ymUserActive} detail={ymUser?.status || "-"} selected={selectedCheck === "ymStatus"} onSelect={setSelectedCheck} />
                     <CheckRow id="ymExpiry" label="YM 만료일 유효" ok={checks.ymNotExpired} detail={ymUser?.ym_end_date || "-"} selected={selectedCheck === "ymExpiry"} onSelect={setSelectedCheck} />
