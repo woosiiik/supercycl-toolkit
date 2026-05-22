@@ -19,6 +19,7 @@ import SymbolMapping from "@/components/symbol-mapping/SymbolMapping";
 import YmSignalTester from "@/components/ym-signal-tester/YmSignalTester";
 import YmSignalStatus from "@/components/ym-signal-status/YmSignalStatus";
 import YmPushStatus from "@/components/ym-push-status/YmPushStatus";
+import YmSignalDetail from "@/components/ym-signal-detail/YmSignalDetail";
 
 export default async function ToolPage({
   params,
@@ -72,6 +73,8 @@ export default async function ToolPage({
           <YmSignalStatus />
         ) : slug === "ym-push-status" ? (
           <YmPushStatus />
+        ) : slug === "ym-signal-detail" ? (
+          <YmSignalDetail />
         ) : (
           <p className="text-gray-500">준비 중입니다.</p>
         )}

@@ -153,4 +153,12 @@ export const tools: ToolConfig[] = [
       "YM 회원 상태, 워치리스트, Push 구독, 알림 설정, 거래소 연동, 보유 포지션을 조회하여 미확정/확정/반대 포지션 시그널 수신 가능 여부를 판정합니다.\n" +
       "⚠️ Local/Dev 환경만 지원합니다. Redis 및 DB VPN 연결이 필요합니다.",
   },
+  {
+    slug: "ym-signal-detail",
+    name: "유스메타 시그널 상세",
+    description:
+      "코인별 유스메타 시그널 이력을 캔들스틱 차트 위에 시각화하는 도구입니다.\n" +
+      "Binance 캔들 데이터에 Premium/Smart/Canceled 시그널을 마커로 표시합니다.\n" +
+      "⚠️ Local/Dev 환경만 지원합니다. DB VPN 연결이 필요합니다.",
+  },
 ];
