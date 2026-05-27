@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 type DbEnv = "local" | "dev";
 
@@ -339,30 +339,113 @@ export default function YmSignalStatus() {
 
             {/* 오른쪽: 상세 보기 */}
             {selectedRow && (
-              <div className="w-1/2 border border-zinc-200 rounded-lg p-4 sticky top-0 self-start">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-semibold text-zinc-500">
-                    #{selectedRow.signal_history_no} —{" "}
-                    <TypeBadge type={selectedRow.signal_type} /> —{" "}
-                    {formatDatetime(selectedRow.created_at)}
-                  </h4>
-                  <button
-                    onClick={() => setSelectedRow(null)}
-                    className="text-xs text-zinc-500 hover:text-zinc-900"
-                  >
-                    닫기
-                  </button>
-                </div>
-                <pre className="bg-zinc-50 rounded p-3 text-xs text-zinc-700 overflow-auto max-h-[540px] whitespace-pre-wrap">
-                  {formatRawData(selectedRow.raw_data)}
-                </pre>
-              </div>
+              <DetailPanel
+                row={selectedRow}
+                onClose={() => setSelectedRow(null)}
+              />
             )}
           </div>
         )}
       </Section>
     </div>
   );
+}
+
+function DetailPanel({ row, onClose }: { row: HistoryRow; onClose: () => void }) {
+  const [search, setSearch] = useState("");
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const preRef = useRef<HTMLPreElement>(null);
+  const formatted = formatRawData(row.raw_data);
+  const matchCount = search
+    ? formatted.split(search).length - 1
+    : 0;
+
+  const scrollToMatch = useCallback((idx: number) => {
+    if (!preRef.current) return;
+    const marks = preRef.current.querySelectorAll("mark");
+    if (marks.length === 0) return;
+    const safeIdx = ((idx % marks.length) + marks.length) % marks.length;
+    setCurrentIdx(safeIdx);
+    marks.forEach((m, i) => {
+      (m as HTMLElement).style.backgroundColor = i === safeIdx ? "#f97316" : "";
+      (m as HTMLElement).style.color = i === safeIdx ? "white" : "";
+    });
+    marks[safeIdx].scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
+  useEffect(() => {
+    if (search && matchCount > 0) {
+      setCurrentIdx(0);
+      // DOM 업데이트 후 스크롤
+      setTimeout(() => scrollToMatch(0), 0);
+    }
+  }, [search, matchCount, scrollToMatch]);
+
+  function prev() { scrollToMatch(currentIdx - 1); }
+  function next() { scrollToMatch(currentIdx + 1); }
+
+  return (
+    <div className="w-1/2 border border-zinc-200 rounded-lg p-4 sticky top-0 self-start">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-semibold text-zinc-500">
+          #{row.signal_history_no} —{" "}
+          <TypeBadge type={row.signal_type} /> —{" "}
+          {formatDatetime(row.created_at)}
+        </h4>
+        <button
+          onClick={onClose}
+          className="text-xs text-zinc-500 hover:text-zinc-900"
+        >
+          닫기
+        </button>
+      </div>
+      <div className="flex items-center gap-2 mb-2">
+        <input
+          className="flex-1 px-2 py-1 border border-zinc-300 rounded text-xs text-zinc-900 bg-white"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && matchCount > 0) {
+              e.shiftKey ? prev() : next();
+            }
+          }}
+          placeholder="검색... (Enter: 다음, Shift+Enter: 이전)"
+        />
+        {search && matchCount > 0 && (
+          <>
+            <button onClick={prev} className="px-1.5 py-0.5 border border-zinc-300 rounded text-xs text-zinc-600 hover:bg-zinc-100">
+              ▲
+            </button>
+            <button onClick={next} className="px-1.5 py-0.5 border border-zinc-300 rounded text-xs text-zinc-600 hover:bg-zinc-100">
+              ▼
+            </button>
+            <span className="text-xs text-zinc-500 whitespace-nowrap">
+              {currentIdx + 1}/{matchCount}
+            </span>
+          </>
+        )}
+        {search && matchCount === 0 && (
+          <span className="text-xs text-red-500 whitespace-nowrap">없음</span>
+        )}
+      </div>
+      <pre ref={preRef} className="bg-zinc-50 rounded p-3 text-xs text-zinc-700 overflow-auto max-h-[500px] whitespace-pre-wrap">
+        {search ? highlightText(formatted, search) : formatted}
+      </pre>
+    </div>
+  );
+}
+
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query) return text;
+  const parts = text.split(query);
+  return parts.map((part, i) => (
+    <span key={i}>
+      {part}
+      {i < parts.length - 1 && (
+        <mark className="bg-yellow-300 text-zinc-900 rounded-sm px-0.5">{query}</mark>
+      )}
+    </span>
+  ));
 }
 
 function TypeBadge({ type }: { type: string }) {

@@ -24,7 +24,7 @@ interface SignalRow {
   created_at: string;
 }
 
-const INTERVALS = ["5m", "15m", "1h", "4h", "1d"] as const;
+const INTERVALS = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
 
 const MAJOR_COINS = [
   "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT",
@@ -37,6 +37,16 @@ const MAJOR_COINS = [
 
 function isLong(position: string): boolean {
   return position.startsWith("L");
+}
+
+function coinLabel(coin: CoinLatest): string {
+  if (!coin.position) return "-";
+  // LL, SS는 그대로
+  if (coin.position === "LL" || coin.position === "SS") return coin.position;
+  // L1~L3, S1~S3는 확정/미확정 표시
+  if (coin.signal_type === "CONFIRMED_PREMIUM") return `${coin.position} 확정`;
+  if (coin.signal_type === "REALTIME_PREMIUM") return `${coin.position} 미확정`;
+  return coin.position;
 }
 
 function formatTs(ts: number) {
@@ -196,19 +206,6 @@ export default function YmSignalDetail() {
                 >
                   <span className="font-mono font-medium text-zinc-900">
                     {coin.symbol}
-                  </span>
-                  <span
-                    className={`text-xs font-medium ${
-                      !coin.position
-                        ? "text-zinc-300"
-                        : coin.signal_type === "CANCELED"
-                          ? "text-zinc-400"
-                          : isLong(coin.position)
-                            ? "text-green-600"
-                            : "text-red-600"
-                    }`}
-                  >
-                    {coin.position || "-"}
                   </span>
                 </button>
               ))
