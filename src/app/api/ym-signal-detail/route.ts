@@ -1,9 +1,19 @@
 import mysql from "mysql2/promise";
 import { NextRequest, NextResponse } from "next/server";
 
-type DbEnv = "local" | "dev";
+type DbEnv = "local" | "dev" | "prod";
 
 function getDbConfig(env: DbEnv) {
+  if (env === "prod") {
+    return {
+      host: process.env.MYSQL_HOST || "127.0.0.1",
+      port: Number(process.env.MYSQL_PORT || 3306),
+      user: process.env.MYSQL_USER || "root",
+      password: process.env.MYSQL_PASSWORD || "",
+      database: process.env.MYSQL_DATABASE || "pnl_db",
+      timezone: "+00:00",
+    };
+  }
   if (env === "dev") {
     return {
       host: process.env.MYSQL_HOST_DEV || "127.0.0.1",

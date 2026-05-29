@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 
 const SignalChart = dynamic(() => import("./SignalChart"), { ssr: false });
 
-type DbEnv = "local" | "dev";
+type DbEnv = "local" | "dev" | "prod";
 type SortMode = "major" | "recent" | "alpha";
 
 interface CoinLatest {
@@ -148,7 +148,7 @@ export default function YmSignalDetail() {
       {/* 환경 선택 */}
       <Section title="환경">
         <div className="flex gap-2">
-          {(["local", "dev"] as const).map((e) => (
+          {(["local", "dev", "prod"] as const).map((e) => (
             <button
               key={e}
               onClick={() => { setEnv(e); setSelectedSymbol(null); }}
@@ -158,7 +158,7 @@ export default function YmSignalDetail() {
                   : "bg-white border-zinc-300 text-zinc-500 hover:border-zinc-400"
               }`}
             >
-              {e === "local" ? "Local" : "Dev"}
+              {e === "local" ? "Local" : e === "dev" ? "Dev" : "Prod"}
             </button>
           ))}
         </div>

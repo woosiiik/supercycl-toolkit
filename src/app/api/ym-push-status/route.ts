@@ -1,10 +1,19 @@
 import mysql from "mysql2/promise";
-import Redis from "ioredis";
+import Redis, { Cluster } from "ioredis";
 import { NextRequest, NextResponse } from "next/server";
 
-type DbEnv = "local" | "dev";
+type DbEnv = "local" | "dev" | "prod";
 
 function getDbConfig(env: DbEnv) {
+  if (env === "prod") {
+    return {
+      host: process.env.MYSQL_HOST || "127.0.0.1",
+      port: Number(process.env.MYSQL_PORT || 3306),
+      user: process.env.MYSQL_USER || "root",
+      password: process.env.MYSQL_PASSWORD || "",
+      database: process.env.MYSQL_DATABASE || "pnl_db",
+    };
+  }
   if (env === "dev") {
     return {
       host: process.env.MYSQL_HOST_DEV || "127.0.0.1",
@@ -24,19 +33,30 @@ function getDbConfig(env: DbEnv) {
   };
 }
 
-function getRedisConfig(env: DbEnv) {
-  if (env === "dev") {
-    return {
-      host: process.env.REDIS_HOST_DEV || "127.0.0.1",
-      port: Number(process.env.REDIS_PORT_DEV || 6379),
-      password: process.env.REDIS_PASSWORD_DEV || undefined,
-    };
+function createRedisClient(env: DbEnv): Redis | Cluster {
+  if (env === "prod") {
+    const nodes = (process.env.REDIS_CLUSTER_NODES_PROD || "127.0.0.1:6379")
+      .split(",")
+      .map((n) => {
+        const [host, port] = n.trim().split(":");
+        return { host, port: Number(port || 6379) };
+      });
+    const password = process.env.REDIS_PASSWORD_PROD || undefined;
+    return new Cluster(nodes, {
+      redisOptions: { password, connectTimeout: 5000 },
+      lazyConnect: true,
+    });
   }
-  return {
-    host: process.env.REDIS_HOST || "127.0.0.1",
-    port: Number(process.env.REDIS_PORT || 6379),
-    password: process.env.REDIS_PASSWORD || undefined,
-  };
+  const host = env === "dev"
+    ? (process.env.REDIS_HOST_DEV || "127.0.0.1")
+    : (process.env.REDIS_HOST || "127.0.0.1");
+  const port = env === "dev"
+    ? Number(process.env.REDIS_PORT_DEV || 6379)
+    : Number(process.env.REDIS_PORT || 6379);
+  const password = env === "dev"
+    ? (process.env.REDIS_PASSWORD_DEV || undefined)
+    : (process.env.REDIS_PASSWORD || undefined);
+  return new Redis({ host, port, password, connectTimeout: 5000, lazyConnect: true });
 }
 
 export async function GET(req: NextRequest) {
@@ -56,7 +76,7 @@ export async function GET(req: NextRequest) {
   }
 
   let conn;
-  let redis: Redis | null = null;
+  let redis: Redis | Cluster | null = null;
   try {
     conn = await mysql.createConnection(getDbConfig(env));
 
@@ -141,14 +161,7 @@ export async function GET(req: NextRequest) {
     const okxKey = exchangeKeys.find((k) => k.exchange_name === "OKX");
 
     if (okxKey?.uid) {
-      const redisConfig = getRedisConfig(env);
-      redis = new Redis({
-        host: redisConfig.host,
-        port: redisConfig.port,
-        password: redisConfig.password,
-        connectTimeout: 5000,
-        lazyConnect: true,
-      });
+      redis = createRedisClient(env);
       await redis.connect();
 
       const memberKey = `okx:${okxKey.uid}`;
@@ -187,7 +200,7 @@ export async function GET(req: NextRequest) {
 
 async function handlePositions(env: DbEnv, inputAddress: string, inputUid: string) {
   let conn;
-  let redis: Redis | null = null;
+  let redis: Redis | Cluster | null = null;
   try {
     conn = await mysql.createConnection(getDbConfig(env));
 
@@ -224,14 +237,7 @@ async function handlePositions(env: DbEnv, inputAddress: string, inputUid: strin
       return NextResponse.json({ positions: [] });
     }
 
-    const redisConfig = getRedisConfig(env);
-    redis = new Redis({
-      host: redisConfig.host,
-      port: redisConfig.port,
-      password: redisConfig.password,
-      connectTimeout: 5000,
-      lazyConnect: true,
-    });
+    redis = createRedisClient(env);
     await redis.connect();
 
     const memberKey = `okx:${exRows[0].uid}`;

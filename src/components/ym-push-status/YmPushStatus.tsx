@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type DbEnv = "local" | "dev";
+type DbEnv = "local" | "dev" | "prod";
 
 interface StatusResult {
   address: string;
@@ -93,7 +93,7 @@ export default function YmPushStatus() {
       {/* 환경 선택 */}
       <Section title="환경">
         <div className="flex gap-2">
-          {(["local", "dev"] as const).map((e) => (
+          {(["local", "dev", "prod"] as const).map((e) => (
             <button
               key={e}
               onClick={() => setEnv(e)}
@@ -103,7 +103,7 @@ export default function YmPushStatus() {
                   : "bg-white border-zinc-300 text-zinc-700 hover:border-zinc-400"
               }`}
             >
-              {e === "local" ? "Local" : "Dev"}
+              {e === "local" ? "Local" : e === "dev" ? "Dev" : "Prod"}
             </button>
           ))}
         </div>
