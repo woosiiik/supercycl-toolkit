@@ -35,11 +35,21 @@ const DEFAULT_PLAINTEXT = JSON.stringify(
   2,
 );
 
+// 저장 상태 스키마/기본값 버전. 데이터 포맷이 바뀌면 올려서 옛 localStorage 캐시를 무효화한다.
+const STATE_VERSION = 2;
+
 function loadSaved() {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // 버전이 다르면 옛 캐시이므로 무시하고 새 기본값을 쓴다.
+    if (parsed?._v !== STATE_VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -70,6 +80,7 @@ export default function HandoffTester() {
       localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
+          _v: STATE_VERSION,
           targetUrl,
           partner,
           publicKeyText,
