@@ -5,7 +5,6 @@ import RateLimitTester from "@/components/rate-limit/RateLimitTester";
 import FaucetFarmer from "@/components/faucet-farmer/FaucetFarmer";
 import StressTester from "@/components/stress-tester/StressTester";
 import JweDecoder from "@/components/jwe-decoder/JweDecoder";
-import PostMessageTester from "@/components/postmessage-tester/PostMessageTester";
 import HandoffTester from "@/components/handoff-tester/HandoffTester";
 import UserDashboard from "@/components/user-dashboard/UserDashboard";
 import UserSignupDetail from "@/components/user-dashboard/UserSignupDetail";
@@ -46,8 +45,6 @@ export default async function ToolPage({
           <StressTester />
         ) : slug === "jwe-decoder" ? (
           <JweDecoder />
-        ) : slug === "postmessage-tester" ? (
-          <PostMessageTester />
         ) : slug === "handoff-tester" ? (
           <HandoffTester />
         ) : slug === "user-dashboard" ? (
