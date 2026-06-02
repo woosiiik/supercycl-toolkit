@@ -7,18 +7,28 @@ const STORAGE_KEY = "handoff-tester-state";
 
 const DEFAULT_URL = "https://aggr-dev.supercycl.io";
 const DEFAULT_PARTNER = "Youthmeta";
+const URL_PRESETS = [
+  { url: "https://aggr-dev.supercycl.io", label: "데브넷" },
+  { url: "https://aggr-stg.supercycl.io", label: "스테이징" },
+  { url: "https://preview.supercycl.io", label: "메인넷-프리뷰" },
+  { url: "https://app.supercycl.io", label: "메인넷" },
+  { url: "http://localhost:3001", label: "로컬" },
+];
 const DEFAULT_PUBLIC_KEY =
   "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz4ZBbxtzHKUvU3GeXtOC\nuKpAbhiJHSKt/kgig4QMeT0n3wr6zwKWZomz70smvEVZkoX12Aqqdgj8J9MxMzO2\nSFR+OgRn+XLvK182XMxeHWQpk9+ULEaOPOAYWSYo2ao8gsCsJdKT3TakTHtmrh2V\nVcAj2UZvTfro1lPbGu+Sve4Rlbi6xyA/BliwvnVVHTf4DQZmvopDsY002nAwTjdr\nAUswGWRBZTeKUwXk7mWBsoWvtgnnRUHsnW+qQpu6RCRZuGyIrWecbynTRCNMlY/A\nkkQaaWMVL8xR9Mi6LrR0S4XLlV5fR1alQEm1oeNE4du95FtPSIMQkGYCkSTESjbM\nDwIDAQAB\n-----END PUBLIC KEY-----";
 const DEFAULT_PLAINTEXT = JSON.stringify(
   {
     data: {
-      platform: "ex",
-      uid: 12345,
-      userid: "testuser_ym",
-      temp: 1775446490,
-      nonce: "e2e-test-nonce-001",
-      sc_price: 3000,
-      end_date: "2026-05-06",
+      uid: "12345",
+      userid: "test123",
+      temp: "1778461200",
+      nonce: "",
+      sc_price: "10000",
+      end_date: "2027-06-03",
+      platform: "EX",
+      is_admin: "Y",
+      is_premium: "N",
+      is_smart: "N",
     },
   },
   null,
@@ -149,6 +159,22 @@ export default function HandoffTester() {
         >
           대상 URL
         </label>
+        <select
+          value={
+            URL_PRESETS.some((p) => p.url === targetUrl) ? targetUrl : ""
+          }
+          onChange={(e) => {
+            if (e.target.value) setTargetUrl(e.target.value);
+          }}
+          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+        >
+          {URL_PRESETS.map((p) => (
+            <option key={p.url} value={p.url}>
+              {p.url} ({p.label})
+            </option>
+          ))}
+          <option value="">직접 입력</option>
+        </select>
         <input
           id="ho-url"
           type="text"
@@ -208,10 +234,15 @@ export default function HandoffTester() {
           id="ho-data"
           value={plaintext}
           onChange={(e) => setPlaintext(e.target.value)}
-          placeholder='{"data": {"platform": "ex", ...}}'
+          placeholder='{"data": {"uid": "12345", ...}}'
           rows={14}
           className="rounded-md border border-zinc-300 bg-white px-3 py-2 font-mono text-xs text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
         />
+        <div className="mt-1 text-xs font-medium text-red-600 dark:text-red-400">
+          * uid를 변경하시오. uid가 중복되는 경우 이전 사용자의 Youthmeta
+          계정이 disable 처리 됩니다.
+          <br />* userid도 취향껏 변경하면 세팅에서 변경된 id를 확인 할 수 있음.
+        </div>
       </div>
 
       {/* Buttons */}

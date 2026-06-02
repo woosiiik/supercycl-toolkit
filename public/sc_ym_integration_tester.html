@@ -173,13 +173,16 @@ DwIDAQAB
   <textarea id="plaintext" rows="14">
 {
   "data": {
-    "platform": "ex",
-    "uid": 12345,
-    "userid": "testuser_ym",
-    "temp": 1775446490,
-    "nonce": "e2e-test-nonce-001",
-    "sc_price": 3000,
-    "end_date": "2026-05-06"
+    "uid": "12345",
+    "userid": "test123",
+    "temp": "1778461200",
+    "nonce": "",
+    "sc_price": "10000",
+    "end_date": "2027-06-03",
+    "platform": "EX",
+    "is_admin": "Y",
+    "is_premium": "N",
+    "is_smart": "N"
   }
 }</textarea
   >
@@ -290,13 +293,16 @@ DwIDAQAB
 -----END PUBLIC KEY-----`;
       document.getElementById('plaintext').value = JSON.stringify({
         data: {
-          platform: "ex",
-          uid: 12345,
-          userid: "testuser_ym",
-          temp: 1775446490,
-          nonce: "e2e-test-nonce-001",
-          sc_price: 3000,
-          end_date: "2026-05-06"
+          uid: "12345",
+          userid: "test123",
+          temp: "1778461200",
+          nonce: "",
+          sc_price: "10000",
+          end_date: "2027-06-03",
+          platform: "EX",
+          is_admin: "Y",
+          is_premium: "N",
+          is_smart: "N"
         }
       }, null, 2);
       document.getElementById('results').innerHTML = '';

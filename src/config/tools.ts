@@ -161,4 +161,13 @@ export const tools: ToolConfig[] = [
       "Binance 캔들 데이터에 Premium/Smart/Canceled 시그널을 마커로 표시합니다.\n" +
       "⚠️ Local/Dev 환경만 지원합니다. DB VPN 연결이 필요합니다.",
   },
+  {
+    slug: "sync-payload-decrypt",
+    name: "거래소 API-key 동기화 payload 복호화",
+    description:
+      "거래소 API-Key 동기화 구간에서 클라이언트가 public key로 암호화해 전송한 encryptedPayload를 server의 private key로 복호화하는 도구입니다.\n" +
+      "RSA 하이브리드 방식: RSA-OAEP(SHA-256/MGF1-SHA-256)로 AES 키를 복호화한 뒤 AES-256-GCM(IV 16byte, tag 128bit)으로 데이터를 복호화합니다.\n" +
+      "payload는 base64(JSON{encryptedKey, iv, authTag, data}) 형식이며, private.pem(PKCS#8)을 입력하면 됩니다.\n" +
+      "브라우저 Web Crypto API로 동작하며 private key·payload는 서버로 전송되지 않습니다.",
+  },
 ];
