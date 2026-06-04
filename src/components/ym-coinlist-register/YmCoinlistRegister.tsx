@@ -56,9 +56,72 @@ export default function YmCoinlistRegister() {
   const [plaintext, setPlaintext] = useState(DEFAULT_PLAINTEXT);
   const [logs, setLogs] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [userResult, setUserResult] = useState<Record<string, unknown> | null>(
+    null,
+  );
 
   function log(msg: string) {
     setLogs((prev) => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+  }
+
+  // GET /v1/ym/user 조회
+  async function fetchUser() {
+    if (!jwt.trim()) {
+      log("❌ JWT(access-token)를 입력하세요");
+      return;
+    }
+    setFetching(true);
+    setUserResult(null);
+    log(`>>> GET ${wasUrl}/v1/ym/user`);
+
+    try {
+      const res = await fetch(
+        `/api/ym-coinlist?wasUrl=${encodeURIComponent(wasUrl)}&jwt=${encodeURIComponent(jwt.trim())}`,
+      );
+      const raw = await res.text();
+      let result: { error?: string; status?: number; data?: unknown };
+      try {
+        result = JSON.parse(raw);
+      } catch {
+        log(`❌ 응답 파싱 실패 (HTTP ${res.status}): ${raw.slice(0, 300)}`);
+        return;
+      }
+
+      if (result.error) {
+        log(`❌ 프록시 에러 (HTTP ${res.status}): ${result.error}`);
+        return;
+      }
+
+      const httpStatus = result.status ?? res.status;
+      log(
+        `<<< HTTP ${httpStatus} 조회 응답: ${JSON.stringify(result.data, null, 2)}`,
+      );
+
+      const dataObj =
+        result.data && typeof result.data === "object"
+          ? (result.data as {
+              retCode?: number;
+              retMsg?: string;
+              result?: Record<string, unknown>;
+            })
+          : null;
+
+      if (dataObj?.retCode === 0) {
+        setUserResult(dataObj.result ?? {});
+        log("✅ 조회 성공!");
+      } else if (httpStatus < 200 || httpStatus >= 300) {
+        log(`❌ WAS 오류 응답: HTTP ${httpStatus}`);
+      } else if (dataObj?.retCode !== undefined) {
+        log(`❌ 조회 실패: retCode=${dataObj.retCode}, retMsg=${dataObj.retMsg || ""}`);
+      } else {
+        log("⚠️ 표준 응답(retCode)이 아닙니다. 위 응답 본문을 확인하세요.");
+      }
+    } catch (e) {
+      log(`❌ 조회 에러: ${e}`);
+    } finally {
+      setFetching(false);
+    }
   }
 
   async function send() {
@@ -120,12 +183,20 @@ export default function YmCoinlistRegister() {
 
       const dataObj =
         result.data && typeof result.data === "object"
-          ? (result.data as { retCode?: number; retMsg?: string })
+          ? (result.data as {
+              retCode?: number;
+              retMsg?: string;
+              result?: Record<string, unknown>;
+            })
           : null;
       const retCode = dataObj?.retCode;
 
       if (retCode === 0) {
-        log("✅ 등록 성공!");
+        log("✅ 유저 정보 변경 성공!");
+        // 변경 후 최신 정보 표시 (응답이 GET /v1/ym/user와 동일 형식)
+        if (dataObj && "result" in dataObj && dataObj.result) {
+          setUserResult(dataObj.result as Record<string, unknown>);
+        }
       } else if (retCode !== undefined) {
         log(`❌ 실패: retCode=${retCode}, retMsg=${dataObj?.retMsg || ""}`);
       } else if (httpStatus < 200 || httpStatus >= 300) {
@@ -173,10 +244,39 @@ export default function YmCoinlistRegister() {
           onChange={(e) => setJwt(e.target.value)}
           placeholder="eyJhbGciOiJ... (Bearer 제외, 토큰 본문만 입력)"
         />
-        <p className="mt-1 text-xs text-zinc-500">
-          Authorization: Bearer 헤더로 전송됩니다. (Bearer 접두어 없이 토큰만 입력)
-        </p>
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            onClick={fetchUser}
+            disabled={fetching}
+            className={`${btnCls} ${fetching ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {fetching ? "조회 중..." : "조회"}
+          </button>
+          <p className="text-xs text-zinc-500">
+            GET /v1/ym/user — 현재 회원 정보를 조회합니다. (Bearer 접두어 없이 토큰만 입력)
+          </p>
+        </div>
       </Section>
+
+      {/* 조회 결과 */}
+      {userResult && (
+        <Section title="조회 결과 (GET /v1/ym/user)">
+          <table className="w-full text-sm">
+            <tbody>
+              {Object.entries(userResult).map(([k, v]) => (
+                <tr key={k} className="border-b border-zinc-100 last:border-0">
+                  <td className="py-1.5 pr-4 align-top font-mono text-xs text-zinc-500 whitespace-nowrap">
+                    {k}
+                  </td>
+                  <td className="py-1.5 font-mono text-xs text-zinc-800 break-all">
+                    {renderVal(v)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Section>
+      )}
 
       {/* RSA Public Key */}
       <Section title="RSA Public Key (JWE 암호화)">
@@ -222,7 +322,7 @@ export default function YmCoinlistRegister() {
           disabled={sending}
           className={`${btnCls} ${sending ? "opacity-50 cursor-not-allowed" : ""}`}
         >
-          {sending ? "전송 중..." : "코인리스트 등록"}
+          {sending ? "전송 중..." : "유스메타 유저 정보 변경"}
         </button>
       </Section>
 
@@ -250,6 +350,14 @@ export default function YmCoinlistRegister() {
       </Section>
     </div>
   );
+}
+
+function renderVal(v: unknown): string {
+  if (Array.isArray(v)) return v.length ? v.join(", ") : "(빈 목록)";
+  if (typeof v === "boolean") return v ? "true" : "false";
+  if (v === null || v === undefined) return "null";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
 }
 
 function Section({
