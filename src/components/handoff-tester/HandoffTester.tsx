@@ -64,9 +64,9 @@ export default function HandoffTester() {
   const [publicKeyText, setPublicKeyText] = useState(
     saved?.publicKeyText ?? DEFAULT_PUBLIC_KEY,
   );
-  const [plaintext, setPlaintext] = useState(
-    saved?.plaintext ?? DEFAULT_PLAINTEXT,
-  );
+  // plaintext(암호화할 데이터)는 localStorage에서 복원하지 않고 항상 최신 DEFAULT를 사용한다.
+  // 복원할 경우 포맷이 바뀌어도 옛 캐시가 따라와 하이드레이션 후 옛 값으로 되돌아가는 문제가 생긴다.
+  const [plaintext, setPlaintext] = useState(DEFAULT_PLAINTEXT);
   const [jweResult, setJweResult] = useState<string | null>(
     saved?.jweResult ?? null,
   );
@@ -86,7 +86,6 @@ export default function HandoffTester() {
           targetUrl,
           partner,
           publicKeyText,
-          plaintext,
           jweResult,
           actionUrl,
         }),
@@ -94,7 +93,7 @@ export default function HandoffTester() {
     } catch {
       /* ignore */
     }
-  }, [targetUrl, partner, publicKeyText, plaintext, jweResult, actionUrl]);
+  }, [targetUrl, partner, publicKeyText, jweResult, actionUrl]);
 
   useEffect(() => {
     saveState();
