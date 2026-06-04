@@ -81,6 +81,7 @@ interface StatusResult {
     ym_uid: string;
     ym_userid: string;
     ym_end_date: string;
+    alarm_date: string | null;
     is_admin: number;
     is_premium: number;
     is_smart: number;
@@ -292,7 +293,7 @@ function StatusView({
     affiliateOk: user?.affiliate_no === 1,
     ymUserExists: !!ymUser,
     ymUserActive: ymUser?.status === "ACTIVE",
-    ymNotExpired: ymUser ? new Date(ymUser.ym_end_date) >= new Date(new Date().toISOString().split("T")[0]) : false,
+    ymNotExpired: ymUser ? new Date(ymUser.alarm_date || ymUser.ym_end_date) >= new Date(new Date().toISOString().split("T")[0]) : false,
     isPremium: ymUser ? ymUser.is_premium === 1 || ymUser.is_admin === 1 : false,
     isSmart: ymUser ? ymUser.is_smart === 1 || ymUser.is_admin === 1 : false,
     hasWatchlist: watchlist.length > 0,
@@ -334,7 +335,7 @@ function StatusView({
             user: { title: "t_user", table: "t_user", data: user, boldKeys: ["address", "affiliate_no"] },
             ymUser: { title: "t_partner_youthmeta_user", table: "t_partner_youthmeta_user", data: ymUser, boldKeys: ["ym_uid", "ym_userid", "status"] },
             ymStatus: { title: "t_partner_youthmeta_user (status)", table: "t_partner_youthmeta_user", data: ymUser, boldKeys: ["status"] },
-            ymExpiry: { title: "t_partner_youthmeta_user (만료일)", table: "t_partner_youthmeta_user", data: ymUser, boldKeys: ["ym_end_date"] },
+            ymExpiry: { title: "t_partner_youthmeta_user (alarm_date)", table: "t_partner_youthmeta_user", data: ymUser, boldKeys: ["alarm_date", "ym_end_date"] },
             isPremium: { title: "t_partner_youthmeta_user (premium)", table: "t_partner_youthmeta_user", data: ymUser, boldKeys: ["is_premium", "is_admin"] },
             isSmart: { title: "t_partner_youthmeta_user (smart)", table: "t_partner_youthmeta_user", data: ymUser, boldKeys: ["is_smart", "is_admin"] },
             watchlist: { title: "t_ym_user_watchlist", table: "t_ym_user_watchlist", data: watchlist, boldKeys: [] },
@@ -354,7 +355,7 @@ function StatusView({
                     <CheckRow id="user" label="t_user 파트너 (affiliate) 번호" ok={checks.affiliateOk} detail={user ? `affiliate_no=${user.affiliate_no ?? "NULL"}` : "NOT FOUND"} selected={selectedCheck === "user"} onSelect={setSelectedCheck} />
                     <CheckRow id="ymUser" label="t_partner_youthmeta_user 존재" ok={checks.ymUserExists} detail={ymUser ? `uid=${ymUser.ym_uid}, userid=${ymUser.ym_userid}` : "NOT FOUND"} selected={selectedCheck === "ymUser"} onSelect={setSelectedCheck} />
                     <CheckRow id="ymStatus" label="YM 상태 ACTIVE" ok={checks.ymUserActive} detail={ymUser?.status || "-"} selected={selectedCheck === "ymStatus"} onSelect={setSelectedCheck} />
-                    <CheckRow id="ymExpiry" label="YM 만료일 유효" ok={checks.ymNotExpired} detail={ymUser?.ym_end_date || "-"} selected={selectedCheck === "ymExpiry"} onSelect={setSelectedCheck} />
+                    <CheckRow id="ymExpiry" label="YM alarm_date 유효" ok={checks.ymNotExpired} detail={ymUser ? `alarm_date=${ymUser.alarm_date || `(없음 → end_date=${ymUser.ym_end_date})`}` : "-"} selected={selectedCheck === "ymExpiry"} onSelect={setSelectedCheck} />
                     <CheckRow id="isPremium" label="is_premium 또는 is_admin" ok={checks.isPremium} detail={ymUser ? `premium=${ymUser.is_premium}, admin=${ymUser.is_admin}` : "-"} selected={selectedCheck === "isPremium"} onSelect={setSelectedCheck} />
                     <CheckRow id="isSmart" label="is_smart 또는 is_admin" ok={checks.isSmart} detail={ymUser ? `smart=${ymUser.is_smart}, admin=${ymUser.is_admin}` : "-"} selected={selectedCheck === "isSmart"} onSelect={setSelectedCheck} />
                     <CheckRow id="watchlist" label="워치리스트 등록" ok={checks.hasWatchlist} detail={watchlist.length > 0 ? `${watchlist.length}개: ${watchlist.join(", ")}` : "0개"} selected={selectedCheck === "watchlist"} onSelect={setSelectedCheck} />

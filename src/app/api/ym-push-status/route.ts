@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
 
     // 2. t_partner_youthmeta_user
     const [ymUserRows] = await conn.query(
-      `SELECT ym_uid, ym_userid, ym_end_date, is_admin, is_premium, is_smart, status, created_at, updated_at
+      `SELECT ym_uid, ym_userid, ym_end_date, alarm_date, is_admin, is_premium, is_smart, status, created_at, updated_at
        FROM t_partner_youthmeta_user WHERE address = ? ORDER BY updated_at DESC`,
       [address],
     ) as [Array<Record<string, unknown>>, unknown];
