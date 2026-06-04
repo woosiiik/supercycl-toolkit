@@ -161,4 +161,13 @@ export const tools: ToolConfig[] = [
       "payload는 base64(JSON{encryptedKey, iv, authTag, data}) 형식이며, private.pem(PKCS#8)을 입력하면 됩니다.\n" +
       "브라우저 Web Crypto API로 동작하며 private key·payload는 서버로 전송되지 않습니다.",
   },
+  {
+    slug: "ym-coinlist-register",
+    name: "유스메타 코인리스트 등록",
+    description:
+      "POST /v1/ym/user/update를 호출하여 유스메타 회원 연동 데이터(coin_list 포함)를 갱신하는 도구입니다.\n" +
+      "데이터를 RSA-OAEP-256 + A256GCM JWE로 암호화(Form POST 테스터와 동일)하여 partnerYouthmetaUser로 전송합니다.\n" +
+      "JWT(access-token), 암호화할 데이터, WAS 환경(Dev/Staging/Production), Public Key를 입력합니다.\n" +
+      "CORS 회피를 위해 서버 프록시(/api/ym-coinlist)를 통해 WAS로 전달됩니다.",
+  },
 ];

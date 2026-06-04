@@ -20,6 +20,7 @@ import YmSignalStatus from "@/components/ym-signal-status/YmSignalStatus";
 import YmPushStatus from "@/components/ym-push-status/YmPushStatus";
 import YmSignalDetail from "@/components/ym-signal-detail/YmSignalDetail";
 import SyncPayloadDecrypt from "@/components/sync-payload-decrypt/SyncPayloadDecrypt";
+import YmCoinlistRegister from "@/components/ym-coinlist-register/YmCoinlistRegister";
 
 export default async function ToolPage({
   params,
@@ -75,6 +76,8 @@ export default async function ToolPage({
           <YmSignalDetail />
         ) : slug === "sync-payload-decrypt" ? (
           <SyncPayloadDecrypt />
+        ) : slug === "ym-coinlist-register" ? (
+          <YmCoinlistRegister />
         ) : (
           <p className="text-gray-500">준비 중입니다.</p>
         )}
