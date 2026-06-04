@@ -4,6 +4,72 @@ import { useState } from "react";
 
 type DbEnv = "local" | "dev" | "prod";
 
+// User-Agent 경량 파싱 (기기 / OS·버전 / 브라우저·버전)
+function parseUA(ua: string | null | undefined): {
+  device: string;
+  os: string;
+  browser: string;
+} {
+  if (!ua) return { device: "-", os: "-", browser: "-" };
+
+  // OS + 버전
+  let os = "Unknown";
+  let m: RegExpMatchArray | null;
+  if ((m = ua.match(/Windows NT ([\d.]+)/))) {
+    const map: Record<string, string> = {
+      "10.0": "10/11",
+      "6.3": "8.1",
+      "6.2": "8",
+      "6.1": "7",
+    };
+    os = `Windows ${map[m[1]] || m[1]}`;
+  } else if (
+    (m = ua.match(/iPhone OS ([\d_]+)/)) ||
+    (m = ua.match(/CPU OS ([\d_]+)/))
+  ) {
+    os = `iOS ${m[1].replace(/_/g, ".")}`;
+  } else if ((m = ua.match(/Mac OS X ([\d_]+)/))) {
+    os = `macOS ${m[1].replace(/_/g, ".")}`;
+  } else if ((m = ua.match(/Android ([\d.]+)/))) {
+    os = `Android ${m[1]}`;
+  } else if (/CrOS/.test(ua)) {
+    os = "ChromeOS";
+  } else if (/Linux/.test(ua)) {
+    os = "Linux";
+  }
+
+  // 브라우저 + 버전 (순서 중요: Edge/Samsung/Opera 가 Chrome 보다 먼저)
+  let browser = "Unknown";
+  if ((m = ua.match(/Edg(?:e|A|iOS)?\/([\d.]+)/))) browser = `Edge ${m[1]}`;
+  else if ((m = ua.match(/SamsungBrowser\/([\d.]+)/)))
+    browser = `Samsung Internet ${m[1]}`;
+  else if ((m = ua.match(/OPR\/([\d.]+)/)) || (m = ua.match(/Opera\/([\d.]+)/)))
+    browser = `Opera ${m[1]}`;
+  else if (
+    (m = ua.match(/FxiOS\/([\d.]+)/)) ||
+    (m = ua.match(/Firefox\/([\d.]+)/))
+  )
+    browser = `Firefox ${m[1]}`;
+  else if ((m = ua.match(/CriOS\/([\d.]+)/))) browser = `Chrome ${m[1]}`;
+  else if ((m = ua.match(/Chrome\/([\d.]+)/))) browser = `Chrome ${m[1]}`;
+  else if ((m = ua.match(/Version\/([\d.]+)[^)]*Safari/)))
+    browser = `Safari ${m[1]}`;
+  else if (/Safari/.test(ua)) browser = "Safari";
+
+  // 기기명
+  let device = "Desktop";
+  if (/iPhone/.test(ua)) device = "iPhone";
+  else if (/iPad/.test(ua)) device = "iPad";
+  else if (/Android/.test(ua)) {
+    const dm =
+      ua.match(/;\s?([^;)]+?)\s+Build\//) ||
+      ua.match(/Android[^;]*;\s?([^;)]+?)\)/);
+    device = dm ? dm[1].trim() : "Android";
+  }
+
+  return { device, os, browser };
+}
+
 interface StatusResult {
   address: string;
   user: {
@@ -382,10 +448,20 @@ function StatusView({
                 <tr key={sub.subscription_no} className="border-b border-zinc-100">
                   <td className="py-1 pr-2 text-zinc-700">{sub.subscription_no}</td>
                   <td
-                    className="py-1 pr-2 text-zinc-700 max-w-xs truncate"
+                    className="py-1 pr-2 text-zinc-700"
                     title={sub.user_agent || undefined}
                   >
-                    {sub.user_agent || "-"}
+                    {(() => {
+                      const p = parseUA(sub.user_agent);
+                      return (
+                        <div className="leading-tight">
+                          <div>{p.device}</div>
+                          <div className="text-zinc-500">
+                            {p.os} · {p.browser}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="py-1 pr-2 text-zinc-700 font-mono truncate max-w-sm">
                     {sub.endpoint.substring(0, 60)}...
