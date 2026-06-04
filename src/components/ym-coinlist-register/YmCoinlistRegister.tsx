@@ -92,24 +92,46 @@ export default function YmCoinlistRegister() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wasUrl, jwt: jwt.trim(), partnerYouthmetaUser: jwe }),
       });
-      const result = await res.json();
 
-      if (result.error) {
-        log(`❌ 프록시 에러: ${result.error}`);
+      // 프록시 응답 파싱 (HTML 에러 페이지 등 비-JSON 응답도 표시)
+      const raw = await res.text();
+      let result: {
+        error?: string;
+        status?: number;
+        url?: string;
+        data?: unknown;
+      };
+      try {
+        result = JSON.parse(raw);
+      } catch {
+        log(`❌ 프록시 응답 파싱 실패 (HTTP ${res.status}): ${raw.slice(0, 300)}`);
         return;
       }
 
-      log(`<<< ${result.status} Response: ${JSON.stringify(result.data, null, 2)}`);
-      const retCode =
+      if (result.error) {
+        log(`❌ 프록시 에러 (HTTP ${res.status}): ${result.error}`);
+        return;
+      }
+
+      const httpStatus = result.status ?? res.status;
+      log(
+        `<<< HTTP ${httpStatus} Response: ${JSON.stringify(result.data, null, 2)}`,
+      );
+
+      const dataObj =
         result.data && typeof result.data === "object"
-          ? (result.data as { retCode?: number }).retCode
-          : undefined;
+          ? (result.data as { retCode?: number; retMsg?: string })
+          : null;
+      const retCode = dataObj?.retCode;
+
       if (retCode === 0) {
         log("✅ 등록 성공!");
       } else if (retCode !== undefined) {
-        const retMsg =
-          (result.data as { retMsg?: string }).retMsg || "";
-        log(`⚠️ retCode=${retCode}, retMsg=${retMsg}`);
+        log(`❌ 실패: retCode=${retCode}, retMsg=${dataObj?.retMsg || ""}`);
+      } else if (httpStatus < 200 || httpStatus >= 300) {
+        log(`❌ WAS 오류 응답: HTTP ${httpStatus}`);
+      } else {
+        log("⚠️ 표준 응답(retCode)이 아닙니다. 위 응답 본문을 확인하세요.");
       }
     } catch (e) {
       log(`❌ 전송 에러: ${e}`);
