@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
 
     // 4. t_push_subscription_pwa
     const [pushRows] = await conn.query(
-      "SELECT subscription_no, endpoint, address, last_bind_time, created_at FROM t_push_subscription_pwa WHERE address = ?",
+      "SELECT subscription_no, endpoint, address, user_agent, last_bind_time, created_at FROM t_push_subscription_pwa WHERE address = ?",
       [address],
     ) as [Array<Record<string, unknown>>, unknown];
 

@@ -27,6 +27,7 @@ interface StatusResult {
     subscription_no: number;
     endpoint: string;
     address: string;
+    user_agent: string | null;
     last_bind_time: string | null;
     created_at: string;
   }>;
@@ -370,6 +371,7 @@ function StatusView({
             <thead>
               <tr className="text-left text-zinc-500 border-b border-zinc-200">
                 <th className="pb-1 pr-2">No</th>
+                <th className="pb-1 pr-2">기기 (User-Agent)</th>
                 <th className="pb-1 pr-2">Endpoint</th>
                 <th className="pb-1 pr-2">Bind Time</th>
                 <th className="pb-1">Created</th>
@@ -379,6 +381,12 @@ function StatusView({
               {pushSubscriptions.map((sub) => (
                 <tr key={sub.subscription_no} className="border-b border-zinc-100">
                   <td className="py-1 pr-2 text-zinc-700">{sub.subscription_no}</td>
+                  <td
+                    className="py-1 pr-2 text-zinc-700 max-w-xs truncate"
+                    title={sub.user_agent || undefined}
+                  >
+                    {sub.user_agent || "-"}
+                  </td>
                   <td className="py-1 pr-2 text-zinc-700 font-mono truncate max-w-sm">
                     {sub.endpoint.substring(0, 60)}...
                   </td>
