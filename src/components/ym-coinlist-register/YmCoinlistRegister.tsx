@@ -85,8 +85,9 @@ export default function YmCoinlistRegister() {
     if (!jwt.trim()) return null;
     const payload = decodeJwtPayload(jwt);
     if (!payload) return { error: true as const };
+    // address는 JWT의 master 클레임을 사용
     const address =
-      typeof payload.address === "string" ? payload.address : undefined;
+      typeof payload.master === "string" ? payload.master : undefined;
     const exp = typeof payload.exp === "number" ? payload.exp : undefined;
     const expired = exp !== undefined ? exp * 1000 < Date.now() : undefined;
     return { error: false as const, address, exp, expired };
