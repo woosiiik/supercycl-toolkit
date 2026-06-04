@@ -1,7 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { CompactEncrypt, importSPKI } from "jose";
+
+// JWT payload 디코딩 (검증 없이 표시용). 실패 시 null.
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.trim().split(".");
+  if (parts.length < 2) return null;
+  try {
+    let b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const json = decodeURIComponent(
+      atob(b64)
+        .split("")
+        .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+        .join(""),
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
 
 // Form POST 테스터와 동일한 기본 공개키
 const DEFAULT_PUBLIC_KEY =
@@ -60,6 +79,18 @@ export default function YmCoinlistRegister() {
   const [userResult, setUserResult] = useState<Record<string, unknown> | null>(
     null,
   );
+
+  // JWT에서 address, exp 추출 및 만료 여부 (입력 즉시 갱신)
+  const jwtInfo = useMemo(() => {
+    if (!jwt.trim()) return null;
+    const payload = decodeJwtPayload(jwt);
+    if (!payload) return { error: true as const };
+    const address =
+      typeof payload.address === "string" ? payload.address : undefined;
+    const exp = typeof payload.exp === "number" ? payload.exp : undefined;
+    const expired = exp !== undefined ? exp * 1000 < Date.now() : undefined;
+    return { error: false as const, address, exp, expired };
+  }, [jwt]);
 
   function log(msg: string) {
     setLogs((prev) => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
@@ -244,6 +275,41 @@ export default function YmCoinlistRegister() {
           onChange={(e) => setJwt(e.target.value)}
           placeholder="eyJhbGciOiJ... (Bearer 제외, 토큰 본문만 입력)"
         />
+        {jwtInfo &&
+          (jwtInfo.error ? (
+            <p className="mt-2 text-xs text-red-600">
+              ⚠️ JWT 디코딩 실패 — 토큰 형식을 확인하세요.
+            </p>
+          ) : (
+            <div className="mt-2 rounded border border-zinc-200 bg-zinc-50 p-2 text-xs font-mono text-zinc-700">
+              <div className="break-all">
+                <span className="text-zinc-500">address: </span>
+                {jwtInfo.address ?? "(없음)"}
+              </div>
+              <div className="mt-0.5">
+                <span className="text-zinc-500">exp: </span>
+                {jwtInfo.exp !== undefined ? (
+                  <>
+                    {new Date(jwtInfo.exp * 1000).toLocaleString("ko-KR", {
+                      timeZone: "Asia/Seoul",
+                    })}{" "}
+                    KST{" "}
+                    {jwtInfo.expired ? (
+                      <span className="ml-1 rounded bg-red-100 px-1.5 py-0.5 font-sans font-semibold text-red-700">
+                        만료됨
+                      </span>
+                    ) : (
+                      <span className="ml-1 rounded bg-green-100 px-1.5 py-0.5 font-sans font-semibold text-green-700">
+                        유효
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  "(없음)"
+                )}
+              </div>
+            </div>
+          ))}
         <div className="mt-2 flex items-center gap-3">
           <button
             onClick={fetchUser}
