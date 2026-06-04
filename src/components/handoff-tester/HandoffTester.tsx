@@ -29,6 +29,8 @@ const DEFAULT_PLAINTEXT = JSON.stringify(
       is_admin: "Y",
       is_premium: "N",
       is_smart: "N",
+      alarm_date: "2026-10-25",
+      coin_list: ["BTCUSDT", "XRPUSDT"],
     },
   },
   null,
@@ -36,7 +38,7 @@ const DEFAULT_PLAINTEXT = JSON.stringify(
 );
 
 // 저장 상태 스키마/기본값 버전. 데이터 포맷이 바뀌면 올려서 옛 localStorage 캐시를 무효화한다.
-const STATE_VERSION = 2;
+const STATE_VERSION = 3;
 
 function loadSaved() {
   if (typeof window === "undefined") return null;
