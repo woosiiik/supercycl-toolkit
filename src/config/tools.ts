@@ -163,7 +163,7 @@ export const tools: ToolConfig[] = [
   },
   {
     slug: "ym-coinlist-register",
-    name: "유스메타 코인리스트 등록",
+    name: "유스메타 회원 정보 변경",
     description:
       "POST /v1/ym/user/update를 호출하여 유스메타 회원 연동 데이터(coin_list 포함)를 갱신하는 도구입니다.\n" +
       "데이터를 RSA-OAEP-256 + A256GCM JWE로 암호화(Form POST 테스터와 동일)하여 partnerYouthmetaUser로 전송합니다.\n" +
