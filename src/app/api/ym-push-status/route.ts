@@ -123,9 +123,9 @@ export async function GET(req: NextRequest) {
     ) as [Array<Record<string, unknown>>, unknown];
     const ymUser = ymUserRows[0] || null;
 
-    // 3. t_ym_watchlist
+    // 3. t_ym_user_watchlist
     const [watchlistRows] = await conn.query(
-      "SELECT symbol FROM t_ym_watchlist WHERE address = ? ORDER BY symbol",
+      "SELECT symbol FROM t_ym_user_watchlist WHERE address = ? ORDER BY symbol",
       [address],
     ) as [Array<{ symbol: string }>, unknown];
     const watchlist = watchlistRows.map((r) => r.symbol);
@@ -228,7 +228,7 @@ async function handlePositions(env: DbEnv, inputAddress: string, inputUid: strin
 
     // watchlist 조회
     const [wlRows] = await conn.query(
-      "SELECT symbol FROM t_ym_watchlist WHERE address = ?",
+      "SELECT symbol FROM t_ym_user_watchlist WHERE address = ?",
       [address],
     ) as [Array<{ symbol: string }>, unknown];
     const watchlist = wlRows.map((r) => r.symbol);

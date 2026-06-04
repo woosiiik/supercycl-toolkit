@@ -270,7 +270,7 @@ function StatusView({
             ymExpiry: { title: "t_partner_youthmeta_user (만료일)", table: "t_partner_youthmeta_user", data: ymUser, boldKeys: ["ym_end_date"] },
             isPremium: { title: "t_partner_youthmeta_user (premium)", table: "t_partner_youthmeta_user", data: ymUser, boldKeys: ["is_premium", "is_admin"] },
             isSmart: { title: "t_partner_youthmeta_user (smart)", table: "t_partner_youthmeta_user", data: ymUser, boldKeys: ["is_smart", "is_admin"] },
-            watchlist: { title: "t_ym_watchlist", table: "t_ym_watchlist", data: watchlist, boldKeys: [] },
+            watchlist: { title: "t_ym_user_watchlist", table: "t_ym_user_watchlist", data: watchlist, boldKeys: [] },
             pushSub: { title: "t_push_subscription_pwa", table: "t_push_subscription_pwa", data: pushSubscriptions, boldKeys: ["endpoint", "address"] },
             notifEnabled: { title: "t_user_settings_notification", table: "t_user_settings_notification", data: notifSettings._exists ? notifSettings : null, boldKeys: ["ym_signal_enabled"] },
             notifOccur: { title: "t_user_settings_notification", table: "t_user_settings_notification", data: notifSettings._exists ? notifSettings : null, boldKeys: ["ym_signal_signal_occur"] },
