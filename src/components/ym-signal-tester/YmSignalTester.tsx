@@ -86,6 +86,7 @@ export default function YmSignalTester() {
   const [memberUid, setMemberUid] = useState("12345");
   const [memberUserid, setMemberUserid] = useState("testuser_ym");
   const [memberEndDate, setMemberEndDate] = useState("2027-06-03");
+  const [memberAlarmDate, setMemberAlarmDate] = useState("2026-10-25");
   const [memberIsAdmin, setMemberIsAdmin] = useState("N");
   const [memberIsPremium, setMemberIsPremium] = useState("N");
   const [memberIsSmart, setMemberIsSmart] = useState("N");
@@ -129,6 +130,7 @@ export default function YmSignalTester() {
         uid: memberUid,
         userid: memberUserid,
         end_date: memberEndDate,
+        alarm_date: memberAlarmDate,
         is_admin: memberIsAdmin,
         is_premium: memberIsPremium,
         is_smart: memberIsSmart,
@@ -365,6 +367,15 @@ export default function YmSignalTester() {
                 className={inputCls}
                 value={memberEndDate}
                 onChange={(e) => setMemberEndDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-500 mb-1">alarm_date</label>
+              <input
+                type="date"
+                className={inputCls}
+                value={memberAlarmDate}
+                onChange={(e) => setMemberAlarmDate(e.target.value)}
               />
             </div>
             <div className="flex items-end gap-4">
