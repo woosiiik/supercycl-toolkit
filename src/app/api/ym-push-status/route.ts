@@ -124,11 +124,21 @@ export async function GET(req: NextRequest) {
     const ymUser = ymUserRows[0] || null;
 
     // 3. t_ym_user_watchlist
-    const [watchlistRows] = await conn.query(
-      "SELECT symbol FROM t_ym_user_watchlist WHERE address = ? ORDER BY symbol",
-      [address],
-    ) as [Array<{ symbol: string }>, unknown];
-    const watchlist = watchlistRows.map((r) => r.symbol);
+    // t_ym_user_watchlist는 address가 아닌 ym_uid로 조회한다.
+    // address로 ym_uid를 얻으려면 t_partner_youthmeta_user의 ACTIVE 레코드를 사용.
+    const activeYmUid =
+      (ymUserRows.find((r) => r.status === "ACTIVE")?.ym_uid as
+        | string
+        | number
+        | undefined) ?? null;
+    let watchlist: string[] = [];
+    if (activeYmUid != null) {
+      const [watchlistRows] = await conn.query(
+        "SELECT symbol FROM t_ym_user_watchlist WHERE ym_uid = ? ORDER BY symbol",
+        [activeYmUid],
+      ) as [Array<{ symbol: string }>, unknown];
+      watchlist = watchlistRows.map((r) => r.symbol);
+    }
 
     // 4. t_push_subscription_pwa
     const [pushRows] = await conn.query(
@@ -226,10 +236,20 @@ async function handlePositions(env: DbEnv, inputAddress: string, inputUid: strin
       return NextResponse.json({ positions: [] });
     }
 
-    // watchlist 조회
-    const [wlRows] = await conn.query(
-      "SELECT symbol FROM t_ym_user_watchlist WHERE address = ?",
+    // ACTIVE youthmeta 회원의 ym_uid 조회 (watchlist는 ym_uid로 조회)
+    const [ymRows] = await conn.query(
+      "SELECT ym_uid FROM t_partner_youthmeta_user WHERE address = ? AND status = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1",
       [address],
+    ) as [Array<{ ym_uid: string | number }>, unknown];
+    if (ymRows.length === 0) {
+      return NextResponse.json({ positions: [] });
+    }
+    const ymUid = ymRows[0].ym_uid;
+
+    // watchlist 조회 (ym_uid 기준)
+    const [wlRows] = await conn.query(
+      "SELECT symbol FROM t_ym_user_watchlist WHERE ym_uid = ?",
+      [ymUid],
     ) as [Array<{ symbol: string }>, unknown];
     const watchlist = wlRows.map((r) => r.symbol);
 
