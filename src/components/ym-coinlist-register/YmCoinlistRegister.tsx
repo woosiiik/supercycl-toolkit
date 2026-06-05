@@ -38,7 +38,7 @@ const inputCls =
   "w-full p-2 bg-white border border-zinc-300 rounded text-zinc-900 text-sm font-mono";
 
 // 중요하지 않은 필드 기본값
-const DEFAULT_TEMP = "temp01";
+const DEFAULT_TEMP = "1111111";
 const DEFAULT_NONCE = "nonce01";
 const DEFAULT_SC_PRICE = "1000";
 const DEFAULT_PLATFORM = "parameter";
