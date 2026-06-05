@@ -140,8 +140,42 @@ export default function YmCoinlistRegister() {
           : null;
 
       if (dataObj?.retCode === 0) {
+        const r = (dataObj.result ?? {}) as {
+          ymUserid?: string;
+          isPremium?: boolean;
+          isSmart?: boolean;
+          ymEndDate?: string;
+          watchlist?: string[];
+        };
         setUserResult(dataObj.result ?? {});
-        log("✅ 조회 성공!");
+
+        // 조회 결과를 '암호화할 데이터'에 반영 (GET에 있는 필드만 덮어쓰고 나머지는 유지)
+        try {
+          const cur = JSON.parse(plaintext);
+          const curData: Record<string, unknown> =
+            cur && typeof cur === "object" && cur.data ? cur.data : {};
+          const merged = {
+            data: {
+              ...curData,
+              userid:
+                typeof r.ymUserid === "string" ? r.ymUserid : curData.userid,
+              is_premium: r.isPremium ? "Y" : "N",
+              is_smart: r.isSmart ? "Y" : "N",
+              end_date:
+                typeof r.ymEndDate === "string" ? r.ymEndDate : curData.end_date,
+              coin_list: Array.isArray(r.watchlist)
+                ? r.watchlist
+                : curData.coin_list,
+            },
+          };
+          setPlaintext(JSON.stringify(merged, null, 2));
+          log("✅ 조회 성공! 결과를 '암호화할 데이터'에 반영했습니다.");
+          log(
+            "ⓘ GET 응답에 없는 필드(uid/temp/nonce/sc_price/platform/is_admin/alarm_date)는 기존 입력값을 유지합니다. 변경 전 직접 확인하세요.",
+          );
+        } catch {
+          log("✅ 조회 성공! (단, '암호화할 데이터'가 JSON이 아니어서 자동 반영 생략)");
+        }
       } else if (httpStatus < 200 || httpStatus >= 300) {
         log(`❌ WAS 오류 응답: HTTP ${httpStatus}`);
       } else if (dataObj?.retCode !== undefined) {
