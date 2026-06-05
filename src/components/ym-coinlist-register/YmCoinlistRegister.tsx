@@ -26,28 +26,6 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 const DEFAULT_PUBLIC_KEY =
   "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz4ZBbxtzHKUvU3GeXtOC\nuKpAbhiJHSKt/kgig4QMeT0n3wr6zwKWZomz70smvEVZkoX12Aqqdgj8J9MxMzO2\nSFR+OgRn+XLvK182XMxeHWQpk9+ULEaOPOAYWSYo2ao8gsCsJdKT3TakTHtmrh2V\nVcAj2UZvTfro1lPbGu+Sve4Rlbi6xyA/BliwvnVVHTf4DQZmvopDsY002nAwTjdr\nAUswGWRBZTeKUwXk7mWBsoWvtgnnRUHsnW+qQpu6RCRZuGyIrWecbynTRCNMlY/A\nkkQaaWMVL8xR9Mi6LrR0S4XLlV5fR1alQEm1oeNE4du95FtPSIMQkGYCkSTESjbM\nDwIDAQAB\n-----END PUBLIC KEY-----";
 
-// Form POST 테스터와 동일한 기본 데이터
-const DEFAULT_PLAINTEXT = JSON.stringify(
-  {
-    data: {
-      uid: "12345",
-      userid: "test123",
-      temp: "1778461200",
-      nonce: "",
-      sc_price: "10000",
-      end_date: "2027-06-03",
-      platform: "EX",
-      is_admin: "Y",
-      is_premium: "N",
-      is_smart: "N",
-      alarm_date: "2026-10-25",
-      coin_list: ["BTCUSDT", "XRPUSDT"],
-    },
-  },
-  null,
-  2,
-);
-
 const WAS_ENVS: { label: string; url: string; defaultKey: string }[] = [
   { label: "Dev", url: "https://pnl-dev.supercycl.io", defaultKey: DEFAULT_PUBLIC_KEY },
   { label: "Staging", url: "https://pnl-stg.supercycl.io", defaultKey: "" },
@@ -59,6 +37,12 @@ const btnCls =
 const inputCls =
   "w-full p-2 bg-white border border-zinc-300 rounded text-zinc-900 text-sm font-mono";
 
+// 중요하지 않은 필드 기본값
+const DEFAULT_TEMP = "temp01";
+const DEFAULT_NONCE = "nonce01";
+const DEFAULT_SC_PRICE = "1000";
+const DEFAULT_PLATFORM = "parameter";
+
 // Form POST 테스터와 동일한 JWE 암호화 (RSA-OAEP-256 + A256GCM)
 async function encryptJwe(plaintext: string, publicKeyPem: string): Promise<string> {
   const key = await importSPKI(publicKeyPem.trim(), "RSA-OAEP-256");
@@ -68,11 +52,33 @@ async function encryptJwe(plaintext: string, publicKeyPem: string): Promise<stri
     .encrypt(key);
 }
 
+// "BTCUSDT, XRPUSDT" 또는 줄바꿈 구분 → ["BTCUSDT", "XRPUSDT"]
+function parseCoinList(s: string): string[] {
+  return s
+    .split(/[\s,]+/)
+    .map((x) => x.trim().toUpperCase())
+    .filter(Boolean);
+}
+
 export default function YmCoinlistRegister() {
   const [wasUrl, setWasUrl] = useState(WAS_ENVS[0].url);
   const [jwt, setJwt] = useState("");
   const [publicKey, setPublicKey] = useState(DEFAULT_PUBLIC_KEY);
-  const [plaintext, setPlaintext] = useState(DEFAULT_PLAINTEXT);
+
+  // 회원 정보 입력 폼
+  const [fUid, setFUid] = useState(""); // ymUid (수정불가)
+  const [fUserid, setFUserid] = useState("test123");
+  const [fTemp, setFTemp] = useState(DEFAULT_TEMP);
+  const [fNonce, setFNonce] = useState(DEFAULT_NONCE);
+  const [fScPrice, setFScPrice] = useState(DEFAULT_SC_PRICE);
+  const [fPlatform, setFPlatform] = useState(DEFAULT_PLATFORM);
+  const [fEndDate, setFEndDate] = useState("2027-06-03");
+  const [fAlarmDate, setFAlarmDate] = useState("2026-10-25");
+  const [fIsAdmin, setFIsAdmin] = useState("N");
+  const [fIsPremium, setFIsPremium] = useState("N");
+  const [fIsSmart, setFIsSmart] = useState("N");
+  const [fCoinList, setFCoinList] = useState("BTCUSDT, XRPUSDT");
+
   const [logs, setLogs] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -80,12 +86,29 @@ export default function YmCoinlistRegister() {
     null,
   );
 
+  // 폼 → 전송 payload
+  const buildData = () => ({
+    data: {
+      uid: fUid,
+      userid: fUserid,
+      temp: fTemp,
+      nonce: fNonce,
+      sc_price: fScPrice,
+      platform: fPlatform,
+      end_date: fEndDate,
+      alarm_date: fAlarmDate,
+      is_admin: fIsAdmin,
+      is_premium: fIsPremium,
+      is_smart: fIsSmart,
+      coin_list: parseCoinList(fCoinList),
+    },
+  });
+
   // JWT에서 address, exp 추출 및 만료 여부 (입력 즉시 갱신)
   const jwtInfo = useMemo(() => {
     if (!jwt.trim()) return null;
     const payload = decodeJwtPayload(jwt);
     if (!payload) return { error: true as const };
-    // address는 JWT의 master 클레임을 사용
     const address =
       typeof payload.master === "string" ? payload.master : undefined;
     const exp = typeof payload.exp === "number" ? payload.exp : undefined;
@@ -134,52 +157,25 @@ export default function YmCoinlistRegister() {
         result.data && typeof result.data === "object"
           ? (result.data as {
               retCode?: number;
+              retMessage?: string;
               retMsg?: string;
               result?: Record<string, unknown>;
             })
           : null;
 
       if (dataObj?.retCode === 0) {
-        const r = (dataObj.result ?? {}) as {
-          ymUserid?: string;
-          isPremium?: boolean;
-          isSmart?: boolean;
-          ymEndDate?: string;
-          watchlist?: string[];
-        };
         setUserResult(dataObj.result ?? {});
-
-        // 조회 결과를 '암호화할 데이터'에 반영 (GET에 있는 필드만 덮어쓰고 나머지는 유지)
-        try {
-          const cur = JSON.parse(plaintext);
-          const curData: Record<string, unknown> =
-            cur && typeof cur === "object" && cur.data ? cur.data : {};
-          const merged = {
-            data: {
-              ...curData,
-              userid:
-                typeof r.ymUserid === "string" ? r.ymUserid : curData.userid,
-              is_premium: r.isPremium ? "Y" : "N",
-              is_smart: r.isSmart ? "Y" : "N",
-              end_date:
-                typeof r.ymEndDate === "string" ? r.ymEndDate : curData.end_date,
-              coin_list: Array.isArray(r.watchlist)
-                ? r.watchlist
-                : curData.coin_list,
-            },
-          };
-          setPlaintext(JSON.stringify(merged, null, 2));
-          log("✅ 조회 성공! 결과를 '암호화할 데이터'에 반영했습니다.");
-          log(
-            "ⓘ GET 응답에 없는 필드(uid/temp/nonce/sc_price/platform/is_admin/alarm_date)는 기존 입력값을 유지합니다. 변경 전 직접 확인하세요.",
-          );
-        } catch {
-          log("✅ 조회 성공! (단, '암호화할 데이터'가 JSON이 아니어서 자동 반영 생략)");
-        }
+        applyResultToForm(dataObj.result ?? {});
+        log("✅ 조회 성공! 결과를 회원 정보 입력 폼에 반영했습니다.");
+        log(
+          "ⓘ GET 응답에 없는 필드(temp/nonce/sc_price/platform/is_admin)는 기존 입력값을 유지합니다.",
+        );
       } else if (httpStatus < 200 || httpStatus >= 300) {
         log(`❌ WAS 오류 응답: HTTP ${httpStatus}`);
       } else if (dataObj?.retCode !== undefined) {
-        log(`❌ 조회 실패: retCode=${dataObj.retCode}, retMsg=${dataObj.retMsg || ""}`);
+        log(
+          `❌ 조회 실패: retCode=${dataObj.retCode}, retMessage=${dataObj.retMessage || dataObj.retMsg || ""}`,
+        );
       } else {
         log("⚠️ 표준 응답(retCode)이 아닙니다. 위 응답 본문을 확인하세요.");
       }
@@ -187,6 +183,28 @@ export default function YmCoinlistRegister() {
       log(`❌ 조회 에러: ${e}`);
     } finally {
       setFetching(false);
+    }
+  }
+
+  // 조회 결과를 폼에 반영 (GET에 있는 필드만)
+  function applyResultToForm(result: Record<string, unknown>) {
+    const r = result as {
+      ymUid?: string;
+      ymUserid?: string;
+      isPremium?: boolean;
+      isSmart?: boolean;
+      ymEndDate?: string;
+      alarmDate?: string;
+      watchlist?: Array<{ symbol: string; name?: string }>;
+    };
+    if (typeof r.ymUid === "string") setFUid(r.ymUid);
+    if (typeof r.ymUserid === "string") setFUserid(r.ymUserid);
+    if (typeof r.ymEndDate === "string") setFEndDate(r.ymEndDate);
+    if (typeof r.alarmDate === "string") setFAlarmDate(r.alarmDate);
+    setFIsPremium(r.isPremium ? "Y" : "N");
+    setFIsSmart(r.isSmart ? "Y" : "N");
+    if (Array.isArray(r.watchlist)) {
+      setFCoinList(r.watchlist.map((w) => w.symbol).join(", "));
     }
   }
 
@@ -204,16 +222,11 @@ export default function YmCoinlistRegister() {
         log("❌ RSA Public Key를 입력하세요");
         return;
       }
-      // 데이터 JSON 유효성 체크
-      try {
-        JSON.parse(plaintext);
-      } catch {
-        log("❌ 암호화할 데이터가 유효한 JSON이 아닙니다");
-        return;
-      }
 
+      const payloadJson = JSON.stringify(buildData());
+      log(`>>> Plaintext: ${JSON.stringify(buildData(), null, 2)}`);
       log(">>> JWE 암호화 중... (RSA-OAEP-256 + A256GCM)");
-      const jwe = await encryptJwe(plaintext, publicKey);
+      const jwe = await encryptJwe(payloadJson, publicKey);
       log(`>>> Encrypted (${jwe.length} chars): ${jwe.substring(0, 80)}...`);
 
       const res = await fetch("/api/ym-coinlist", {
@@ -251,6 +264,7 @@ export default function YmCoinlistRegister() {
         result.data && typeof result.data === "object"
           ? (result.data as {
               retCode?: number;
+              retMessage?: string;
               retMsg?: string;
               result?: Record<string, unknown>;
             })
@@ -260,11 +274,14 @@ export default function YmCoinlistRegister() {
       if (retCode === 0) {
         log("✅ 유저 정보 변경 성공!");
         // 변경 후 최신 정보 표시 (응답이 GET /v1/ym/user와 동일 형식)
-        if (dataObj && "result" in dataObj && dataObj.result) {
-          setUserResult(dataObj.result as Record<string, unknown>);
+        if (dataObj?.result) {
+          setUserResult(dataObj.result);
+          applyResultToForm(dataObj.result);
         }
       } else if (retCode !== undefined) {
-        log(`❌ 실패: retCode=${retCode}, retMsg=${dataObj?.retMsg || ""}`);
+        log(
+          `❌ 실패: retCode=${retCode}, retMessage=${dataObj?.retMessage || dataObj?.retMsg || ""}`,
+        );
       } else if (httpStatus < 200 || httpStatus >= 300) {
         log(`❌ WAS 오류 응답: HTTP ${httpStatus}`);
       } else {
@@ -278,7 +295,7 @@ export default function YmCoinlistRegister() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-6xl">
       {/* 환경 선택 */}
       <Section title="WAS 환경">
         <div className="flex gap-2">
@@ -354,30 +371,102 @@ export default function YmCoinlistRegister() {
             {fetching ? "조회 중..." : "조회"}
           </button>
           <p className="text-xs text-zinc-500">
-            GET /v1/ym/user — 현재 회원 정보를 조회합니다. (Bearer 접두어 없이 토큰만 입력)
+            GET /v1/ym/user — 현재 회원 정보를 조회하여 아래 폼에 채웁니다.
           </p>
         </div>
       </Section>
 
-      {/* 조회 결과 */}
-      {userResult && (
-        <Section title="조회 결과 (GET /v1/ym/user)">
-          <table className="w-full text-sm">
-            <tbody>
-              {Object.entries(userResult).map(([k, v]) => (
-                <tr key={k} className="border-b border-zinc-100 last:border-0">
-                  <td className="py-1.5 pr-4 align-top font-mono text-xs text-zinc-500 whitespace-nowrap">
-                    {k}
-                  </td>
-                  <td className="py-1.5 font-mono text-xs text-zinc-800 break-all">
-                    {renderVal(v)}
-                  </td>
-                </tr>
+      {/* 회원 정보 입력 폼 (좌) + 조회 결과 (우) */}
+      <div className="flex gap-4 items-start">
+        <div className="flex-1 min-w-0">
+          <Section title="회원 정보 입력 (변경할 값)">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="ymUid (수정불가)" value={fUid} readOnly />
+              <Field label="userid" value={fUserid} onChange={setFUserid} />
+              <Field
+                label="end_date"
+                type="date"
+                value={fEndDate}
+                onChange={setFEndDate}
+              />
+              <Field
+                label="alarm_date"
+                type="date"
+                value={fAlarmDate}
+                onChange={setFAlarmDate}
+              />
+              <Field label="temp" value={fTemp} onChange={setFTemp} />
+              <Field label="nonce" value={fNonce} onChange={setFNonce} />
+              <Field label="sc_price" value={fScPrice} onChange={setFScPrice} />
+              <Field label="platform" value={fPlatform} onChange={setFPlatform} />
+            </div>
+
+            <div className="mt-3 flex items-center gap-4">
+              {(
+                [
+                  { label: "is_admin", value: fIsAdmin, set: setFIsAdmin },
+                  { label: "is_premium", value: fIsPremium, set: setFIsPremium },
+                  { label: "is_smart", value: fIsSmart, set: setFIsSmart },
+                ] as const
+              ).map((o) => (
+                <label
+                  key={o.label}
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={o.value === "Y"}
+                    onChange={(e) => o.set(e.target.checked ? "Y" : "N")}
+                    className="w-4 h-4 accent-blue-600"
+                  />
+                  <span className="text-sm text-zinc-700">
+                    {o.label} ({o.value})
+                  </span>
+                </label>
               ))}
-            </tbody>
-          </table>
-        </Section>
-      )}
+            </div>
+
+            <div className="mt-3">
+              <label className="block text-xs text-zinc-500 mb-1">
+                coin_list (콤마 또는 줄바꿈 구분)
+              </label>
+              <textarea
+                className={`${inputCls} h-20`}
+                value={fCoinList}
+                onChange={(e) => setFCoinList(e.target.value)}
+                placeholder="BTCUSDT, XRPUSDT"
+              />
+              <p className="mt-1 text-xs text-zinc-500">
+                t_ym_user_watchlist에 교체 반영됩니다. (비우면 전부 삭제)
+              </p>
+            </div>
+          </Section>
+        </div>
+
+        {userResult && (
+          <div className="w-96 shrink-0">
+            <Section title="조회 결과 (GET /v1/ym/user)">
+              <table className="w-full text-sm">
+                <tbody>
+                  {Object.entries(userResult).map(([k, v]) => (
+                    <tr
+                      key={k}
+                      className="border-b border-zinc-100 last:border-0"
+                    >
+                      <td className="py-1.5 pr-3 align-top font-mono text-xs text-zinc-500 whitespace-nowrap">
+                        {k}
+                      </td>
+                      <td className="py-1.5 font-mono text-xs text-zinc-800 break-all">
+                        {renderVal(v)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Section>
+          </div>
+        )}
+      </div>
 
       {/* RSA Public Key */}
       <Section title="RSA Public Key (JWE 암호화)">
@@ -392,22 +481,9 @@ export default function YmCoinlistRegister() {
         </p>
       </Section>
 
-      {/* 암호화할 데이터 */}
-      <Section title="암호화할 데이터">
-        <textarea
-          className={`${inputCls} h-72 text-xs`}
-          value={plaintext}
-          onChange={(e) => setPlaintext(e.target.value)}
-        />
-        <p className="mt-1 text-xs text-zinc-500">
-          복호화 평문 {"{ \"data\": { ... } }"} 형식. coin_list가 t_ym_user_watchlist에
-          교체 반영됩니다. ([] 이면 전부 삭제, 키 부재 시 무변경)
-        </p>
-      </Section>
-
       {/* 요청 미리보기 & 전송 */}
       <Section title="요청 미리보기">
-        <pre className="p-3 bg-zinc-50 rounded text-xs text-zinc-700 overflow-auto max-h-48 mb-4">
+        <pre className="p-3 bg-zinc-50 rounded text-xs text-zinc-700 overflow-auto max-h-60 mb-4">
           <span className="text-blue-600">POST</span> {wasUrl}/v1/ym/user/update
           {"\n"}
           <span className="text-zinc-500">Authorization: Bearer {"{JWT}"}</span>
@@ -416,7 +492,7 @@ export default function YmCoinlistRegister() {
             {"// data가 JWE 암호화되어 { \"partnerYouthmetaUser\": \"...\" } 로 전송"}
           </span>
           {"\n\n"}
-          {plaintext}
+          {JSON.stringify(buildData(), null, 2)}
         </pre>
         <button
           onClick={send}
@@ -453,8 +529,46 @@ export default function YmCoinlistRegister() {
   );
 }
 
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  readOnly = false,
+}: {
+  label: string;
+  value: string;
+  onChange?: (v: string) => void;
+  type?: string;
+  readOnly?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-zinc-500 mb-1">{label}</label>
+      <input
+        type={type}
+        className={`${inputCls} ${readOnly ? "bg-zinc-100 text-zinc-500 cursor-not-allowed" : ""}`}
+        value={value}
+        readOnly={readOnly}
+        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+      />
+    </div>
+  );
+}
+
 function renderVal(v: unknown): string {
-  if (Array.isArray(v)) return v.length ? v.join(", ") : "(빈 목록)";
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "(빈 목록)";
+    return v
+      .map((item) => {
+        if (item && typeof item === "object" && "symbol" in item) {
+          const o = item as { symbol: string; name?: string };
+          return o.name ? `${o.symbol} (${o.name})` : o.symbol;
+        }
+        return String(item);
+      })
+      .join(", ");
+  }
   if (typeof v === "boolean") return v ? "true" : "false";
   if (v === null || v === undefined) return "null";
   if (typeof v === "object") return JSON.stringify(v);
