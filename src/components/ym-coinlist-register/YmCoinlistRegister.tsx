@@ -74,6 +74,7 @@ export default function YmCoinlistRegister() {
   const [fPlatform, setFPlatform] = useState(DEFAULT_PLATFORM);
   const [fEndDate, setFEndDate] = useState("2027-06-03");
   const [fAlarmDate, setFAlarmDate] = useState("2026-10-25");
+  const [fAlarmNull, setFAlarmNull] = useState(false); // alarm_date = null 여부
   const [fIsAdmin, setFIsAdmin] = useState("N");
   const [fIsPremium, setFIsPremium] = useState("N");
   const [fIsSmart, setFIsSmart] = useState("N");
@@ -96,7 +97,7 @@ export default function YmCoinlistRegister() {
       sc_price: fScPrice,
       platform: fPlatform,
       end_date: fEndDate,
-      alarm_date: fAlarmDate,
+      alarm_date: fAlarmNull ? null : fAlarmDate,
       is_admin: fIsAdmin,
       is_premium: fIsPremium,
       is_smart: fIsSmart,
@@ -194,13 +195,18 @@ export default function YmCoinlistRegister() {
       isPremium?: boolean;
       isSmart?: boolean;
       ymEndDate?: string;
-      alarmDate?: string;
+      alarmDate?: string | null;
       watchlist?: Array<{ symbol: string; name?: string }>;
     };
     if (typeof r.ymUid === "string") setFUid(r.ymUid);
     if (typeof r.ymUserid === "string") setFUserid(r.ymUserid);
     if (typeof r.ymEndDate === "string") setFEndDate(r.ymEndDate);
-    if (typeof r.alarmDate === "string") setFAlarmDate(r.alarmDate);
+    if (r.alarmDate === null) {
+      setFAlarmNull(true);
+    } else if (typeof r.alarmDate === "string") {
+      setFAlarmNull(false);
+      setFAlarmDate(r.alarmDate);
+    }
     setFIsPremium(r.isPremium ? "Y" : "N");
     setFIsSmart(r.isSmart ? "Y" : "N");
     if (Array.isArray(r.watchlist)) {
@@ -389,12 +395,29 @@ export default function YmCoinlistRegister() {
                 value={fEndDate}
                 onChange={setFEndDate}
               />
-              <Field
-                label="alarm_date"
-                type="date"
-                value={fAlarmDate}
-                onChange={setFAlarmDate}
-              />
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1">
+                  alarm_date
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    className={`${inputCls} ${fAlarmNull ? "bg-zinc-100 text-zinc-400 cursor-not-allowed" : ""}`}
+                    value={fAlarmDate}
+                    disabled={fAlarmNull}
+                    onChange={(e) => setFAlarmDate(e.target.value)}
+                  />
+                  <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={fAlarmNull}
+                      onChange={(e) => setFAlarmNull(e.target.checked)}
+                      className="w-4 h-4 accent-blue-600"
+                    />
+                    <span className="text-xs text-zinc-600">null</span>
+                  </label>
+                </div>
+              </div>
               <Field label="temp" value={fTemp} onChange={setFTemp} />
               <Field label="nonce" value={fNonce} onChange={setFNonce} />
               <Field label="sc_price" value={fScPrice} onChange={setFScPrice} />
@@ -570,7 +593,7 @@ function renderVal(v: unknown): string {
       .join(", ");
   }
   if (typeof v === "boolean") return v ? "true" : "false";
-  if (v === null || v === undefined) return "null";
+  if (v === null || v === undefined) return "NULL";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }
