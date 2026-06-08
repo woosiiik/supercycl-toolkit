@@ -163,20 +163,39 @@ export default function YmSignalTester() {
       const jweToken = await encryptJwe(payloadJson, publicKey.trim());
       log(`>>> Encrypted (${jweToken.length} chars): ${jweToken.substring(0, 80)}...`);
 
-      const body = { encrypted: jweToken };
-
-      const res = await fetch(url, {
+      // 배포 환경 CORS 회피: WAS로 직접 호출하지 않고 서버 프록시(/api/ym-signal)를 경유
+      const res = await fetch("/api/ym-signal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ wasUrl, endpoint, encrypted: jweToken }),
       });
-      const data = await res.json();
 
-      log(`<<< ${res.status} Response: ${JSON.stringify(data, null, 2)}`);
-      if (data.retCode === 0) {
+      const raw = await res.text();
+      let result: { error?: string; status?: number; data?: unknown };
+      try {
+        result = JSON.parse(raw);
+      } catch {
+        log(`❌ 프록시 응답 파싱 실패 (HTTP ${res.status}): ${raw.slice(0, 300)}`);
+        return;
+      }
+
+      if (result.error) {
+        log(`❌ 프록시 에러 (HTTP ${res.status}): ${result.error}`);
+        return;
+      }
+
+      const httpStatus = result.status ?? res.status;
+      const data = result.data as { retCode?: number; retMsg?: string } | null;
+
+      log(`<<< HTTP ${httpStatus} Response: ${JSON.stringify(result.data, null, 2)}`);
+      if (data && data.retCode === 0) {
         log(`✅ 전송 성공!`);
-      } else {
+      } else if (data && data.retCode !== undefined) {
         log(`⚠️ retCode=${data.retCode}, retMsg=${data.retMsg || ""}`);
+      } else if (httpStatus < 200 || httpStatus >= 300) {
+        log(`❌ WAS 오류 응답: HTTP ${httpStatus}`);
+      } else {
+        log(`⚠️ 표준 응답(retCode)이 아닙니다. 위 응답 본문을 확인하세요.`);
       }
     } catch (e) {
       log(`❌ 전송 에러: ${e}`);
