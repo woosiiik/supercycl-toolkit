@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ExchangeMeta, StoredData } from "@/lib/exchange-pnl/types";
 import { EXCHANGE_COLORS } from "@/lib/exchange-pnl/exchanges";
+import { fmtUtc } from "@/lib/exchange-pnl/format";
 
 export type CollectState = "idle" | "loading" | "done" | "error";
 
@@ -115,7 +116,7 @@ export default function ExchangeCard({
         <div className="text-[11px] text-zinc-400">
           {data && (
             <span>
-              최근 수집: {new Date(data.collectedAt).toLocaleString()} · API {data.meta.requestCount}회
+              최근 수집: {fmtUtc(data.collectedAt)} · API {data.meta.requestCount}회
             </span>
           )}
         </div>

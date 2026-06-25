@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { StoredData, RawPage } from "@/lib/exchange-pnl/types";
 import { getExchange } from "@/lib/exchange-pnl/exchanges";
-import { fmtAmount } from "@/lib/exchange-pnl/format";
+import { fmtAmount, fmtUtc } from "@/lib/exchange-pnl/format";
 
 interface BreakdownEntry {
   key: string;
@@ -129,8 +129,8 @@ export default function RawDataView({ data }: { data: StoredData }) {
           엔드포인트: {data.meta.endpoints.join(", ")}
         </p>
         <p className="mt-1 text-zinc-400">
-          기간 {new Date(data.startTime).toISOString().slice(0, 10)} ~ {new Date(data.endTime).toISOString().slice(0, 10)} ·
-          수집 {new Date(data.collectedAt).toLocaleString()}
+          기간 {new Date(data.startTime).toISOString().slice(0, 10)} ~ {new Date(data.endTime).toISOString().slice(0, 10)} (UTC) ·
+          수집 {fmtUtc(data.collectedAt)}
         </p>
       </div>
 
