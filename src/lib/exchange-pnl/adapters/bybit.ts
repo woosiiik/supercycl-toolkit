@@ -7,30 +7,39 @@ import { fetchJson, hmacSha256Hex, buildQuery, splitWindows, num, DAY_MS } from 
 // closedPnl 단위는 "청산 주문" → hold time 불가, 승/패는 청산오더 근사.
 // 펀딩은 closed-pnl에 없어 transaction-log(type=SETTLEMENT)에서 별도 수집(실제 발생일 귀속).
 
-const BASE = "https://api.bybit.com";
+// api.bybit.com이 지역/IP 차단(HTTP 403)될 경우 공식 미러 api.bytick.com로 폴백.
+const HOSTS = ["https://api.bybit.com", "https://api.bytick.com"];
 const PATH = "/v5/position/closed-pnl";
 const TXLOG_PATH = "/v5/account/transaction-log";
 const RECV = "5000";
 const MAX_PAGES = 20;
 const WINDOW = 7 * DAY_MS;
 
-function bybitGet(
+async function bybitGet(
   apiKey: string,
   apiSecret: string,
   path: string,
   qs: string,
-): ReturnType<typeof fetchJson> {
-  const ts = Date.now().toString();
-  const sign = hmacSha256Hex(apiSecret, ts + apiKey + RECV + qs);
-  return fetchJson(`${path} ${qs.slice(0, 40)}`, `${BASE}${path}?${qs}`, {
-    method: "GET",
-    headers: {
-      "X-BAPI-API-KEY": apiKey,
-      "X-BAPI-TIMESTAMP": ts,
-      "X-BAPI-RECV-WINDOW": RECV,
-      "X-BAPI-SIGN": sign,
-    },
-  });
+): Promise<Awaited<ReturnType<typeof fetchJson>>> {
+  let last: Awaited<ReturnType<typeof fetchJson>> | undefined;
+  for (const host of HOSTS) {
+    // 서명은 도메인 무관(ts+apiKey+recvWindow+qs) — 호스트마다 ts 재계산해 recvWindow 안전.
+    const ts = Date.now().toString();
+    const sign = hmacSha256Hex(apiSecret, ts + apiKey + RECV + qs);
+    const res = await fetchJson(`${path} ${qs.slice(0, 40)}`, `${host}${path}?${qs}`, {
+      method: "GET",
+      headers: {
+        "X-BAPI-API-KEY": apiKey,
+        "X-BAPI-TIMESTAMP": ts,
+        "X-BAPI-RECV-WINDOW": RECV,
+        "X-BAPI-SIGN": sign,
+      },
+    });
+    last = res;
+    // 403(CDN 차단)이 아니면 그대로 사용. 403이면 다음 미러 시도.
+    if (res.page.status !== 403) return res;
+  }
+  return last!;
 }
 
 export async function collectBybit(req: CollectRequest): Promise<CollectResult> {
@@ -41,6 +50,18 @@ export async function collectBybit(req: CollectRequest): Promise<CollectResult> 
   let requestCount = 0;
 
   warnings.push("Bybit는 청산오더 단위 데이터입니다 — hold time 미지원, 승/패·승률은 청산오더 기준 근사입니다. 펀딩은 transaction-log(SETTLEMENT)에서 별도 수집합니다.");
+
+  let said403 = false;
+  const note403 = (rp: RawPage) => {
+    if (rp.status === 403 && !said403) {
+      said403 = true;
+      warnings.push(
+        "HTTP 403: api.bybit.com·api.bytick.com 모두 차단됨 — 서버 IP/지역 차단입니다. " +
+          "Vercel 서버리스 함수는 기본 미국 리전(iad1)에서 실행되는데 Bybit는 미국을 차단합니다. " +
+          "Vercel 함수 리전을 비-미국(예: fra1·icn1·hnd1)으로 변경하거나, 허용 지역의 프록시를 경유해야 합니다.",
+      );
+    }
+  };
 
   const windows = splitWindows(req.startTime, req.endTime, WINDOW);
 
@@ -57,6 +78,7 @@ export async function collectBybit(req: CollectRequest): Promise<CollectResult> 
 
       const b = body as { retCode?: number; retMsg?: string; result?: { list?: BybitClosed[]; nextPageCursor?: string } };
       if (!ok || (b?.retCode !== undefined && b.retCode !== 0)) {
+        note403(rp);
         warnings.push(`Bybit closed-pnl 오류 (${tag} p${page}): retCode=${b?.retCode} msg=${b?.retMsg ?? rp.status}`);
         break;
       }
@@ -88,6 +110,7 @@ export async function collectBybit(req: CollectRequest): Promise<CollectResult> 
 
       const b = body as { retCode?: number; retMsg?: string; result?: { list?: BybitTxLog[]; nextPageCursor?: string } };
       if (!ok || (b?.retCode !== undefined && b.retCode !== 0)) {
+        note403(rp);
         warnings.push(`Bybit transaction-log 오류 (${tag} p${page}): retCode=${b?.retCode} msg=${b?.retMsg ?? rp.status}`);
         break;
       }

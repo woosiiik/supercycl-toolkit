@@ -29,13 +29,19 @@ export function buildQuery(params: Record<string, string | number | undefined | 
   return pairs.join("&");
 }
 
+// 일부 거래소 CDN(CloudFront 등)은 User-Agent 없는 요청을 봇으로 보고 차단하므로 기본 UA 부여.
+const DEFAULT_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+
 /** fetch + JSON 파싱. 실패해도 throw 하지 않고 RawPage 로 반환(개발자가 원본 확인). */
 export async function fetchJson(
   label: string,
   url: string,
   init?: RequestInit,
 ): Promise<{ page: RawPage; ok: boolean; body: unknown }> {
-  const res = await fetch(url, init);
+  const headers = new Headers(init?.headers);
+  if (!headers.has("User-Agent")) headers.set("User-Agent", DEFAULT_UA);
+  const res = await fetch(url, { ...init, headers });
   const text = await res.text();
   let body: unknown;
   try {

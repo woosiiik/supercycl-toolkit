@@ -9,6 +9,9 @@ import { getAdapter } from "@/lib/exchange-pnl/adapters";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
+// Bybit·Binance·OKX는 미국을 지역 차단하므로, Vercel 기본 미국 리전(iad1) 대신
+// 비-미국 리전(프랑크푸르트)에서 실행한다. vercel.json regions 와 일치.
+export const preferredRegion = "fra1";
 
 const VALID: ExchangeId[] = ["okx", "bingx", "bitget", "gate", "bybit", "binance", "hyperliquid"];
 
