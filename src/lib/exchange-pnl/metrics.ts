@@ -12,12 +12,22 @@ export function effectiveNet(row: NormalizedRow, t: PnlToggles): number {
   return row.pricePnl + (t.includeFee ? row.fee : 0) + (t.includeFunding ? row.funding : 0);
 }
 
+/** 일별 차트 hover 시 보여줄 내역 한 줄 (거래소·심볼 단위로 묶음) */
+export interface DailyEntry {
+  exchange: ExchangeId;
+  symbol: string;
+  net: number;
+  count: number;
+}
+
 export interface DailyPoint {
   date: string; // YYYY-MM-DD (UTC)
   pricePnl: number;
   fee: number;
   funding: number;
   net: number;
+  /** 그 날짜 내역 (거래소+심볼 그룹, |net| 내림차순) */
+  entries: DailyEntry[];
 }
 
 export interface SymbolPoint {
@@ -95,6 +105,7 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
   let loss = 0;
 
   const dailyMap = new Map<string, DailyPoint>();
+  const dailyEntries = new Map<string, Map<string, DailyEntry>>(); // date → (exchange:symbol → entry)
   const symbolMap = new Map<string, SymbolPoint>();
   const symbolExchanges = new Map<string, Set<ExchangeId>>();
   const units = new Set<string>();
@@ -129,12 +140,20 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
 
     // 일별
     const dk = dateKey(r.closeTime);
-    const dp = dailyMap.get(dk) ?? { date: dk, pricePnl: 0, fee: 0, funding: 0, net: 0 };
+    const dp = dailyMap.get(dk) ?? { date: dk, pricePnl: 0, fee: 0, funding: 0, net: 0, entries: [] };
     dp.pricePnl += r.pricePnl;
     dp.fee += r.fee;
     dp.funding += r.funding;
     dp.net += net;
     dailyMap.set(dk, dp);
+    // 일별 내역(거래소+심볼 그룹)
+    const em = dailyEntries.get(dk) ?? new Map<string, DailyEntry>();
+    const ekey = `${r.exchange}:${r.symbol}`;
+    const entry = em.get(ekey) ?? { exchange: r.exchange, symbol: r.symbol, net: 0, count: 0 };
+    entry.net += net;
+    entry.count += 1;
+    em.set(ekey, entry);
+    dailyEntries.set(dk, em);
 
     // 심볼별
     const sp = symbolMap.get(r.symbol) ?? { symbol: r.symbol, pricePnl: 0, fee: 0, funding: 0, net: 0, count: 0, exchanges: [] };
@@ -175,6 +194,10 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
   }
 
   const daily = [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+  for (const dp of daily) {
+    const em = dailyEntries.get(dp.date);
+    dp.entries = em ? [...em.values()].sort((a, b) => Math.abs(b.net) - Math.abs(a.net)) : [];
+  }
   for (const sp of symbolMap.values()) {
     sp.exchanges = [...(symbolExchanges.get(sp.symbol) ?? [])];
   }

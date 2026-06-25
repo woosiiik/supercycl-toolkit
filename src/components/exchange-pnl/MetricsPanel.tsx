@@ -12,7 +12,7 @@ import {
   Cell,
 } from "recharts";
 import type { NormalizedRow, ExchangeId } from "@/lib/exchange-pnl/types";
-import { computeMetrics, formatHoldTime, type PnlToggles } from "@/lib/exchange-pnl/metrics";
+import { computeMetrics, formatHoldTime, type PnlToggles, type DailyPoint } from "@/lib/exchange-pnl/metrics";
 import { fmtAmount } from "@/lib/exchange-pnl/format";
 import { EXCHANGES, EXCHANGE_COLORS } from "@/lib/exchange-pnl/exchanges";
 
@@ -75,6 +75,43 @@ function pnlColor(n: number): string {
   if (n > 0) return "text-emerald-600 dark:text-emerald-400";
   if (n < 0) return "text-red-600 dark:text-red-400";
   return "text-zinc-500";
+}
+
+const TOOLTIP_MAX = 12;
+
+// 일별 차트 hover 시 그 날짜 내역(거래소 점 + 약칭 + 심볼 + net)을 리스트로 표시
+function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: DailyPoint }> }) {
+  if (!active || !payload?.length) return null;
+  const dp = payload[0].payload;
+  const entries = dp.entries ?? [];
+  const shown = entries.slice(0, TOOLTIP_MAX);
+  const rest = entries.length - shown.length;
+  return (
+    <div className="max-w-xs rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="mb-1 flex items-baseline justify-between gap-3">
+        <span className="font-medium text-zinc-700 dark:text-zinc-200">{dp.date}</span>
+        <span className={`font-semibold tabular-nums ${pnlColor(dp.net)}`}>Net {fmtUsd(dp.net)}</span>
+      </div>
+      {entries.length === 0 ? (
+        <div className="text-zinc-400">내역 없음</div>
+      ) : (
+        <div className="flex flex-col gap-0.5">
+          {shown.map((e, i) => (
+            <div key={i} className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-1 truncate">
+                <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: EXCHANGE_COLORS[e.exchange] }} />
+                <span className="text-zinc-400">{SHORT[e.exchange]}</span>
+                <span className="truncate text-zinc-600 dark:text-zinc-300">{e.symbol || "—"}</span>
+                {e.count > 1 && <span className="text-zinc-400">×{e.count}</span>}
+              </span>
+              <span className={`tabular-nums ${pnlColor(e.net)}`}>{fmtUsd(e.net)}</span>
+            </div>
+          ))}
+          {rest > 0 && <div className="text-zinc-400">외 {rest}건</div>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface Props {
@@ -170,11 +207,7 @@ export default function MetricsPanel({ rows, toggles, showSupportNotes }: Props)
             <CartesianGrid strokeDasharray="3 3" stroke="#88888830" />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d: string) => d.slice(5)} />
             <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v: number) => fmtUsd(v)} />
-            <Tooltip
-              formatter={(v) => fmtUsd(Number(v))}
-              labelClassName="text-zinc-900"
-              contentStyle={{ fontSize: 12 }}
-            />
+            <Tooltip content={<DailyTooltip />} cursor={{ fill: "#8888881a" }} />
             <Bar dataKey="net" name="Net PnL">
               {m.daily.map((d) => (
                 <Cell key={d.date} fill={d.net >= 0 ? "#10b981" : "#ef4444"} />
