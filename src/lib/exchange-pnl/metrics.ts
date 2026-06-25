@@ -16,7 +16,10 @@ export function effectiveNet(row: NormalizedRow, t: PnlToggles): number {
 export interface DailyEntry {
   exchange: ExchangeId;
   symbol: string;
-  net: number;
+  pricePnl: number; // 가격손익(closed PnL)
+  fee: number; // 수수료
+  funding: number; // 펀딩
+  net: number; // 토글 반영 net
   count: number;
 }
 
@@ -149,7 +152,10 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
     // 일별 내역(거래소+심볼 그룹)
     const em = dailyEntries.get(dk) ?? new Map<string, DailyEntry>();
     const ekey = `${r.exchange}:${r.symbol}`;
-    const entry = em.get(ekey) ?? { exchange: r.exchange, symbol: r.symbol, net: 0, count: 0 };
+    const entry = em.get(ekey) ?? { exchange: r.exchange, symbol: r.symbol, pricePnl: 0, fee: 0, funding: 0, net: 0, count: 0 };
+    entry.pricePnl += r.pricePnl;
+    entry.fee += r.fee;
+    entry.funding += r.funding;
     entry.net += net;
     entry.count += 1;
     em.set(ekey, entry);
