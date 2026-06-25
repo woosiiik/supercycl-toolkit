@@ -134,6 +134,7 @@ function normalizeFunding(f: HlFunding): NormalizedRow {
     closeTime: num(f.time),
     holdTimeMs: null,
     win: null,
-    unit: "fill",
+    // 펀딩 원장은 체결(fill)이 아님 → income 으로 분류해 종료건수/평균 분모에서 제외 (Bybit와 통일)
+    unit: "income",
   };
 }

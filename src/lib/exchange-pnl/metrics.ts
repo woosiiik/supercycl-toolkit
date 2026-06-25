@@ -72,7 +72,21 @@ function dateKey(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+/** (exchange, id) 기준 중복 제거 — 페이지 경계·커서 오용으로 인한 중복 방어 */
+export function dedupeRows(rows: NormalizedRow[]): NormalizedRow[] {
+  const seen = new Set<string>();
+  const out: NormalizedRow[] = [];
+  for (const r of rows) {
+    const key = `${r.exchange}:${r.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
+  }
+  return out;
+}
+
 export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
+  rows = dedupeRows(rows);
   let totalNet = 0;
   let totalPrice = 0;
   let totalFee = 0;
