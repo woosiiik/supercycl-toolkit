@@ -56,15 +56,6 @@ const legacyTools: ToolConfig[] = [
       "알고리즘: RSA-OAEP + A256GCM, RSA 2048bit PEM 또는 JWK 형식의 private key를 지원합니다.",
   },
   {
-    slug: "handoff-tester",
-    name: "Youthmeta 연동 테스터 (Form POST)",
-    description:
-      "Youthmeta 연동용 Form POST 방식 테스트 도구입니다.\n" +
-      "JWE 암호화된 데이터를 hidden form으로 Supercycl /api/handoff 엔드포인트에 POST 전송합니다.\n" +
-      "서버에서 JWE를 쿠키에 저장하고 메인 페이지로 리다이렉트합니다.\n" +
-      "참고: https://icon-project.atlassian.net/wiki/spaces/SuperCycl/pages/4168024074/Design+-+UTM+Referral+Affiliate#Youthmeta-%ED%9A%8C%EC%9B%90-%EA%B0%80%EC%9E%85-%EB%B0%8F-%ED%9A%8C%EC%9B%90-%EC%A0%95%EB%B3%B4-%EC%88%98%EB%A0%B9",
-  },
-  {
     slug: "user-dashboard",
     name: "가입 현황",
     description:
@@ -142,7 +133,7 @@ const legacyTools: ToolConfig[] = [
     description:
       "유스메타 시그널 전송 및 회원 정보 변경 테스트 도구입니다.\n" +
       "RSA-OAEP + A256GCM JWE 암호화를 적용하여 실시간/확정 시그널 전송, 회원 정보 업데이트(member/notify)를 테스트합니다.\n" +
-      "Local/Dev 환경은 Public Key가 하드코딩되어 있으며, Staging/Production은 별도 입력이 필요합니다.",
+      "보안상 Public Key는 하드코딩되어 있지 않으며, 모든 환경에서 직접 입력해야 합니다.",
   },
   {
     slug: "ym-signal-status",
@@ -176,15 +167,6 @@ const legacyTools: ToolConfig[] = [
       "RSA 하이브리드 방식: RSA-OAEP(SHA-256/MGF1-SHA-256)로 AES 키를 복호화한 뒤 AES-256-GCM(IV 16byte, tag 128bit)으로 데이터를 복호화합니다.\n" +
       "payload는 base64(JSON{encryptedKey, iv, authTag, data}) 형식이며, private.pem(PKCS#8)을 입력하면 됩니다.\n" +
       "브라우저 Web Crypto API로 동작하며 private key·payload는 서버로 전송되지 않습니다.",
-  },
-  {
-    slug: "ym-coinlist-register",
-    name: "유스메타 회원 정보 변경",
-    description:
-      "POST /v1/ym/user/update를 호출하여 유스메타 회원 연동 데이터(coin_list 포함)를 갱신하는 도구입니다.\n" +
-      "데이터를 RSA-OAEP-256 + A256GCM JWE로 암호화(Form POST 테스터와 동일)하여 partnerYouthmetaUser로 전송합니다.\n" +
-      "JWT(access-token), 암호화할 데이터, WAS 환경(Dev/Staging/Production), Public Key를 입력합니다.\n" +
-      "CORS 회피를 위해 서버 프록시(/api/ym-coinlist)를 통해 WAS로 전달됩니다.",
   },
 ];
 

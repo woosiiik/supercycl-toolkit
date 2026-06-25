@@ -5,7 +5,6 @@ import RateLimitTester from "@/components/rate-limit/RateLimitTester";
 import FaucetFarmer from "@/components/faucet-farmer/FaucetFarmer";
 import StressTester from "@/components/stress-tester/StressTester";
 import JweDecoder from "@/components/jwe-decoder/JweDecoder";
-import HandoffTester from "@/components/handoff-tester/HandoffTester";
 import UserDashboard from "@/components/user-dashboard/UserDashboard";
 import UserSignupDetail from "@/components/user-dashboard/UserSignupDetail";
 import UserExport from "@/components/user-export/UserExport";
@@ -20,7 +19,6 @@ import YmSignalStatus from "@/components/ym-signal-status/YmSignalStatus";
 import YmPushStatus from "@/components/ym-push-status/YmPushStatus";
 import YmSignalDetail from "@/components/ym-signal-detail/YmSignalDetail";
 import SyncPayloadDecrypt from "@/components/sync-payload-decrypt/SyncPayloadDecrypt";
-import YmCoinlistRegister from "@/components/ym-coinlist-register/YmCoinlistRegister";
 import ExchangePnl from "@/components/exchange-pnl/ExchangePnl";
 
 export default async function ToolPage({
@@ -49,8 +47,6 @@ export default async function ToolPage({
           <StressTester />
         ) : slug === "jwe-decoder" ? (
           <JweDecoder />
-        ) : slug === "handoff-tester" ? (
-          <HandoffTester />
         ) : slug === "user-dashboard" ? (
           <UserDashboard />
         ) : slug === "user-signup-detail" ? (
@@ -79,8 +75,6 @@ export default async function ToolPage({
           <YmSignalDetail />
         ) : slug === "sync-payload-decrypt" ? (
           <SyncPayloadDecrypt />
-        ) : slug === "ym-coinlist-register" ? (
-          <YmCoinlistRegister />
         ) : (
           <p className="text-gray-500">준비 중입니다.</p>
         )}

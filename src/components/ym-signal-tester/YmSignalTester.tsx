@@ -12,12 +12,12 @@ interface Signal {
 type ApiMode = "signal" | "member";
 type SignalType = "realtime" | "confirmed";
 
-const DEFAULT_PUBLIC_KEY =
-  "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz4ZBbxtzHKUvU3GeXtOC\nuKpAbhiJHSKt/kgig4QMeT0n3wr6zwKWZomz70smvEVZkoX12Aqqdgj8J9MxMzO2\nSFR+OgRn+XLvK182XMxeHWQpk9+ULEaOPOAYWSYo2ao8gsCsJdKT3TakTHtmrh2V\nVcAj2UZvTfro1lPbGu+Sve4Rlbi6xyA/BliwvnVVHTf4DQZmvopDsY002nAwTjdr\nAUswGWRBZTeKUwXk7mWBsoWvtgnnRUHsnW+qQpu6RCRZuGyIrWecbynTRCNMlY/A\nkkQaaWMVL8xR9Mi6LrR0S4XLlV5fR1alQEm1oeNE4du95FtPSIMQkGYCkSTESjbM\nDwIDAQAB\n-----END PUBLIC KEY-----";
+// 보안상 운영 public key는 하드코딩하지 않는다. 모든 환경에서 직접 입력받는다.
+const DEFAULT_PUBLIC_KEY = "";
 
 const WAS_ENVS: { label: string; url: string; defaultKey: string }[] = [
-  { label: "Local", url: "http://localhost:8080", defaultKey: DEFAULT_PUBLIC_KEY },
-  { label: "Dev", url: "https://pnl-dev.supercycl.io", defaultKey: DEFAULT_PUBLIC_KEY },
+  { label: "Local", url: "http://localhost:8080", defaultKey: "" },
+  { label: "Dev", url: "https://pnl-dev.supercycl.io", defaultKey: "" },
   { label: "Staging", url: "https://pnl-stg.supercycl.io", defaultKey: "" },
   { label: "Production", url: "https://pnl.supercycl.io", defaultKey: "" },
 ];
