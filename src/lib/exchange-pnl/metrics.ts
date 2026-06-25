@@ -21,6 +21,8 @@ export interface DailyEntry {
   funding: number; // 펀딩
   net: number; // 토글 반영 net
   count: number;
+  minClose: number; // 그룹 내 최초 종료시각(ms)
+  maxClose: number; // 그룹 내 최종 종료시각(ms)
 }
 
 export interface DailyPoint {
@@ -152,12 +154,26 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
     // 일별 내역(거래소+심볼 그룹)
     const em = dailyEntries.get(dk) ?? new Map<string, DailyEntry>();
     const ekey = `${r.exchange}:${r.symbol}`;
-    const entry = em.get(ekey) ?? { exchange: r.exchange, symbol: r.symbol, pricePnl: 0, fee: 0, funding: 0, net: 0, count: 0 };
+    const entry = em.get(ekey) ?? {
+      exchange: r.exchange,
+      symbol: r.symbol,
+      pricePnl: 0,
+      fee: 0,
+      funding: 0,
+      net: 0,
+      count: 0,
+      minClose: Number.POSITIVE_INFINITY,
+      maxClose: 0,
+    };
     entry.pricePnl += r.pricePnl;
     entry.fee += r.fee;
     entry.funding += r.funding;
     entry.net += net;
     entry.count += 1;
+    if (r.closeTime > 0) {
+      entry.minClose = Math.min(entry.minClose, r.closeTime);
+      entry.maxClose = Math.max(entry.maxClose, r.closeTime);
+    }
     em.set(ekey, entry);
     dailyEntries.set(dk, em);
 

@@ -79,6 +79,13 @@ function pnlColor(n: number): string {
 
 const TOOLTIP_MAX = 12;
 
+// ms → HH:MM:SS (UTC). 그룹에 여러 건이면 최초~최종 범위로.
+function closeTimeLabel(min: number, max: number): string {
+  if (!Number.isFinite(min) || max <= 0) return "";
+  const hms = (ms: number) => new Date(ms).toISOString().slice(11, 19);
+  return min === max ? `${hms(max)} UTC` : `${hms(min)}–${hms(max)} UTC`;
+}
+
 // 일별 차트 hover 시 그 날짜 내역을 거래소·심볼별로, 가격손익/수수료/펀딩/Net 구분해 표시
 function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: DailyPoint }> }) {
   if (!active || !payload?.length) return null;
@@ -86,7 +93,7 @@ function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{
   const entries = dp.entries ?? [];
   const shown = entries.slice(0, TOOLTIP_MAX);
   const rest = entries.length - shown.length;
-  const numCls = (n: number) => `px-2 py-0.5 text-right tabular-nums ${pnlColor(n)}`;
+  const numCls = (n: number) => `px-2 py-0.5 text-right align-top tabular-nums ${pnlColor(n)}`;
   return (
     <div className="max-w-md rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
       <div className="mb-1 flex items-baseline justify-between gap-3">
@@ -109,18 +116,23 @@ function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{
           <tbody>
             {shown.map((e, i) => (
               <tr key={i} className="border-t border-zinc-100 dark:border-zinc-800">
-                <td className="py-0.5 pr-2">
+                <td className="py-0.5 pr-2 align-top">
                   <span className="flex items-center gap-1">
                     <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: EXCHANGE_COLORS[e.exchange] }} />
                     <span className="text-zinc-400">{SHORT[e.exchange]}</span>
                     <span className="text-zinc-600 dark:text-zinc-300">{e.symbol || "—"}</span>
                     {e.count > 1 && <span className="text-zinc-400">×{e.count}</span>}
                   </span>
+                  {closeTimeLabel(e.minClose, e.maxClose) && (
+                    <span className="block pl-2.5 font-mono text-[10px] text-zinc-400">
+                      {closeTimeLabel(e.minClose, e.maxClose)}
+                    </span>
+                  )}
                 </td>
                 <td className={numCls(e.pricePnl)}>{fmtUsd(e.pricePnl)}</td>
                 <td className={numCls(e.fee)}>{fmtUsd(e.fee)}</td>
                 <td className={numCls(e.funding)}>{fmtUsd(e.funding)}</td>
-                <td className={`px-2 py-0.5 text-right font-medium tabular-nums ${pnlColor(e.net)}`}>{fmtUsd(e.net)}</td>
+                <td className={`px-2 py-0.5 text-right align-top font-medium tabular-nums ${pnlColor(e.net)}`}>{fmtUsd(e.net)}</td>
               </tr>
             ))}
           </tbody>
