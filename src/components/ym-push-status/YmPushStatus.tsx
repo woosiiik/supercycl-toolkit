@@ -530,7 +530,7 @@ function StatusView({
               </div>
             ) : (
               <p className="text-xs text-zinc-500 mt-1">
-                워치리스트 코인에 대한 포지션 없음
+                보유 중인 포지션 없음
               </p>
             )}
           </div>

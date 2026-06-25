@@ -59,6 +59,55 @@ function createRedisClient(env: DbEnv): Redis | Cluster {
   return new Redis({ host, port, password, connectTimeout: 5000, lazyConnect: true });
 }
 
+// 단일/클러스터 Redis 모두에서 패턴에 매칭되는 키를 SCAN으로 수집
+async function scanKeys(redis: Redis | Cluster, pattern: string): Promise<string[]> {
+  const keys: string[] = [];
+  const nodes = redis instanceof Cluster ? redis.nodes("master") : [redis];
+  for (const node of nodes) {
+    let cursor = "0";
+    do {
+      const [next, batch] = (await node.scan(
+        cursor,
+        "MATCH",
+        pattern,
+        "COUNT",
+        500,
+      )) as [string, string[]];
+      cursor = next;
+      keys.push(...batch);
+    } while (cursor !== "0");
+  }
+  return keys;
+}
+
+// memberKey(okx:{uid})가 속한 모든 coin:position 포지션 조회 (워치리스트 무관, 전체)
+async function fetchAllPositions(
+  redis: Redis | Cluster,
+  memberKey: string,
+): Promise<Array<{ symbol: string; direction: string; member: string }>> {
+  const keys = await scanKeys(redis, "coin:position:*");
+  const positions: Array<{ symbol: string; direction: string; member: string }> = [];
+  if (keys.length === 0) return positions;
+
+  const pipeline = redis.pipeline();
+  for (const key of keys) pipeline.sismember(key, memberKey);
+  const results = (await pipeline.exec()) ?? [];
+
+  results.forEach((res, idx) => {
+    const [err, isMember] = res as [Error | null, number];
+    if (err || !isMember) return;
+    const parts = keys[idx].split(":");
+    const dir = parts[parts.length - 1]; // long | short
+    if (dir !== "long" && dir !== "short") return;
+    // coin:position:{symbol}:{dir} — symbol에 ':'가 있을 가능성까지 보존
+    const symbol = parts.slice(2, parts.length - 1).join(":");
+    positions.push({ symbol, direction: dir, member: memberKey });
+  });
+
+  positions.sort((a, b) => a.symbol.localeCompare(b.symbol) || a.direction.localeCompare(b.direction));
+  return positions;
+}
+
 export async function GET(req: NextRequest) {
   const env = (req.nextUrl.searchParams.get("env") || "local") as DbEnv;
   const inputAddress = req.nextUrl.searchParams.get("address") || "";
@@ -175,18 +224,8 @@ export async function GET(req: NextRequest) {
       await redis.connect();
 
       const memberKey = `okx:${okxKey.uid}`;
-      // 워치리스트 코인뿐 아니라 전체 포지션 조회
-      // 워치리스트가 있으면 워치리스트 기준, 없으면 빈배열
-      const symbolsToCheck = watchlist.length > 0 ? watchlist : [];
-
-      for (const symbol of symbolsToCheck) {
-        for (const dir of ["long", "short"]) {
-          const members = await redis.smembers(`coin:position:${symbol}:${dir}`);
-          if (members.includes(memberKey)) {
-            positions.push({ symbol, direction: dir, member: memberKey });
-          }
-        }
-      }
+      // 워치리스트와 무관하게 보유 중인 전체 포지션 조회
+      positions = await fetchAllPositions(redis, memberKey);
     }
 
     return NextResponse.json({
@@ -236,41 +275,12 @@ async function handlePositions(env: DbEnv, inputAddress: string, inputUid: strin
       return NextResponse.json({ positions: [] });
     }
 
-    // ACTIVE youthmeta 회원의 ym_uid 조회 (watchlist는 ym_uid로 조회)
-    const [ymRows] = await conn.query(
-      "SELECT ym_uid FROM t_partner_youthmeta_user WHERE address = ? AND status = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1",
-      [address],
-    ) as [Array<{ ym_uid: string | number }>, unknown];
-    if (ymRows.length === 0) {
-      return NextResponse.json({ positions: [] });
-    }
-    const ymUid = ymRows[0].ym_uid;
-
-    // watchlist 조회 (ym_uid 기준)
-    const [wlRows] = await conn.query(
-      "SELECT symbol FROM t_ym_user_watchlist WHERE ym_uid = ?",
-      [ymUid],
-    ) as [Array<{ symbol: string }>, unknown];
-    const watchlist = wlRows.map((r) => r.symbol);
-
-    if (watchlist.length === 0) {
-      return NextResponse.json({ positions: [] });
-    }
-
     redis = createRedisClient(env);
     await redis.connect();
 
+    // 워치리스트와 무관하게 보유 중인 전체 포지션 조회
     const memberKey = `okx:${exRows[0].uid}`;
-    const positions: Array<{ symbol: string; direction: string; member: string }> = [];
-
-    for (const symbol of watchlist) {
-      for (const dir of ["long", "short"]) {
-        const members = await redis.smembers(`coin:position:${symbol}:${dir}`);
-        if (members.includes(memberKey)) {
-          positions.push({ symbol, direction: dir, member: memberKey });
-        }
-      }
-    }
+    const positions = await fetchAllPositions(redis, memberKey);
 
     return NextResponse.json({ positions });
   } catch (err) {
