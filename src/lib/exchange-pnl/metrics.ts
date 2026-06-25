@@ -27,6 +27,8 @@ export interface SymbolPoint {
   funding: number;
   net: number;
   count: number;
+  /** 이 심볼 행에 기여한 거래소들 (합산 보기에서 표기용) */
+  exchanges: ExchangeId[];
 }
 
 export interface HoldTimeStats {
@@ -80,6 +82,7 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
 
   const dailyMap = new Map<string, DailyPoint>();
   const symbolMap = new Map<string, SymbolPoint>();
+  const symbolExchanges = new Map<string, Set<ExchangeId>>();
   const units = new Set<string>();
 
   // 포지션 승/패: win 필드가 채워진(=포지션/청산오더/fill 단위) row만 카운트
@@ -120,13 +123,16 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
     dailyMap.set(dk, dp);
 
     // 심볼별
-    const sp = symbolMap.get(r.symbol) ?? { symbol: r.symbol, pricePnl: 0, fee: 0, funding: 0, net: 0, count: 0 };
+    const sp = symbolMap.get(r.symbol) ?? { symbol: r.symbol, pricePnl: 0, fee: 0, funding: 0, net: 0, count: 0, exchanges: [] };
     sp.pricePnl += r.pricePnl;
     sp.fee += r.fee;
     sp.funding += r.funding;
     sp.net += net;
     sp.count += 1;
     symbolMap.set(r.symbol, sp);
+    const exSet = symbolExchanges.get(r.symbol) ?? new Set<ExchangeId>();
+    exSet.add(r.exchange);
+    symbolExchanges.set(r.symbol, exSet);
 
     if (r.unit !== "income") closedCount += 1;
 
@@ -155,6 +161,9 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
   }
 
   const daily = [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+  for (const sp of symbolMap.values()) {
+    sp.exchanges = [...(symbolExchanges.get(sp.symbol) ?? [])];
+  }
   const bySymbol = [...symbolMap.values()].sort((a, b) => b.net - a.net);
 
   const totalWL = winCount + lossCount;

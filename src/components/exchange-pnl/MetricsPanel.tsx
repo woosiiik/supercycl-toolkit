@@ -14,7 +14,7 @@ import {
 import type { NormalizedRow, ExchangeId } from "@/lib/exchange-pnl/types";
 import { computeMetrics, formatHoldTime, type PnlToggles } from "@/lib/exchange-pnl/metrics";
 import { fmtAmount } from "@/lib/exchange-pnl/format";
-import { EXCHANGES } from "@/lib/exchange-pnl/exchanges";
+import { EXCHANGES, EXCHANGE_COLORS } from "@/lib/exchange-pnl/exchanges";
 
 // 작은 값(sub-cent 펀딩 등)도 보이도록 적응형 포맷 사용
 const fmtUsd = fmtAmount;
@@ -196,6 +196,12 @@ export default function MetricsPanel({ rows, toggles, showSupportNotes }: Props)
             </span>
           )}
         </div>
+        {showSupportNotes && (
+          <p className="mb-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+            ※ 거래소마다 심볼 표기가 달라(BTC-USDT / BTCUSDT / BTC_USDT / BTC 등) 같은 코인이 여러 행으로 분리됩니다.
+            하나로 합치려면 거래소 간 심볼 매핑이 필요합니다(현재는 미적용 — 상황 파악 우선). 각 행 옆에 출처 거래소를 표기합니다.
+          </p>
+        )}
         <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
           <table className="w-full text-sm">
             <thead className="bg-zinc-50 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
@@ -211,7 +217,23 @@ export default function MetricsPanel({ rows, toggles, showSupportNotes }: Props)
             <tbody>
               {topSymbols.map((s) => (
                 <tr key={s.symbol} className="border-t border-zinc-100 dark:border-zinc-800">
-                  <td className="px-3 py-1.5 font-medium text-zinc-700 dark:text-zinc-300">{s.symbol || "—"}</td>
+                  <td className="px-3 py-1.5 font-medium text-zinc-700 dark:text-zinc-300">
+                    <span>{s.symbol || "—"}</span>
+                    {showSupportNotes && s.exchanges.length > 0 && (
+                      <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                        {s.exchanges.map((ex) => (
+                          <span
+                            key={ex}
+                            className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-[10px] font-normal text-zinc-500 dark:text-zinc-400"
+                            style={{ backgroundColor: EXCHANGE_COLORS[ex] + "22" }}
+                          >
+                            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: EXCHANGE_COLORS[ex] }} />
+                            {SHORT[ex]}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </td>
                   <td className={`px-3 py-1.5 text-right tabular-nums ${pnlColor(s.net)}`}>{fmtUsd(s.net)}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-zinc-500">{fmtUsd(s.pricePnl)}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-zinc-500">{fmtUsd(s.fee)}</td>
