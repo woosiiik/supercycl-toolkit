@@ -1,0 +1,195 @@
+import type { NormalizedRow, ExchangeId } from "./types";
+
+// 정규화 row → 지표 계산. 수수료/펀딩 토글은 net을 재계산하는 단순 산술.
+
+export interface PnlToggles {
+  includeFee: boolean;
+  includeFunding: boolean;
+}
+
+/** 토글 적용 net = pricePnl + (fee?) + (funding?) */
+export function effectiveNet(row: NormalizedRow, t: PnlToggles): number {
+  return row.pricePnl + (t.includeFee ? row.fee : 0) + (t.includeFunding ? row.funding : 0);
+}
+
+export interface DailyPoint {
+  date: string; // YYYY-MM-DD (UTC)
+  pricePnl: number;
+  fee: number;
+  funding: number;
+  net: number;
+}
+
+export interface SymbolPoint {
+  symbol: string;
+  pricePnl: number;
+  fee: number;
+  funding: number;
+  net: number;
+  count: number;
+}
+
+export interface HoldTimeStats {
+  /** 평균 보유시간(ms) */
+  overallAvg: number;
+  winAvg: number;
+  lossAvg: number;
+  /** holdTime 이 있는 row 수 */
+  sampleCount: number;
+}
+
+export interface Metrics {
+  rowCount: number;
+  /** 포지션/청산오더/fill 단위 카운트 (income 제외) */
+  closedCount: number;
+  totalNet: number;
+  totalPrice: number;
+  totalFee: number;
+  totalFunding: number;
+  avgNet: number; // closedCount 기준 평균
+  profit: number; // net > 0 합
+  loss: number; // net < 0 합
+  winCount: number | null;
+  lossCount: number | null;
+  winRate: number | null; // 0~1
+  daily: DailyPoint[];
+  bySymbol: SymbolPoint[];
+  holdTime: HoldTimeStats | null;
+  /** 데이터 단위들 (혼합 시 표시) */
+  units: string[];
+  /** 포지션 승/패 지원 여부 (win 필드가 채워진 row가 있는지) */
+  positionGranular: boolean;
+}
+
+function dateKey(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
+  let totalNet = 0;
+  let totalPrice = 0;
+  let totalFee = 0;
+  let totalFunding = 0;
+  let profit = 0;
+  let loss = 0;
+
+  const dailyMap = new Map<string, DailyPoint>();
+  const symbolMap = new Map<string, SymbolPoint>();
+  const units = new Set<string>();
+
+  // 포지션 승/패: win 필드가 채워진(=포지션/청산오더/fill 단위) row만 카운트
+  let winCount = 0;
+  let lossCount = 0;
+  let hasWinField = false;
+
+  // hold time
+  let htOverallSum = 0;
+  let htWinSum = 0;
+  let htLossSum = 0;
+  let htCount = 0;
+  let htWinCount = 0;
+  let htLossCount = 0;
+
+  let closedCount = 0;
+
+  for (const r of rows) {
+    units.add(r.unit);
+    const net = effectiveNet(r, t);
+    totalNet += net;
+    totalPrice += r.pricePnl;
+    totalFee += r.fee;
+    totalFunding += r.funding;
+    if (net > 0) profit += net;
+    else if (net < 0) loss += net;
+
+    // 일별
+    const dk = dateKey(r.closeTime);
+    const dp = dailyMap.get(dk) ?? { date: dk, pricePnl: 0, fee: 0, funding: 0, net: 0 };
+    dp.pricePnl += r.pricePnl;
+    dp.fee += r.fee;
+    dp.funding += r.funding;
+    dp.net += net;
+    dailyMap.set(dk, dp);
+
+    // 심볼별
+    const sp = symbolMap.get(r.symbol) ?? { symbol: r.symbol, pricePnl: 0, fee: 0, funding: 0, net: 0, count: 0 };
+    sp.pricePnl += r.pricePnl;
+    sp.fee += r.fee;
+    sp.funding += r.funding;
+    sp.net += net;
+    sp.count += 1;
+    symbolMap.set(r.symbol, sp);
+
+    if (r.unit !== "income") closedCount += 1;
+
+    if (r.win !== null) {
+      hasWinField = true;
+      if (r.win) winCount += 1;
+      else lossCount += 1;
+    }
+
+    if (r.holdTimeMs !== null && r.holdTimeMs > 0) {
+      htOverallSum += r.holdTimeMs;
+      htCount += 1;
+      if (r.win) {
+        htWinSum += r.holdTimeMs;
+        htWinCount += 1;
+      } else {
+        htLossSum += r.holdTimeMs;
+        htLossCount += 1;
+      }
+    }
+  }
+
+  const daily = [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+  const bySymbol = [...symbolMap.values()].sort((a, b) => b.net - a.net);
+
+  const totalWL = winCount + lossCount;
+  const holdTime: HoldTimeStats | null =
+    htCount > 0
+      ? {
+          overallAvg: htOverallSum / htCount,
+          winAvg: htWinCount > 0 ? htWinSum / htWinCount : 0,
+          lossAvg: htLossCount > 0 ? htLossSum / htLossCount : 0,
+          sampleCount: htCount,
+        }
+      : null;
+
+  return {
+    rowCount: rows.length,
+    closedCount,
+    totalNet,
+    totalPrice,
+    totalFee,
+    totalFunding,
+    avgNet: closedCount > 0 ? totalNet / closedCount : 0,
+    profit,
+    loss,
+    winCount: hasWinField ? winCount : null,
+    lossCount: hasWinField ? lossCount : null,
+    winRate: hasWinField && totalWL > 0 ? winCount / totalWL : null,
+    daily,
+    bySymbol,
+    holdTime,
+    units: [...units],
+    positionGranular: hasWinField,
+  };
+}
+
+/** 여러 거래소 row를 합쳐 거래소 식별이 가능하도록(이미 exchange 필드 있음) 그대로 합산 */
+export function combineRows(byExchange: Partial<Record<ExchangeId, NormalizedRow[]>>, selected: ExchangeId[]): NormalizedRow[] {
+  const out: NormalizedRow[] = [];
+  for (const ex of selected) {
+    const rows = byExchange[ex];
+    if (rows) out.push(...rows);
+  }
+  return out;
+}
+
+export function formatHoldTime(ms: number): string {
+  if (!ms || ms <= 0) return "—";
+  const h = ms / (1000 * 60 * 60);
+  if (h < 1) return `${(h * 60).toFixed(0)}분`;
+  if (h < 24) return `${h.toFixed(1)}시간`;
+  return `${(h / 24).toFixed(1)}일`;
+}

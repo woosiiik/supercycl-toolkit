@@ -21,6 +21,7 @@ import YmPushStatus from "@/components/ym-push-status/YmPushStatus";
 import YmSignalDetail from "@/components/ym-signal-detail/YmSignalDetail";
 import SyncPayloadDecrypt from "@/components/sync-payload-decrypt/SyncPayloadDecrypt";
 import YmCoinlistRegister from "@/components/ym-coinlist-register/YmCoinlistRegister";
+import ExchangePnl from "@/components/exchange-pnl/ExchangePnl";
 
 export default async function ToolPage({
   params,
@@ -38,7 +39,9 @@ export default async function ToolPage({
     <div>
       <ToolHeader tool={tool} />
       <div className="p-6">
-        {slug === "hl-rate-limit-tester" ? (
+        {slug === "exchange-pnl" ? (
+          <ExchangePnl />
+        ) : slug === "hl-rate-limit-tester" ? (
           <RateLimitTester />
         ) : slug === "hl-testnet-faucet-farmer" ? (
           <FaucetFarmer />

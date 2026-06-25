@@ -74,24 +74,33 @@ export default function Sidebar() {
           </button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-0.5 px-2 pb-4">
-          {tools.map((tool) => {
+        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-4">
+          {tools.map((tool, idx) => {
             const href = `/tools/${tool.slug}`;
             const isActive = pathname === href;
+            // legacy 시작 지점에 구분선 표시
+            const prev = tools[idx - 1];
+            const showLegacyDivider = tool.legacy && (!prev || !prev.legacy);
 
             return (
-              <Link
-                key={tool.slug}
-                href={href}
-                onClick={() => setIsOpen(false)}
-                className={`rounded-md px-3 py-2 text-sm transition-colors ${
-                  isActive
-                    ? "bg-zinc-200 font-medium text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
-                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                }`}
-              >
-                {tool.name}
-              </Link>
+              <div key={tool.slug}>
+                {showLegacyDivider && (
+                  <div className="mb-1 mt-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
+                    Legacy
+                  </div>
+                )}
+                <Link
+                  href={href}
+                  onClick={() => setIsOpen(false)}
+                  className={`block rounded-md px-3 py-2 text-sm transition-colors ${
+                    isActive
+                      ? "bg-zinc-200 font-medium text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
+                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                  }`}
+                >
+                  {tool.name}
+                </Link>
+              </div>
             );
           })}
         </nav>

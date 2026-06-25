@@ -3,9 +3,25 @@ export interface ToolConfig {
   name: string; // 메뉴 표시명
   description: string; // Tool_Page 상단 설명
   icon?: string; // 선택적 아이콘
+  legacy?: boolean; // 기존(legacy) 메뉴 — 사이드바에서 구분선 아래로 분리
 }
 
-export const tools: ToolConfig[] = [
+// === 신규 메뉴 (상단) ===
+const newTools: ToolConfig[] = [
+  {
+    slug: "exchange-pnl",
+    name: "거래소 PNL 수집/검증",
+    description:
+      "7개 코인선물거래소(OKX·BingX·Bitget·Gate·Bybit·Binance·Hyperliquid)의 Futures PnL을 실제 API로 수집하여 검증하는 도구입니다.\n" +
+      "거래소별 read-only API key(Hyperliquid는 지갑 주소)를 입력하면 포지션 히스토리/income/fills를 수집해 PnL을 가격손익·수수료·펀딩 컴포넌트로 분리 정규화합니다.\n" +
+      "여러 거래소 합산 보기, 거래소별 보기, 원본 API 응답(raw) 보기를 제공하며 수수료/펀딩 토글로 net을 재계산합니다.\n" +
+      "본격 개발 전 실제 데이터 형태 확인 및 설계 검토용입니다. API key와 수집 데이터는 브라우저 localStorage에만 저장됩니다.\n" +
+      "설계 근거: docs/pnl/exchange-pnl-comparison.md",
+  },
+];
+
+// === Legacy 메뉴 (기존) ===
+const legacyTools: ToolConfig[] = [
   {
     slug: "hl-rate-limit-tester",
     name: "HL Rate-Limit Tester",
@@ -170,4 +186,9 @@ export const tools: ToolConfig[] = [
       "JWT(access-token), 암호화할 데이터, WAS 환경(Dev/Staging/Production), Public Key를 입력합니다.\n" +
       "CORS 회피를 위해 서버 프록시(/api/ym-coinlist)를 통해 WAS로 전달됩니다.",
   },
+];
+
+export const tools: ToolConfig[] = [
+  ...newTools,
+  ...legacyTools.map((t) => ({ ...t, legacy: true as const })),
 ];
