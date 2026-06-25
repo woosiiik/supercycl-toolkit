@@ -117,11 +117,17 @@ function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{
             {shown.map((e, i) => (
               <tr key={i} className="border-t border-zinc-100 dark:border-zinc-800">
                 <td className="py-0.5 pr-2 align-top">
-                  <span className="flex items-center gap-1">
+                  <span className="flex flex-wrap items-center gap-1">
                     <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: EXCHANGE_COLORS[e.exchange] }} />
                     <span className="text-zinc-400">{SHORT[e.exchange]}</span>
                     <span className="text-zinc-600 dark:text-zinc-300">{e.symbol || "—"}</span>
-                    {e.count > 1 && <span className="text-zinc-400">×{e.count}</span>}
+                    {e.side && (
+                      <span className={e.side === "long" ? "font-medium text-emerald-600 dark:text-emerald-400" : "font-medium text-red-600 dark:text-red-400"}>
+                        {e.side === "long" ? "L" : "S"}
+                      </span>
+                    )}
+                    {e.leverage && <span className="text-zinc-500">{e.leverage}x</span>}
+                    {e.count > 1 && <span className="text-zinc-400">·{e.count}건</span>}
                   </span>
                   {closeTimeLabel(e.minClose, e.maxClose) && (
                     <span className="block pl-2.5 font-mono text-[10px] text-zinc-400">

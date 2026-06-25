@@ -82,6 +82,7 @@ interface BitgetPos {
   totalFunding?: string;
   pnl?: string; // 실현손익(가격)
   netProfit?: string; // 순익
+  leverage?: string;
 }
 
 function normalize(d: BitgetPos): NormalizedRow {
@@ -106,5 +107,6 @@ function normalize(d: BitgetPos): NormalizedRow {
     holdTimeMs: open && close ? close - open : null,
     win: net > 0,
     unit: "position",
+    leverage: num(d.leverage) || null,
   };
 }

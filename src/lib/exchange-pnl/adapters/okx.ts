@@ -81,6 +81,7 @@ interface OkxPos {
   fee: string; // 수수료(음수)
   fundingFee: string;
   realizedPnl: string; // net
+  lever?: string; // 레버리지
   cTime: string;
   uTime: string;
 }
@@ -106,5 +107,6 @@ function normalize(d: OkxPos): NormalizedRow {
     holdTimeMs: openTime && closeTime ? closeTime - openTime : null,
     win: net > 0,
     unit: "position",
+    leverage: num(d.lever) || null,
   };
 }

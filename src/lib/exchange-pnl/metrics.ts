@@ -16,6 +16,8 @@ export function effectiveNet(row: NormalizedRow, t: PnlToggles): number {
 export interface DailyEntry {
   exchange: ExchangeId;
   symbol: string;
+  side: "long" | "short" | null;
+  leverage: number | null;
   pricePnl: number; // 가격손익(closed PnL)
   fee: number; // 수수료
   funding: number; // 펀딩
@@ -153,10 +155,14 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
     dailyMap.set(dk, dp);
     // 일별 내역(거래소+심볼 그룹)
     const em = dailyEntries.get(dk) ?? new Map<string, DailyEntry>();
-    const ekey = `${r.exchange}:${r.symbol}`;
+    const lev = r.leverage ?? null;
+    // 거래소+심볼+방향+레버리지가 같은 건끼리 묶음 (방향/레버리지가 한 줄에 일관)
+    const ekey = `${r.exchange}:${r.symbol}:${r.side ?? ""}:${lev ?? ""}`;
     const entry = em.get(ekey) ?? {
       exchange: r.exchange,
       symbol: r.symbol,
+      side: r.side,
+      leverage: lev,
       pricePnl: 0,
       fee: 0,
       funding: 0,

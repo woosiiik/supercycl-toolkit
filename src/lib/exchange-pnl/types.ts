@@ -79,6 +79,8 @@ export interface NormalizedRow {
   win: boolean | null;
   /** 데이터 단위 */
   unit: PositionUnit;
+  /** 레버리지(배수). 제공하지 않는 거래소는 null/undefined (OKX·BingX·Bitget·Bybit만 제공) */
+  leverage?: number | null;
 }
 
 /** 어댑터 → API 응답 */

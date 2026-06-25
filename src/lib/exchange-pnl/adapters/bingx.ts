@@ -163,6 +163,7 @@ interface BingxPos {
   openTime?: number | string;
   updateTime?: number | string;
   closeTime?: number | string;
+  leverage?: number | string;
 }
 
 function normalize(d: BingxPos, fallbackSymbol: string): NormalizedRow {
@@ -187,5 +188,6 @@ function normalize(d: BingxPos, fallbackSymbol: string): NormalizedRow {
     holdTimeMs: open && close ? close - open : null,
     win: net > 0,
     unit: "position",
+    leverage: num(d.leverage) || null,
   };
 }

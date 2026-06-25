@@ -136,6 +136,7 @@ interface BybitClosed {
   closedPnl?: string;
   openFee?: string;
   closeFee?: string;
+  leverage?: string;
   orderId?: string;
   createdTime?: string;
   updatedTime?: string;
@@ -145,12 +146,16 @@ function normalize(d: BybitClosed): NormalizedRow {
   const close = num(d.updatedTime ?? d.createdTime);
   const net = num(d.closedPnl); // 수수료 포함 여부 실데이터 검증 권장
   const fee = -(num(d.openFee) + num(d.closeFee));
+  // closed-pnl의 side는 "청산 주문" 방향 → 포지션 방향은 그 반대(one-way 모드 기준).
+  // 청산이 Sell이면 롱을 닫은 것 = 포지션 long, Buy면 short.
+  const cs = (d.side || "").toLowerCase();
+  const side = cs === "sell" ? "long" : cs === "buy" ? "short" : null;
   // closedPnl을 net으로 두고 fee는 별도 표기. pricePnl = net - fee 로 근사.
   return {
     exchange: "bybit",
     id: d.orderId ?? `${d.symbol}-${close}`,
     symbol: d.symbol ?? "",
-    side: null, // 청산오더 side는 포지션 방향과 반대라 미표기
+    side,
     pricePnl: net - fee,
     fee,
     funding: 0,
@@ -160,6 +165,7 @@ function normalize(d: BybitClosed): NormalizedRow {
     holdTimeMs: null,
     win: net > 0,
     unit: "closing_order",
+    leverage: num(d.leverage) || null,
   };
 }
 
