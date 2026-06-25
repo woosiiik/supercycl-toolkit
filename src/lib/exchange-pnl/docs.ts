@@ -183,17 +183,19 @@ export const EXCHANGE_DOCS: Record<ExchangeId, ExchangeDoc> = {
     auth: "API Key + Secret / HMAC-SHA256, 헤더 X-BAPI-API-KEY/TIMESTAMP/RECV-WINDOW/SIGN",
     flow: [
       "기간을 7일 윈도우로 분할 (단일요청 7일 제한)",
-      "각 윈도우에서 closed-pnl(category=linear, limit=100) 호출",
-      "nextPageCursor 로 다음 페이지 요청",
+      "① 각 윈도우에서 closed-pnl(category=linear, limit=100) 호출 → 청산손익·수수료",
+      "② 각 윈도우에서 transaction-log(type=SETTLEMENT, limit=50) 호출 → 펀딩 (별도 원장)",
+      "각각 nextPageCursor 로 페이지네이션",
     ],
-    diagram: `기간 → 7일 윈도우로 분할
-┌─ 7d ─┐ ┌─ 7d ─┐ ┌─ 7d ─┐ …
-│closed│ │closed│ │closed│
-│ -pnl │ │ -pnl │ │ -pnl │
-│cursor│ │cursor│ │cursor│
-└──┬───┘ └──────┘ └──────┘
-   ▼
- 청산오더 단위 row (포지션 아님!)`,
+    diagram: `기간 → 7일 윈도우로 분할, 각 윈도우마다 2개 소스
+┌─ 7d ──────────────────────┐
+│ ① closed-pnl              │ → 청산손익(net) + 수수료
+│    (cursor 페이지)         │
+│ ② transaction-log         │ → 펀딩(SETTLEMENT)
+│    type=SETTLEMENT         │    실제 발생일 귀속
+└──────────┬────────────────┘
+           ▼  합산
+   청산오더 row + 펀딩 row`,
     fields: [
       { raw: "symbol", norm: "symbol" },
       { raw: "closedPnl", norm: "net (수수료 포함 여부 검증 필요)" },
@@ -201,13 +203,13 @@ export const EXCHANGE_DOCS: Record<ExchangeId, ExchangeDoc> = {
       { raw: "updatedTime", norm: "closeTime (귀속시각)" },
       { raw: "orderId", norm: "dedupe 키" },
       { raw: "createdTime (청산주문 시각)", norm: "⚠ 포지션 오픈시각 아님" },
+      { raw: "txlog.funding (SETTLEMENT)", norm: "펀딩(funding) — 별도 호출, 실제 발생일" },
     ],
-    pnlDef: "net = closedPnl, 펀딩은 미포함(별도 transaction-log SETTLEMENT 필요)",
-    knowable: ["일별 PnL", "30일 합계·평균", "심볼별 PnL"],
+    pnlDef: "청산손익=closed-pnl(net·수수료), 펀딩=transaction-log SETTLEMENT(실제 발생일 귀속). 둘을 합쳐 net 산출",
+    knowable: ["일별 PnL", "30일 합계·평균", "심볼별 PnL", "펀딩(별도 원장 수집)"],
     unknowable: [
       "보유시간(hold time) — 포지션 오픈시각이 없음(청산주문 시각만 존재)",
       "포지션 단위 승/패 수·승률 — 부분청산 시 1포지션이 여러 row → '청산오더 단위' 근사만 가능",
-      "펀딩 — closed-pnl에 미포함",
     ],
     retention: "closed-pnl·transaction-log 2년, 단일요청 7일 윈도우",
     rateLimit: "closed-pnl 50/s per UID, IP 600/5s",

@@ -69,8 +69,8 @@ export const EXCHANGES: ExchangeMeta[] = [
     name: "Bybit",
     tier: "A-",
     unit: "closing_order",
-    endpoint: "GET /v5/position/closed-pnl (category=linear, 7일 윈도우)",
-    note: "청산오더 단위(포지션 아님) → hold time 불가, 승/패는 청산오더 근사. 펀딩은 미포함.",
+    endpoint: "GET /v5/position/closed-pnl + transaction-log(SETTLEMENT)",
+    note: "청산오더 단위(포지션 아님) → hold time 불가, 승/패는 청산오더 근사. 펀딩은 transaction-log에서 별도 수집.",
     credFields: [
       { key: "apiKey", label: "API Key", secret: true },
       { key: "apiSecret", label: "API Secret", secret: true },

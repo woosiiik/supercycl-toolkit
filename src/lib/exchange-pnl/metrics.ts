@@ -49,9 +49,14 @@ export interface Metrics {
   avgNet: number; // closedCount 기준 평균
   profit: number; // net > 0 합
   loss: number; // net < 0 합
+  // 근사 포함(포지션 + 청산오더 + fill 단위 전부)
   winCount: number | null;
   lossCount: number | null;
   winRate: number | null; // 0~1
+  // 정식(포지션 단위 = unit "position": OKX·BingX·Bitget·Gate)만
+  winCountStrict: number | null;
+  lossCountStrict: number | null;
+  winRateStrict: number | null; // 0~1
   daily: DailyPoint[];
   bySymbol: SymbolPoint[];
   holdTime: HoldTimeStats | null;
@@ -81,6 +86,9 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
   let winCount = 0;
   let lossCount = 0;
   let hasWinField = false;
+  // 정식(포지션 단위)만 별도 카운트
+  let winCountStrict = 0;
+  let lossCountStrict = 0;
 
   // hold time
   let htOverallSum = 0;
@@ -126,6 +134,11 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
       hasWinField = true;
       if (r.win) winCount += 1;
       else lossCount += 1;
+      // 정식: 포지션 단위 row만
+      if (r.unit === "position") {
+        if (r.win) winCountStrict += 1;
+        else lossCountStrict += 1;
+      }
     }
 
     if (r.holdTimeMs !== null && r.holdTimeMs > 0) {
@@ -145,6 +158,7 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
   const bySymbol = [...symbolMap.values()].sort((a, b) => b.net - a.net);
 
   const totalWL = winCount + lossCount;
+  const totalWLStrict = winCountStrict + lossCountStrict;
   const holdTime: HoldTimeStats | null =
     htCount > 0
       ? {
@@ -168,6 +182,9 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
     winCount: hasWinField ? winCount : null,
     lossCount: hasWinField ? lossCount : null,
     winRate: hasWinField && totalWL > 0 ? winCount / totalWL : null,
+    winCountStrict: totalWLStrict > 0 ? winCountStrict : null,
+    lossCountStrict: totalWLStrict > 0 ? lossCountStrict : null,
+    winRateStrict: totalWLStrict > 0 ? winCountStrict / totalWLStrict : null,
     daily,
     bySymbol,
     holdTime,
