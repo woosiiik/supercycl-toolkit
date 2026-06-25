@@ -86,6 +86,23 @@ function closeTimeLabel(min: number, max: number): string {
   return min === max ? `${hms(max)} UTC` : `${hms(min)}–${hms(max)} UTC`;
 }
 
+// long/short 화살표 배지
+function SideBadge({ side }: { side: "long" | "short" }) {
+  const long = side === "long";
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 rounded px-1 py-px text-[10px] font-bold leading-none ${
+        long
+          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+          : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+      }`}
+    >
+      {long ? "▲" : "▼"}
+      {long ? "LONG" : "SHORT"}
+    </span>
+  );
+}
+
 // 일별 차트 hover 시 그 날짜 내역을 거래소·심볼별로, 가격손익/수수료/펀딩/Net 구분해 표시
 function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: DailyPoint }> }) {
   if (!active || !payload?.length) return null;
@@ -93,62 +110,67 @@ function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{
   const entries = dp.entries ?? [];
   const shown = entries.slice(0, TOOLTIP_MAX);
   const rest = entries.length - shown.length;
-  const numCls = (n: number) => `px-2 py-0.5 text-right align-top tabular-nums ${pnlColor(n)}`;
+  const num = (n: number) => `px-3 py-2 text-right align-middle tabular-nums ${pnlColor(n)}`;
   return (
-    <div className="max-w-md rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-      <div className="mb-1 flex items-baseline justify-between gap-3">
-        <span className="font-medium text-zinc-700 dark:text-zinc-200">{dp.date}</span>
-        <span className={`font-semibold tabular-nums ${pnlColor(dp.net)}`}>Net {fmtUsd(dp.net)}</span>
+    <div className="min-w-[34rem] max-w-2xl rounded-lg border border-zinc-200 bg-white text-xs shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+      {/* 헤더 */}
+      <div className="flex items-baseline justify-between gap-4 border-b border-zinc-200 px-4 py-2.5 dark:border-zinc-700">
+        <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{dp.date}</span>
+        <span className="text-sm">
+          <span className="text-zinc-400">Net </span>
+          <span className={`font-bold tabular-nums ${pnlColor(dp.net)}`}>{fmtUsd(dp.net)}</span>
+        </span>
       </div>
+
       {entries.length === 0 ? (
-        <div className="text-zinc-400">내역 없음</div>
+        <div className="px-4 py-3 text-zinc-400">내역 없음</div>
       ) : (
         <table className="w-full border-collapse">
-          <thead className="text-[10px] text-zinc-400">
-            <tr>
-              <th className="py-0.5 pr-2 text-left font-normal">거래소 · 심볼</th>
-              <th className="px-2 py-0.5 text-right font-normal">손익</th>
-              <th className="px-2 py-0.5 text-right font-normal">수수료</th>
-              <th className="px-2 py-0.5 text-right font-normal">펀딩</th>
-              <th className="px-2 py-0.5 text-right font-normal">Net</th>
+          <thead className="text-[10px] uppercase tracking-wide text-zinc-400">
+            <tr className="border-b border-zinc-200 dark:border-zinc-700">
+              <th className="px-4 py-1.5 text-left font-medium">거래소 · 심볼</th>
+              <th className="px-3 py-1.5 text-right font-medium">손익</th>
+              <th className="px-3 py-1.5 text-right font-medium">수수료</th>
+              <th className="px-3 py-1.5 text-right font-medium">펀딩</th>
+              <th className="px-3 py-1.5 text-right font-medium">Net</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {shown.map((e, i) => (
-              <tr key={i} className="border-t border-zinc-100 dark:border-zinc-800">
-                <td className="py-0.5 pr-2 align-top">
-                  <span className="flex flex-wrap items-center gap-1">
-                    <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: EXCHANGE_COLORS[e.exchange] }} />
+              <tr key={i} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                <td className="px-4 py-2 align-middle">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: EXCHANGE_COLORS[e.exchange] }} />
                     <span className="text-zinc-400">{SHORT[e.exchange]}</span>
-                    <span className="text-zinc-600 dark:text-zinc-300">{e.symbol || "—"}</span>
-                    {e.side && (
-                      <span className={e.side === "long" ? "font-medium text-emerald-600 dark:text-emerald-400" : "font-medium text-red-600 dark:text-red-400"}>
-                        {e.side === "long" ? "L" : "S"}
+                    <span className="font-medium text-zinc-700 dark:text-zinc-200">{e.symbol || "—"}</span>
+                    {e.side && <SideBadge side={e.side} />}
+                    {e.leverage && (
+                      <span className="rounded bg-zinc-100 px-1 py-px text-[10px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                        {e.leverage}x
                       </span>
                     )}
-                    {e.leverage && <span className="text-zinc-500">{e.leverage}x</span>}
-                    {e.count > 1 && <span className="text-zinc-400">·{e.count}건</span>}
-                  </span>
+                    {e.count > 1 && <span className="text-[10px] text-zinc-400">·{e.count}건</span>}
+                  </div>
                   {closeTimeLabel(e.minClose, e.maxClose) && (
-                    <span className="block pl-2.5 font-mono text-[10px] text-zinc-400">
+                    <div className="mt-0.5 pl-3.5 font-mono text-[10px] text-zinc-400">
                       {closeTimeLabel(e.minClose, e.maxClose)}
-                    </span>
+                    </div>
                   )}
                 </td>
-                <td className={numCls(e.pricePnl)}>{fmtUsd(e.pricePnl)}</td>
-                <td className={numCls(e.fee)}>{fmtUsd(e.fee)}</td>
-                <td className={numCls(e.funding)}>{fmtUsd(e.funding)}</td>
-                <td className={`px-2 py-0.5 text-right align-top font-medium tabular-nums ${pnlColor(e.net)}`}>{fmtUsd(e.net)}</td>
+                <td className={num(e.pricePnl)}>{fmtUsd(e.pricePnl)}</td>
+                <td className={num(e.fee)}>{fmtUsd(e.fee)}</td>
+                <td className={num(e.funding)}>{fmtUsd(e.funding)}</td>
+                <td className={`px-3 py-2 text-right align-middle font-semibold tabular-nums ${pnlColor(e.net)}`}>{fmtUsd(e.net)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t border-zinc-200 dark:border-zinc-700">
-              <td className="py-0.5 pr-2 text-zinc-500">{rest > 0 ? `외 ${rest}건 포함 합계` : "합계"}</td>
-              <td className={numCls(dp.pricePnl)}>{fmtUsd(dp.pricePnl)}</td>
-              <td className={numCls(dp.fee)}>{fmtUsd(dp.fee)}</td>
-              <td className={numCls(dp.funding)}>{fmtUsd(dp.funding)}</td>
-              <td className={`px-2 py-0.5 text-right font-semibold tabular-nums ${pnlColor(dp.net)}`}>{fmtUsd(dp.net)}</td>
+            <tr className="border-t-2 border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/50">
+              <td className="px-4 py-2 font-medium text-zinc-500">{rest > 0 ? `외 ${rest}건 포함 합계` : "합계"}</td>
+              <td className={num(dp.pricePnl)}>{fmtUsd(dp.pricePnl)}</td>
+              <td className={num(dp.fee)}>{fmtUsd(dp.fee)}</td>
+              <td className={num(dp.funding)}>{fmtUsd(dp.funding)}</td>
+              <td className={`px-3 py-2 text-right font-bold tabular-nums ${pnlColor(dp.net)}`}>{fmtUsd(dp.net)}</td>
             </tr>
           </tfoot>
         </table>
