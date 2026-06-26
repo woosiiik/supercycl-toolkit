@@ -147,6 +147,20 @@ export default function ExchangePnl() {
     return out;
   }, [collectedExchanges, selected, dataMap]);
 
+  // 합산 보기 차트의 날짜축 = 선택된 거래소들의 수집기간 합집합
+  const aggregatedRange = useMemo(() => {
+    let s = Number.POSITIVE_INFINITY;
+    let e = Number.NEGATIVE_INFINITY;
+    for (const ex of collectedExchanges) {
+      if (!selected.has(ex.id)) continue;
+      const d = dataMap[ex.id];
+      if (!d) continue;
+      s = Math.min(s, d.startTime);
+      e = Math.max(e, d.endTime);
+    }
+    return Number.isFinite(s) && Number.isFinite(e) ? { start: s, end: e } : undefined;
+  }, [collectedExchanges, selected, dataMap]);
+
   const anyLoading = Object.values(status).some((s) => s.state === "loading");
 
   const tabCls = (t: Tab) =>
@@ -283,7 +297,7 @@ export default function ExchangePnl() {
               </label>
             ))}
           </div>
-          <MetricsPanel rows={aggregatedRows} toggles={toggles} showSupportNotes />
+          <MetricsPanel rows={aggregatedRows} toggles={toggles} showSupportNotes range={aggregatedRange} />
         </div>
       )}
 
@@ -319,7 +333,7 @@ export default function ExchangePnl() {
                   <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{getExchange(target).name}</h3>
                   <span className="text-xs text-zinc-400">{getExchange(target).unit} 단위 · {d.rows.length}건</span>
                 </div>
-                <MetricsPanel rows={d.rows} toggles={toggles} showSupportNotes />
+                <MetricsPanel rows={d.rows} toggles={toggles} showSupportNotes range={{ start: d.startTime, end: d.endTime }} />
               </div>
             );
           })()}

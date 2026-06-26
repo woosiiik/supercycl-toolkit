@@ -94,15 +94,29 @@ function dateKey(ms: number): string {
 }
 
 const DAY = 86400000;
+const MAX_FILL_DAYS = 800; // 폭주 방지(비정상적으로 큰 범위면 채우지 않음)
 
-/** 첫 날~마지막 날 사이의 거래 없는 날짜를 0으로 채워 연속된 날짜축을 만든다 (UTC). */
-function fillDateGaps(daily: DailyPoint[]): DailyPoint[] {
-  if (daily.length < 2) return daily;
+function utcMidnight(ms: number): number {
+  return Date.parse(new Date(ms).toISOString().slice(0, 10) + "T00:00:00Z");
+}
+
+/**
+ * 거래 없는 날짜를 0으로 채워 연속된 날짜축을 만든다 (UTC).
+ * range(조회기간 ms)가 주어지면 그 기간 전체를 덮도록 양끝까지 채운다(거래 없는 날 포함).
+ * 없으면 첫 거래일~마지막 거래일 사이만 채운다.
+ */
+function fillDateGaps(daily: DailyPoint[], range?: { start: number; end: number }): DailyPoint[] {
   const byDate = new Map(daily.map((d) => [d.date, d]));
-  const start = Date.parse(daily[0].date + "T00:00:00Z");
-  const end = Date.parse(daily[daily.length - 1].date + "T00:00:00Z");
+  let startMs = daily.length ? Date.parse(daily[0].date + "T00:00:00Z") : Number.POSITIVE_INFINITY;
+  let endMs = daily.length ? Date.parse(daily[daily.length - 1].date + "T00:00:00Z") : Number.NEGATIVE_INFINITY;
+  if (range) {
+    startMs = Math.min(startMs, utcMidnight(range.start));
+    endMs = Math.max(endMs, utcMidnight(range.end));
+  }
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs > endMs) return daily;
+  if ((endMs - startMs) / DAY > MAX_FILL_DAYS) return daily; // 안전장치
   const out: DailyPoint[] = [];
-  for (let t = start; t <= end; t += DAY) {
+  for (let t = startMs; t <= endMs; t += DAY) {
     const date = new Date(t).toISOString().slice(0, 10);
     out.push(byDate.get(date) ?? { date, pricePnl: 0, fee: 0, funding: 0, net: 0, entries: [] });
   }
@@ -122,7 +136,7 @@ export function dedupeRows(rows: NormalizedRow[]): NormalizedRow[] {
   return out;
 }
 
-export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
+export function computeMetrics(rows: NormalizedRow[], t: PnlToggles, range?: { start: number; end: number }): Metrics {
   rows = dedupeRows(rows);
   let totalNet = 0;
   let totalPrice = 0;
@@ -256,8 +270,8 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
         })
       : [];
   }
-  // 거래 없는 날짜도 0으로 채워 연속 표시
-  const daily = fillDateGaps(sortedDaily);
+  // 거래 없는 날짜도 0으로 채워 연속 표시 (range가 있으면 조회기간 전체를 덮음)
+  const daily = fillDateGaps(sortedDaily, range);
   for (const sp of symbolMap.values()) {
     sp.exchanges = [...(symbolExchanges.get(sp.symbol) ?? [])];
   }

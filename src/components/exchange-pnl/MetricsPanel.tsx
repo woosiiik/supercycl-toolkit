@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, Fragment } from "react";
+import { Fragment } from "react";
 import {
   BarChart,
   Bar,
@@ -232,6 +232,8 @@ interface Props {
   toggles: PnlToggles;
   /** 포지션 승/패·hold time 미지원 안내 표시 여부 */
   showSupportNotes?: boolean;
+  /** 조회 기간(ms). 주어지면 일별 차트에 거래 없는 날도 포함해 기간 전체 표시 */
+  range?: { start: number; end: number };
 }
 
 function Card({
@@ -261,8 +263,9 @@ function Card({
   );
 }
 
-export default function MetricsPanel({ rows, toggles, showSupportNotes }: Props) {
-  const m = useMemo(() => computeMetrics(rows, toggles), [rows, toggles]);
+export default function MetricsPanel({ rows, toggles, showSupportNotes, range }: Props) {
+  // React Compiler가 자동 메모이즈 (수동 useMemo는 컴파일러와 충돌)
+  const m = computeMetrics(rows, toggles, range);
 
   if (rows.length === 0) {
     return <p className="text-sm text-zinc-400">데이터가 없습니다.</p>;
