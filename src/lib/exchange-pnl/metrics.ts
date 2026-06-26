@@ -47,9 +47,16 @@ export interface SymbolPoint {
   fee: number;
   funding: number;
   net: number;
-  count: number;
+  count: number; // 전체 레코드 수 (거래 + 수수료/펀딩 원장)
+  tradeCount: number; // 거래 레코드 수 (순수 수수료·펀딩 원장 제외)
   /** 이 심볼 행에 기여한 거래소들 (합산 보기에서 표기용) */
   exchanges: ExchangeId[];
+}
+
+/** 순수 수수료/펀딩 원장 행이 아니라 실제 거래(포지션/청산/fill/실현손익)인지 */
+function isTradeRow(r: NormalizedRow): boolean {
+  // income 단위인데 가격손익이 0이면 = 순수 수수료 또는 펀딩 원장 → 거래 아님
+  return !(r.unit === "income" && r.pricePnl === 0);
 }
 
 export interface HoldTimeStats {
@@ -220,12 +227,13 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles, range?: { s
     dailyEntries.set(dk, em);
 
     // 심볼별
-    const sp = symbolMap.get(r.symbol) ?? { symbol: r.symbol, pricePnl: 0, fee: 0, funding: 0, net: 0, count: 0, exchanges: [] };
+    const sp = symbolMap.get(r.symbol) ?? { symbol: r.symbol, pricePnl: 0, fee: 0, funding: 0, net: 0, count: 0, tradeCount: 0, exchanges: [] };
     sp.pricePnl += r.pricePnl;
     sp.fee += r.fee;
     sp.funding += r.funding;
     sp.net += net;
     sp.count += 1;
+    if (isTradeRow(r)) sp.tradeCount += 1;
     symbolMap.set(r.symbol, sp);
     const exSet = symbolExchanges.get(r.symbol) ?? new Set<ExchangeId>();
     exSet.add(r.exchange);

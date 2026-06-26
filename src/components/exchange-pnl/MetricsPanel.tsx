@@ -379,6 +379,9 @@ export default function MetricsPanel({ rows, toggles, showSupportNotes, range }:
               지원: <span className="font-medium text-emerald-600 dark:text-emerald-400">All</span>
             </span>
           )}
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+            · 전체건수=거래+수수료+펀딩 레코드, 거래건수=수수료·펀딩 원장 제외
+          </span>
         </div>
         {showSupportNotes && (
           <p className="mb-2 text-[11px] text-zinc-400 dark:text-zinc-500">
@@ -395,7 +398,8 @@ export default function MetricsPanel({ rows, toggles, showSupportNotes, range }:
                 <th className="px-3 py-2 text-right">가격손익</th>
                 <th className="px-3 py-2 text-right">수수료</th>
                 <th className="px-3 py-2 text-right">펀딩</th>
-                <th className="px-3 py-2 text-right">건수</th>
+                <th className="px-3 py-2 text-right">전체건수</th>
+                <th className="px-3 py-2 text-right">거래건수</th>
               </tr>
             </thead>
             <tbody>
@@ -422,7 +426,8 @@ export default function MetricsPanel({ rows, toggles, showSupportNotes, range }:
                   <td className="px-3 py-1.5 text-right tabular-nums text-zinc-500">{fmtUsd(s.pricePnl)}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-zinc-500">{fmtUsd(s.fee)}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-zinc-500">{fmtUsd(s.funding)}</td>
-                  <td className="px-3 py-1.5 text-right tabular-nums text-zinc-500">{s.count}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-zinc-400">{s.count}</td>
+                  <td className="px-3 py-1.5 text-right font-medium tabular-nums text-zinc-600 dark:text-zinc-300">{s.tradeCount}</td>
                 </tr>
               ))}
             </tbody>
