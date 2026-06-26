@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -227,6 +227,36 @@ function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{
   );
 }
 
+// 심볼 테이블 정렬
+type SymbolSortKey = "symbol" | "net" | "pricePnl" | "fee" | "funding" | "count" | "tradeCount";
+
+function SortTh({
+  label,
+  k,
+  sort,
+  onSort,
+  align = "right",
+}: {
+  label: string;
+  k: SymbolSortKey;
+  sort: { key: SymbolSortKey; dir: "asc" | "desc" };
+  onSort: (k: SymbolSortKey) => void;
+  align?: "left" | "right";
+}) {
+  const active = sort.key === k;
+  return (
+    <th
+      className={`cursor-pointer select-none px-3 py-2 ${align === "left" ? "text-left" : "text-right"} hover:text-zinc-700 dark:hover:text-zinc-200`}
+      onClick={() => onSort(k)}
+    >
+      <span className={`inline-flex items-center gap-0.5 ${align === "left" ? "" : "flex-row-reverse"}`}>
+        <span>{label}</span>
+        <span className={active ? "text-blue-500" : "text-transparent"}>{active && sort.dir === "asc" ? "▲" : "▼"}</span>
+      </span>
+    </th>
+  );
+}
+
 interface Props {
   rows: NormalizedRow[];
   toggles: PnlToggles;
@@ -277,6 +307,8 @@ function MiniRow({ label, value, valueClass }: { label: string; value: string; v
 }
 
 export default function MetricsPanel({ rows, toggles, showSupportNotes, range }: Props) {
+  const [sort, setSort] = useState<{ key: SymbolSortKey; dir: "asc" | "desc" }>({ key: "net", dir: "desc" });
+
   // React Compiler가 자동 메모이즈 (수동 useMemo는 컴파일러와 충돌)
   const m = computeMetrics(rows, toggles, range);
 
@@ -284,7 +316,14 @@ export default function MetricsPanel({ rows, toggles, showSupportNotes, range }:
     return <p className="text-sm text-zinc-400">데이터가 없습니다.</p>;
   }
 
-  const topSymbols = m.bySymbol.slice(0, 30);
+  const onSort = (key: SymbolSortKey) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "symbol" ? "asc" : "desc" }));
+
+  const dir = sort.dir === "asc" ? 1 : -1;
+  const sortedSymbols = [...m.bySymbol].sort((a, b) =>
+    sort.key === "symbol" ? a.symbol.localeCompare(b.symbol) * dir : ((a[sort.key] as number) - (b[sort.key] as number)) * dir,
+  );
+  const topSymbols = sortedSymbols.slice(0, 30);
 
   return (
     <div className="flex flex-col gap-5">
@@ -393,13 +432,13 @@ export default function MetricsPanel({ rows, toggles, showSupportNotes, range }:
           <table className="w-full text-sm">
             <thead className="bg-zinc-50 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
               <tr>
-                <th className="px-3 py-2 text-left">심볼</th>
-                <th className="px-3 py-2 text-right">Net</th>
-                <th className="px-3 py-2 text-right">가격손익</th>
-                <th className="px-3 py-2 text-right">수수료</th>
-                <th className="px-3 py-2 text-right">펀딩</th>
-                <th className="px-3 py-2 text-right">전체건수</th>
-                <th className="px-3 py-2 text-right">거래건수</th>
+                <SortTh label="심볼" k="symbol" sort={sort} onSort={onSort} align="left" />
+                <SortTh label="Net" k="net" sort={sort} onSort={onSort} />
+                <SortTh label="가격손익" k="pricePnl" sort={sort} onSort={onSort} />
+                <SortTh label="수수료" k="fee" sort={sort} onSort={onSort} />
+                <SortTh label="펀딩" k="funding" sort={sort} onSort={onSort} />
+                <SortTh label="전체건수" k="count" sort={sort} onSort={onSort} />
+                <SortTh label="거래건수" k="tradeCount" sort={sort} onSort={onSort} />
               </tr>
             </thead>
             <tbody>
