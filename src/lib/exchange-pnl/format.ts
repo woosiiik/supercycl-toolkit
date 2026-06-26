@@ -12,8 +12,15 @@ export function fmtAmount(n: number): string {
   if (!Number.isFinite(n)) return "0";
   if (n === 0) return "0";
   const abs = Math.abs(n);
-  if (abs < 0.001) return n.toExponential(2); // 극소값은 지수표기
-  if (abs < 0.01) return n.toFixed(6);
-  if (abs < 1) return n.toFixed(4);
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (abs >= 1) {
+    return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  // 1 미만은 지수표기 없이 십진수로. 작을수록 자릿수를 늘려 유효숫자 ~4자리 확보,
+  // 후행 0은 정리. (예: 6.87e-4 → "0.000687")
+  const leadingZeros = Math.max(0, Math.floor(-Math.log10(abs)));
+  const decimals = Math.min(leadingZeros + 4, 20);
+  return n
+    .toFixed(decimals)
+    .replace(/0+$/, "")
+    .replace(/\.$/, "");
 }
