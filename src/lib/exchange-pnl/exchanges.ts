@@ -69,8 +69,8 @@ export const EXCHANGES: ExchangeMeta[] = [
       { key: "apiSecret", label: "API Secret", secret: true },
     ],
     supports: { daily: true, last30d: true, bySymbol: true, holdTime: true, positionWinLoss: "yes", winRate: "yes" },
-    retentionMonths: null,
-    retentionLabel: "미확인 (실호출 확인 필요)",
+    retentionMonths: 6,
+    retentionLabel: "최근 180일 (약 6개월)",
   },
   {
     id: "bybit",
