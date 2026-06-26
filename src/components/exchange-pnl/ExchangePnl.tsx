@@ -36,6 +36,7 @@ export default function ExchangePnl() {
   const [tab, setTab] = useState<Tab>("collect");
   const [selected, setSelected] = useState<Set<ExchangeId>>(new Set());
   const [rawExchange, setRawExchange] = useState<ExchangeId | null>(null);
+  const [perExchangeSel, setPerExchangeSel] = useState<ExchangeId | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   // 초기 로드: localStorage 에서 자격증명/데이터 복원
@@ -288,20 +289,40 @@ export default function ExchangePnl() {
 
       {/* === 거래소별 탭 === */}
       {tab === "perExchange" && (
-        <div className="flex flex-col gap-8">
-          {collectedExchanges.map((ex) => {
-            const d = dataMap[ex.id]!;
+        <div className="flex flex-col gap-4">
+          {/* 거래소 선택 버튼 */}
+          <div className="flex flex-wrap gap-2">
+            {collectedExchanges.map((ex) => {
+              const isActive = (perExchangeSel ?? collectedExchanges[0]?.id) === ex.id;
+              return (
+                <button
+                  key={ex.id}
+                  onClick={() => setPerExchangeSel(ex.id)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+                    isActive ? "text-white" : "border border-zinc-300 text-zinc-600 dark:border-zinc-600 dark:text-zinc-400"
+                  }`}
+                  style={isActive ? { backgroundColor: EXCHANGE_COLORS[ex.id] } : undefined}
+                >
+                  {ex.name} ({dataMap[ex.id]?.rows.length ?? 0})
+                </button>
+              );
+            })}
+          </div>
+          {(() => {
+            const target = perExchangeSel ?? collectedExchanges[0]?.id;
+            const d = target ? dataMap[target] : null;
+            if (!d || !target) return null;
             return (
-              <div key={ex.id}>
+              <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: EXCHANGE_COLORS[ex.id] }} />
-                  <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{ex.name}</h3>
-                  <span className="text-xs text-zinc-400">{getExchange(ex.id).unit} 단위 · {d.rows.length}건</span>
+                  <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: EXCHANGE_COLORS[target] }} />
+                  <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{getExchange(target).name}</h3>
+                  <span className="text-xs text-zinc-400">{getExchange(target).unit} 단위 · {d.rows.length}건</span>
                 </div>
                 <MetricsPanel rows={d.rows} toggles={toggles} showSupportNotes />
               </div>
             );
-          })}
+          })()}
         </div>
       )}
 
