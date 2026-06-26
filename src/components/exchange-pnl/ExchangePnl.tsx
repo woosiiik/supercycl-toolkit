@@ -18,22 +18,32 @@ import MethodDocs from "./MethodDocs";
 
 type Tab = "collect" | "aggregated" | "perExchange" | "raw" | "docs";
 
-function defaultRange() {
-  const end = new Date();
-  const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
-  return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
-  };
+// 오늘(UTC)이 속한 월 값 ("YYYY-MM")
+function currentMonthValue(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-// 2026년 1월부터 현재(UTC) 월까지의 월별 조회 옵션 (최신월 먼저)
+// 특정 월("YYYY-MM")의 1일~말일 (UTC)
+function monthRange(value: string): { start: string; end: string } {
+  const [y, m] = value.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const mm = String(m).padStart(2, "0");
+  return { start: `${y}-${mm}-01`, end: `${y}-${mm}-${String(lastDay).padStart(2, "0")}` };
+}
+
+// 기본 기간 = 오늘이 속한 월
+function defaultRange() {
+  return monthRange(currentMonthValue());
+}
+
+// 2025년 1월부터 현재(UTC) 월까지의 월별 조회 옵션 (최신월 먼저)
 function monthOptions(): { value: string; label: string; start: string; end: string }[] {
   const now = new Date();
   const endY = now.getUTCFullYear();
   const endM = now.getUTCMonth() + 1; // 1~12
   const opts: { value: string; label: string; start: string; end: string }[] = [];
-  for (let y = 2026; y <= endY; y++) {
+  for (let y = 2025; y <= endY; y++) {
     const mEnd = y === endY ? endM : 12;
     for (let m = 1; m <= mEnd; m++) {
       const mm = String(m).padStart(2, "0");
@@ -54,7 +64,7 @@ export default function ExchangePnl() {
   const [dataMap, setDataMap] = useState<Partial<Record<ExchangeId, StoredData>>>({});
   const [status, setStatus] = useState<Record<string, { state: CollectState; error?: string }>>({});
   const [range, setRange] = useState(defaultRange);
-  const [monthSel, setMonthSel] = useState(""); // 월별 조회 선택값 ("" = 직접 선택)
+  const [monthSel, setMonthSel] = useState(() => currentMonthValue()); // 기본: 오늘이 속한 월
   const months = monthOptions();
   const [toggles, setToggles] = useState<PnlToggles>({ includeFee: true, includeFunding: true });
   const [tab, setTab] = useState<Tab>("collect");
