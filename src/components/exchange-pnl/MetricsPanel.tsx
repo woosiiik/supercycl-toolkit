@@ -264,7 +264,7 @@ function Card({
 }
 
 const CARD_CLS = "rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900";
-const CARD_LABEL = "text-[11px] font-medium text-zinc-500 dark:text-zinc-400";
+const CARD_LABEL = "text-[13px] font-semibold text-zinc-700 dark:text-zinc-200";
 
 // 한 카드에 여러 (라벨: 값) 줄을 넣는 미니 행
 function MiniRow({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
