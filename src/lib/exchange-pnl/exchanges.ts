@@ -17,6 +17,8 @@ export const EXCHANGES: ExchangeMeta[] = [
       { key: "passphrase", label: "Passphrase", secret: true },
     ],
     supports: { daily: true, last30d: true, bySymbol: true, holdTime: true, positionWinLoss: "yes", winRate: "yes" },
+    retentionMonths: 3,
+    retentionLabel: "최근 약 3개월",
   },
   {
     id: "bingx",
@@ -36,6 +38,8 @@ export const EXCHANGES: ExchangeMeta[] = [
       },
     ],
     supports: { daily: true, last30d: true, bySymbol: true, holdTime: true, positionWinLoss: "yes", winRate: "yes" },
+    retentionMonths: 3,
+    retentionLabel: "최근 약 3개월",
   },
   {
     id: "bitget",
@@ -50,6 +54,8 @@ export const EXCHANGES: ExchangeMeta[] = [
       { key: "passphrase", label: "Passphrase", secret: true },
     ],
     supports: { daily: true, last30d: true, bySymbol: true, holdTime: true, positionWinLoss: "yes", winRate: "yes" },
+    retentionMonths: 3,
+    retentionLabel: "최근 3개월",
   },
   {
     id: "gate",
@@ -63,6 +69,8 @@ export const EXCHANGES: ExchangeMeta[] = [
       { key: "apiSecret", label: "API Secret", secret: true },
     ],
     supports: { daily: true, last30d: true, bySymbol: true, holdTime: true, positionWinLoss: "yes", winRate: "yes" },
+    retentionMonths: null,
+    retentionLabel: "미확인 (실호출 확인 필요)",
   },
   {
     id: "bybit",
@@ -76,6 +84,8 @@ export const EXCHANGES: ExchangeMeta[] = [
       { key: "apiSecret", label: "API Secret", secret: true },
     ],
     supports: { daily: true, last30d: true, bySymbol: true, holdTime: false, positionWinLoss: "approx", winRate: "approx" },
+    retentionMonths: 24,
+    retentionLabel: "2년 (요청당 7일 윈도우)",
   },
   {
     id: "binance",
@@ -89,6 +99,8 @@ export const EXCHANGES: ExchangeMeta[] = [
       { key: "apiSecret", label: "API Secret", secret: true },
     ],
     supports: { daily: true, last30d: true, bySymbol: true, holdTime: false, positionWinLoss: "no", winRate: "no" },
+    retentionMonths: 3,
+    retentionLabel: "income 3개월 (REST)",
   },
   {
     id: "hyperliquid",
@@ -106,6 +118,8 @@ export const EXCHANGES: ExchangeMeta[] = [
       },
     ],
     supports: { daily: true, last30d: true, bySymbol: true, holdTime: false, positionWinLoss: "approx", winRate: "approx" },
+    retentionMonths: null,
+    retentionLabel: "최근 약 10,000 fill (시간 무관)",
   },
 ];
 

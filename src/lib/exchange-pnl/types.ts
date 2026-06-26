@@ -46,6 +46,10 @@ export interface ExchangeMeta {
     positionWinLoss: "yes" | "approx" | "no"; // 포지션 승/패 수
     winRate: "yes" | "approx" | "no"; // win/loss rate
   };
+  /** 조회 가능한 보존기간(개월). null이면 시간 기준 한도 불명/해당없음 */
+  retentionMonths: number | null;
+  /** 보존 한도 표시 라벨 */
+  retentionLabel: string;
 }
 
 export type PositionUnit = "position" | "closing_order" | "income" | "fill";

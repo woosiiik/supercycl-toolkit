@@ -17,6 +17,18 @@ interface Props {
   state: CollectState;
   error?: string;
   disabled: boolean;
+  /** 현재 선택된 조회 시작일(ms) — 보존기간 초과 경고용 */
+  rangeStartMs: number;
+}
+
+// 선택한 시작일이 거래소 보존기간을 벗어났는지
+function retentionWarning(meta: ExchangeMeta, rangeStartMs: number): string | null {
+  if (meta.retentionMonths == null) return null;
+  const cutoff = new Date();
+  cutoff.setUTCMonth(cutoff.getUTCMonth() - meta.retentionMonths);
+  if (rangeStartMs >= cutoff.getTime()) return null;
+  const startStr = new Date(rangeStartMs).toISOString().slice(0, 10);
+  return `이 거래소는 ${meta.retentionLabel}만 조회됩니다. 선택 시작일(${startStr})이 보존기간을 벗어나 데이터가 일부/전부 안 나올 수 있습니다.`;
 }
 
 function tierBadge(tier: string): string {
@@ -46,12 +58,14 @@ export default function ExchangeCard({
   state,
   error,
   disabled,
+  rangeStartMs,
 }: Props) {
   const [open, setOpen] = useState(false);
   const color = EXCHANGE_COLORS[meta.id];
 
   const hasCreds = meta.credFields.every((f) => (creds[f.key] ?? "").trim() !== "" || !f.secret);
   const rowCount = data?.rows.length ?? 0;
+  const retWarning = retentionWarning(meta, rangeStartMs);
 
   return (
     <div className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
@@ -86,6 +100,16 @@ export default function ExchangeCard({
         <SupportPill ok={meta.supports.positionWinLoss === "yes" ? true : meta.supports.positionWinLoss === "approx" ? "approx" : false} label="승/패" />
         <SupportPill ok={meta.supports.winRate === "yes" ? true : meta.supports.winRate === "approx" ? "approx" : false} label="승률" />
       </div>
+
+      {/* 보존기간 안내 + 초과 경고 */}
+      <div className="px-4 pb-2">
+        <span className="text-[11px] text-zinc-400 dark:text-zinc-500">조회 가능 기간: {meta.retentionLabel}</span>
+      </div>
+      {retWarning && (
+        <div className="mx-4 mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300">
+          ⚠ {retWarning}
+        </div>
+      )}
 
       {open && (
         <div className="border-t border-zinc-100 px-4 py-3 dark:border-zinc-800">

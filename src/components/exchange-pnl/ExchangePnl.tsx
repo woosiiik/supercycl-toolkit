@@ -333,6 +333,7 @@ export default function ExchangePnl() {
                 state={status[ex.id]?.state ?? "idle"}
                 error={status[ex.id]?.error}
                 disabled={anyLoading}
+                rangeStartMs={startMs}
               />
             ))}
           </div>
