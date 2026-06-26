@@ -307,7 +307,7 @@ function MiniRow({ label, value, valueClass }: { label: string; value: string; v
 }
 
 export default function MetricsPanel({ rows, toggles, showSupportNotes, range }: Props) {
-  const [sort, setSort] = useState<{ key: SymbolSortKey; dir: "asc" | "desc" }>({ key: "net", dir: "desc" });
+  const [sort, setSort] = useState<{ key: SymbolSortKey; dir: "asc" | "desc" }>({ key: "symbol", dir: "asc" });
 
   // React Compiler가 자동 메모이즈 (수동 useMemo는 컴파일러와 충돌)
   const m = computeMetrics(rows, toggles, range);
