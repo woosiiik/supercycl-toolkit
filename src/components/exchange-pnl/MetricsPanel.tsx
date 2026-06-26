@@ -152,8 +152,9 @@ function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{
                     {e.count > 1 && <span className="text-[10px] text-zinc-400">·{e.count}건</span>}
                   </div>
                   {closeTimeLabel(e.minClose, e.maxClose) && (
-                    <div className="mt-0.5 pl-3.5 font-mono text-[10px] text-zinc-400">
-                      {closeTimeLabel(e.minClose, e.maxClose)}
+                    <div className="mt-0.5 pl-3.5 text-[10px] text-zinc-400">
+                      <span className="text-zinc-400">Closed </span>
+                      <span className="font-mono">{closeTimeLabel(e.minClose, e.maxClose)}</span>
                     </div>
                   )}
                 </td>
