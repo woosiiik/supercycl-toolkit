@@ -27,11 +27,35 @@ function defaultRange() {
   };
 }
 
+// 2026년 1월부터 현재(UTC) 월까지의 월별 조회 옵션 (최신월 먼저)
+function monthOptions(): { value: string; label: string; start: string; end: string }[] {
+  const now = new Date();
+  const endY = now.getUTCFullYear();
+  const endM = now.getUTCMonth() + 1; // 1~12
+  const opts: { value: string; label: string; start: string; end: string }[] = [];
+  for (let y = 2026; y <= endY; y++) {
+    const mEnd = y === endY ? endM : 12;
+    for (let m = 1; m <= mEnd; m++) {
+      const mm = String(m).padStart(2, "0");
+      const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      opts.push({
+        value: `${y}-${mm}`,
+        label: `${y}년 ${m}월`,
+        start: `${y}-${mm}-01`,
+        end: `${y}-${mm}-${String(lastDay).padStart(2, "0")}`,
+      });
+    }
+  }
+  return opts.reverse();
+}
+
 export default function ExchangePnl() {
   const [creds, setCreds] = useState<Record<string, Record<string, string>>>({});
   const [dataMap, setDataMap] = useState<Partial<Record<ExchangeId, StoredData>>>({});
   const [status, setStatus] = useState<Record<string, { state: CollectState; error?: string }>>({});
   const [range, setRange] = useState(defaultRange);
+  const [monthSel, setMonthSel] = useState(""); // 월별 조회 선택값 ("" = 직접 선택)
+  const months = monthOptions();
   const [toggles, setToggles] = useState<PnlToggles>({ includeFee: true, includeFunding: true });
   const [tab, setTab] = useState<Tab>("collect");
   const [selected, setSelected] = useState<Set<ExchangeId>>(new Set());
@@ -186,11 +210,34 @@ export default function ExchangePnl() {
       {/* 글로벌 컨트롤: 기간 + 토글 */}
       <div className="flex flex-wrap items-end gap-4 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900">
         <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">월별 조회</label>
+          <select
+            value={monthSel}
+            onChange={(e) => {
+              const v = e.target.value;
+              setMonthSel(v);
+              const opt = months.find((o) => o.value === v);
+              if (opt) setRange({ start: opt.start, end: opt.end });
+            }}
+            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+          >
+            <option value="">직접 선택</option>
+            {months.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">시작</label>
           <input
             type="date"
             value={range.start}
-            onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
+            onChange={(e) => {
+              setMonthSel("");
+              setRange((r) => ({ ...r, start: e.target.value }));
+            }}
             className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
           />
         </div>
@@ -200,7 +247,10 @@ export default function ExchangePnl() {
           <input
             type="date"
             value={range.end}
-            onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
+            onChange={(e) => {
+              setMonthSel("");
+              setRange((r) => ({ ...r, end: e.target.value }));
+            }}
             className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
           />
         </div>
