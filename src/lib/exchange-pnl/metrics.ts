@@ -93,6 +93,22 @@ function dateKey(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+const DAY = 86400000;
+
+/** 첫 날~마지막 날 사이의 거래 없는 날짜를 0으로 채워 연속된 날짜축을 만든다 (UTC). */
+function fillDateGaps(daily: DailyPoint[]): DailyPoint[] {
+  if (daily.length < 2) return daily;
+  const byDate = new Map(daily.map((d) => [d.date, d]));
+  const start = Date.parse(daily[0].date + "T00:00:00Z");
+  const end = Date.parse(daily[daily.length - 1].date + "T00:00:00Z");
+  const out: DailyPoint[] = [];
+  for (let t = start; t <= end; t += DAY) {
+    const date = new Date(t).toISOString().slice(0, 10);
+    out.push(byDate.get(date) ?? { date, pricePnl: 0, fee: 0, funding: 0, net: 0, entries: [] });
+  }
+  return out;
+}
+
 /** (exchange, id) 기준 중복 제거 — 페이지 경계·커서 오용으로 인한 중복 방어 */
 export function dedupeRows(rows: NormalizedRow[]): NormalizedRow[] {
   const seen = new Set<string>();
@@ -227,8 +243,8 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
     }
   }
 
-  const daily = [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date));
-  for (const dp of daily) {
+  const sortedDaily = [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+  for (const dp of sortedDaily) {
     const em = dailyEntries.get(dp.date);
     // 거래소별로 묶고(표준 순서), 같은 거래소 안에서는 |net| 큰 순
     dp.entries = em
@@ -240,6 +256,8 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
         })
       : [];
   }
+  // 거래 없는 날짜도 0으로 채워 연속 표시
+  const daily = fillDateGaps(sortedDaily);
   for (const sp of symbolMap.values()) {
     sp.exchanges = [...(symbolExchanges.get(sp.symbol) ?? [])];
   }
