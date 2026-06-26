@@ -176,7 +176,9 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
     entry.funding += r.funding;
     entry.net += net;
     entry.count += 1;
-    if (r.closeTime > 0) {
+    // 종료시각은 실제 청산(closed-pnl: position/closing_order/fill) 행에만 의미가 있다.
+    // income/funding 행(정산 시각이 00:00/08:00/16:00 등)은 제외 → 툴팁에 시간 미표시.
+    if (r.unit !== "income" && r.closeTime > 0) {
       entry.minClose = Math.min(entry.minClose, r.closeTime);
       entry.maxClose = Math.max(entry.maxClose, r.closeTime);
     }
