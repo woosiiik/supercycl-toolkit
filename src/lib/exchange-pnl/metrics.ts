@@ -1,6 +1,10 @@
 import type { NormalizedRow, ExchangeId } from "./types";
+import { EXCHANGES } from "./exchanges";
 
 // 정규화 row → 지표 계산. 수수료/펀딩 토글은 net을 재계산하는 단순 산술.
+
+// 거래소 표준 표시 순서 (툴팁 내역을 거래소별로 묶기 위함)
+const EX_ORDER: Record<string, number> = Object.fromEntries(EXCHANGES.map((e, i) => [e.id, i]));
 
 export interface PnlToggles {
   includeFee: boolean;
@@ -226,7 +230,15 @@ export function computeMetrics(rows: NormalizedRow[], t: PnlToggles): Metrics {
   const daily = [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date));
   for (const dp of daily) {
     const em = dailyEntries.get(dp.date);
-    dp.entries = em ? [...em.values()].sort((a, b) => Math.abs(b.net) - Math.abs(a.net)) : [];
+    // 거래소별로 묶고(표준 순서), 같은 거래소 안에서는 |net| 큰 순
+    dp.entries = em
+      ? [...em.values()].sort((a, b) => {
+          const ea = EX_ORDER[a.exchange] ?? 99;
+          const eb = EX_ORDER[b.exchange] ?? 99;
+          if (ea !== eb) return ea - eb;
+          return Math.abs(b.net) - Math.abs(a.net);
+        })
+      : [];
   }
   for (const sp of symbolMap.values()) {
     sp.exchanges = [...(symbolExchanges.get(sp.symbol) ?? [])];
