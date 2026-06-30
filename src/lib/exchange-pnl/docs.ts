@@ -19,6 +19,8 @@ export interface ExchangeDoc {
   /** 가져오는 주요 필드 → 정규화 매핑 */
   fields: FieldMap[];
   pnlDef: string;
+  /** 펀딩(funding) 수집 소스 — 포지션/원장 row에 포함인지, 별도 호출/원장인지 */
+  fundingSource: { kind: "inline" | "separate"; label: string };
   /** ✅ 알 수 있는 것 */
   knowable: string[];
   /** ❌ 모르는 것 (+ 이유) */
@@ -56,6 +58,7 @@ export const EXCHANGE_DOCS: Record<ExchangeId, ExchangeDoc> = {
       { raw: "cTime / uTime", norm: "openTime / closeTime → holdTime" },
     ],
     pnlDef: "net = realizedPnl, 컴포넌트(pnl·fee·fundingFee) 모두 분리 제공 → 종료일 귀속",
+    fundingSource: { kind: "inline", label: "포지션 row 포함 (fundingFee)" },
     knowable: ["일별 PnL", "30일 합계·평균", "심볼별 PnL", "보유시간(전체·승·패)", "포지션 종료/승/패 수", "win/loss rate"],
     unknowable: ["보존기간(~3개월) 이전 포지션은 조회 불가 → 주기 증분 수집 전제"],
     retention: "약 3개월",
@@ -100,6 +103,7 @@ export const EXCHANGE_DOCS: Record<ExchangeId, ExchangeDoc> = {
       { raw: "openTime / updateTime", norm: "openTime / closeTime → holdTime" },
     ],
     pnlDef: "net = netProfit = realisedProfit + positionCommission + totalFunding (분해 제공) → 종료일 귀속",
+    fundingSource: { kind: "inline", label: "포지션 row 포함 (totalFunding)" },
     knowable: ["일별 PnL", "30일 합계·평균", "심볼별 PnL", "보유시간(전체·승·패)", "포지션 종료/승/패 수", "win/loss rate"],
     unknowable: [
       "심볼 파라미터가 필수라 '거래한 심볼 목록'을 먼저 알아야 함 → income으로 자동 추출",
@@ -137,6 +141,7 @@ export const EXCHANGE_DOCS: Record<ExchangeId, ExchangeDoc> = {
       { raw: "ctime / utime", norm: "openTime / closeTime → holdTime" },
     ],
     pnlDef: "net = netProfit, 컴포넌트(pnl·openFee/closeFee·totalFunding) 분리 → 종료일 귀속",
+    fundingSource: { kind: "inline", label: "포지션 row 포함 (totalFunding)" },
     knowable: ["일별 PnL", "30일 합계·평균", "심볼별 PnL", "보유시간(전체·승·패)", "포지션 종료/승/패 수", "win/loss rate"],
     unknowable: ["보존기간(3개월) 이전은 조회 불가"],
     retention: "3개월 (요청 span 최대 90일)",
@@ -170,6 +175,7 @@ export const EXCHANGE_DOCS: Record<ExchangeId, ExchangeDoc> = {
       { raw: "first_open_time / time", norm: "openTime / closeTime → holdTime" },
     ],
     pnlDef: "net = pnl = pnl_pnl + pnl_fund + pnl_fee (가격손익/펀딩/수수료 분해) → 종료일 귀속",
+    fundingSource: { kind: "inline", label: "포지션 row 포함 (pnl_fund)" },
     knowable: ["일별 PnL", "30일 합계·평균", "심볼별 PnL", "보유시간(전체·승·패)", "포지션 종료/승/패 수", "win/loss rate"],
     unknowable: ["보존기간 약 180일(6개월) — from이 180일 초과 시 INVALID_PARAM_VALUE (실호출 확인됨)"],
     retention: "최근 180일 (약 6개월). from 180일 초과 시 오류",
@@ -206,6 +212,7 @@ export const EXCHANGE_DOCS: Record<ExchangeId, ExchangeDoc> = {
       { raw: "txlog.funding (SETTLEMENT)", norm: "펀딩(funding) — 별도 호출, 실제 발생일" },
     ],
     pnlDef: "청산손익=closed-pnl(net·수수료), 펀딩=transaction-log SETTLEMENT(실제 발생일 귀속). 둘을 합쳐 net 산출",
+    fundingSource: { kind: "separate", label: "별도 원장 (transaction-log SETTLEMENT)" },
     knowable: ["일별 PnL", "30일 합계·평균", "심볼별 PnL", "펀딩(별도 원장 수집)"],
     unknowable: [
       "보유시간(hold time) — 포지션 오픈시각이 없음(청산주문 시각만 존재)",
@@ -244,6 +251,7 @@ export const EXCHANGE_DOCS: Record<ExchangeId, ExchangeDoc> = {
       { raw: "tranId", norm: "dedupe 키" },
     ],
     pnlDef: "각 컴포넌트를 실제 발생일에 귀속 → 일별 분해가 정확. net = 컴포넌트 합",
+    fundingSource: { kind: "inline", label: "income 원장 포함 (FUNDING_FEE)" },
     knowable: ["일별 PnL (실제 발생일 귀속, 정확)", "30일 합계·평균", "심볼별 PnL"],
     unknowable: [
       "보유시간 — 포지션 경계 정보 없음",
@@ -284,6 +292,7 @@ export const EXCHANGE_DOCS: Record<ExchangeId, ExchangeDoc> = {
       { raw: "tid", norm: "dedupe 키" },
     ],
     pnlDef: "net = closedPnl − fee. 펀딩은 userFunding에서 별도 수집(실제 발생일 귀속)",
+    fundingSource: { kind: "separate", label: "별도 호출 (userFunding)" },
     knowable: ["일별 PnL", "30일 합계·평균", "심볼별 PnL"],
     unknowable: [
       "보유시간 — 오픈~종료 시각 없음",
