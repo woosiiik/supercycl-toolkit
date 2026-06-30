@@ -20,6 +20,7 @@ import YmPushStatus from "@/components/ym-push-status/YmPushStatus";
 import YmSignalDetail from "@/components/ym-signal-detail/YmSignalDetail";
 import SyncPayloadDecrypt from "@/components/sync-payload-decrypt/SyncPayloadDecrypt";
 import ExchangePnl from "@/components/exchange-pnl/ExchangePnl";
+import SupercyclUserManager from "@/components/supercycl-user/SupercyclUserManager";
 
 export default async function ToolPage({
   params,
@@ -37,7 +38,9 @@ export default async function ToolPage({
     <div>
       <ToolHeader tool={tool} />
       <div className="p-6">
-        {slug === "exchange-pnl" ? (
+        {slug === "supercycl-user" ? (
+          <SupercyclUserManager />
+        ) : slug === "exchange-pnl" ? (
           <ExchangePnl />
         ) : slug === "hl-rate-limit-tester" ? (
           <RateLimitTester />

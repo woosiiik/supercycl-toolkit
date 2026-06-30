@@ -9,6 +9,16 @@ export interface ToolConfig {
 // === 신규 메뉴 (상단) ===
 const newTools: ToolConfig[] = [
   {
+    slug: "supercycl-user",
+    name: "슈퍼사이클 유저관리",
+    description:
+      "유저 address를 입력하면 DB 내 해당 회원의 각종 정보를 테이블별로 조회하여 보여주는 관리 도구입니다.\n" +
+      "address/main_address를 참조하는 모든 테이블을 런타임에 자동 탐색하고, ym_uid 기반 워치리스트까지 함께 조회합니다.\n" +
+      "\"유저삭제 SQL 생성\" 버튼은 조회된 테이블 기준으로 DELETE 쿼리문을 만들어 출력합니다 — 앱이 직접 삭제하지 않으며, 개발자가 검토 후 직접 실행합니다.\n" +
+      "Dev/Staging/Production 환경을 선택할 수 있으며, Production은 SQL 생성 전 모달로 한 번 더 확인합니다.\n" +
+      "조회만 하므로 읽기 권한 계정이면 충분합니다. VPN 연결이 필요합니다.",
+  },
+  {
     slug: "exchange-pnl",
     name: "거래소 PNL 수집/검증",
     description:
