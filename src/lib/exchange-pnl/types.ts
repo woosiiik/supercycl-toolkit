@@ -90,11 +90,46 @@ export interface NormalizedRow {
   leverage?: number | null;
 }
 
+/**
+ * 체결(fill)로 재구성한 포지션(라운드트립).
+ * 트레이드 히스토리 기반 도구에서 포지션 단위 지표(승/패·보유시간)를 산출하기 위해
+ * 심볼별로 체결을 시간순 재생하여 "포지션이 0으로 돌아오는 구간"을 하나의 포지션으로 묶는다.
+ */
+export interface ReconstructedPosition {
+  exchange: ExchangeId;
+  coin: string;
+  side: "long" | "short";
+  /** 오픈 시각(ms). 데이터 범위 밖에서 열렸으면 null(orphan) */
+  openTime: number | null;
+  /** 청산 시각(ms). 아직 안 닫혔으면 null(진행중) */
+  closeTime: number | null;
+  holdTimeMs: number | null;
+  /** 최대 보유 크기(절대값) */
+  maxSize: number;
+  /** 실현손익 합 (Σ closedPnl) */
+  pricePnl: number;
+  /** 수수료 합 (음수=비용) */
+  fee: number;
+  /** 귀속된 펀딩 합 (시간구간 매칭) */
+  funding: number;
+  /** net = pricePnl + fee + funding */
+  netPnl: number;
+  /** 승/패 (net>0). 진행중이면 null */
+  win: boolean | null;
+  fillCount: number;
+  /** 오픈이 데이터 범위 밖(orphan) — 보유시간 미상 */
+  orphan: boolean;
+  /** 아직 미청산(진행중) */
+  open: boolean;
+}
+
 /** 어댑터 → API 응답 */
 export interface CollectResult {
   exchange: ExchangeId;
   /** 정규화된 row */
   rows: NormalizedRow[];
+  /** 체결로 재구성한 포지션 (지원 거래소만) */
+  positions?: ReconstructedPosition[];
   /** 원본 API 응답 (페이지/호출 단위, 가공 없음) */
   rawPages: RawPage[];
   /** 수집 경고/주의 */
@@ -135,4 +170,6 @@ export interface StoredData {
   rawPages: RawPage[];
   warnings: string[];
   meta: CollectResult["meta"];
+  /** 체결로 재구성한 포지션 (지원 거래소만) */
+  positions?: ReconstructedPosition[];
 }

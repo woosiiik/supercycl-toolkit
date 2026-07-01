@@ -15,8 +15,9 @@ import ExchangeCard, { type CollectState } from "./ExchangeCard";
 import MetricsPanel from "./MetricsPanel";
 import RawDataView from "./RawDataView";
 import MethodDocs from "./MethodDocs";
+import PositionReconstruction from "./PositionReconstruction";
 
-type Tab = "collect" | "aggregated" | "perExchange" | "raw" | "docs";
+type Tab = "collect" | "aggregated" | "perExchange" | "positions" | "raw" | "docs";
 
 // 오늘(UTC)이 속한 월 값 ("YYYY-MM")
 function currentMonthValue(): string {
@@ -132,6 +133,7 @@ export default function ExchangePnl({ method = "position" }: { method?: CollectM
           rawPages: result.rawPages,
           warnings: result.warnings,
           meta: result.meta,
+          positions: result.positions,
         };
         saveData(stored, method);
         setDataMap((prev) => ({ ...prev, [ex]: stored }));
@@ -172,6 +174,11 @@ export default function ExchangePnl({ method = "position" }: { method?: CollectM
   }, [creds, handleCollect]);
 
   const collectedExchanges = EXCHANGES.filter((ex) => dataMap[ex.id]);
+
+  // 체결로 재구성된 포지션이 있는 거래소 (트레이드 방식 전용)
+  const reconEntries = collectedExchanges
+    .filter((ex) => (dataMap[ex.id]?.positions?.length ?? 0) > 0)
+    .map((ex) => ({ exchange: ex.id, positions: dataMap[ex.id]!.positions! }));
 
   // 합산 대상 row
   const aggregatedRows: NormalizedRow[] = useMemo(() => {
@@ -297,6 +304,11 @@ export default function ExchangePnl({ method = "position" }: { method?: CollectM
           <button className={tabCls("perExchange")} onClick={() => setTab("perExchange")} disabled={collectedExchanges.length === 0}>
             거래소별
           </button>
+          {method === "trade" && (
+            <button className={tabCls("positions")} onClick={() => setTab("positions")} disabled={collectedExchanges.length === 0}>
+              포지션 재구성
+            </button>
+          )}
           <button className={tabCls("raw")} onClick={() => setTab("raw")} disabled={collectedExchanges.length === 0}>
             원본 데이터
           </button>
@@ -404,6 +416,9 @@ export default function ExchangePnl({ method = "position" }: { method?: CollectM
           })()}
         </div>
       )}
+
+      {/* === 포지션 재구성 탭 (트레이드 방식) === */}
+      {tab === "positions" && <PositionReconstruction entries={reconEntries} />}
 
       {/* === 원본 데이터 탭 === */}
       {tab === "raw" && (
