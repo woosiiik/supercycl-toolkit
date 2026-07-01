@@ -20,7 +20,7 @@ export async function collectHyperliquid(req: CollectRequest): Promise<CollectRe
     return { exchange: "hyperliquid", rows, rawPages, warnings, meta: { requestCount, endpoints: ["/info"], startTime: req.startTime, endTime: req.endTime } };
   }
 
-  warnings.push("Hyperliquid는 fill 단위 closedPnl 합산입니다 — hold time 미지원, 승/패는 fill 기준 근사. 최근 10,000 fill 한계로 장기 이력은 누락될 수 있습니다.");
+  warnings.push("Hyperliquid는 fill 단위 (closedPnl − fee) 합산입니다(오픈 체결 수수료 포함) — hold time 미지원, 승/패는 청산 fill 기준 근사. 최근 10,000 fill 한계로 장기 이력은 누락될 수 있습니다.");
 
   // === fills (closedPnl) ===
   let startTime = req.startTime;
@@ -91,17 +91,19 @@ interface HlFill {
 function normalizeFill(f: HlFill): NormalizedRow | null {
   const closed = num(f.closedPnl);
   const fee = num(f.fee);
-  // 청산 fill만 (closedPnl != 0 또는 dir에 Close 포함)
-  const isClose = (f.dir || "").includes("Close");
-  if (!isClose && closed === 0) return null;
+  // 손익이나 수수료가 있는 모든 체결 포함 (오픈 체결의 수수료도 반영).
+  if (closed === 0 && fee === 0) return null;
   const net = closed - fee;
   const dir = (f.dir || "").toLowerCase();
   const side = dir.includes("long") ? "long" : dir.includes("short") ? "short" : null;
+  // 실현손익이 있는 청산 fill만 포지션 승/패 대상. 오픈(수수료만) 체결은 win=null·income으로
+  // 분류해 승률·종료건수를 오염시키지 않으면서 수수료는 합산에 포함한다.
+  const isRealized = closed !== 0;
   return {
     exchange: "hyperliquid",
     id: `fill-${f.tid ?? ""}`,
     symbol: f.coin ?? "",
-    side,
+    side: isRealized ? side : null,
     pricePnl: closed,
     fee: -fee,
     funding: 0,
@@ -109,8 +111,8 @@ function normalizeFill(f: HlFill): NormalizedRow | null {
     openTime: null,
     closeTime: num(f.time),
     holdTimeMs: null,
-    win: closed > 0,
-    unit: "fill",
+    win: isRealized ? closed > 0 : null,
+    unit: isRealized ? "fill" : "income",
   };
 }
 
