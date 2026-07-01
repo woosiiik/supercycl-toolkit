@@ -104,7 +104,11 @@ function SideBadge({ side }: { side: "long" | "short" }) {
 // 일별 차트 hover 시 그 날짜 내역을 거래소·심볼별로, 가격손익/수수료/펀딩/Net 구분해 표시
 function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: DailyPoint }> }) {
   if (!active || !payload?.length) return null;
-  const dp = payload[0].payload;
+  return <DailyDetail dp={payload[0].payload} />;
+}
+
+// 일별 상세 카드 — hover 툴팁과 클릭 고정 패널에서 공용. onClose가 있으면 X 버튼 표시.
+function DailyDetail({ dp, onClose }: { dp: DailyPoint; onClose?: () => void }) {
   const entries = dp.entries ?? [];
   const num = (n: number) => `px-3 py-2 text-right align-middle tabular-nums ${pnlColor(n)}`;
 
@@ -132,11 +136,23 @@ function DailyTooltip({ active, payload }: { active?: boolean; payload?: Array<{
   return (
     <div className="min-w-[34rem] max-w-2xl rounded-lg border border-zinc-200 bg-white text-xs shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
       {/* 헤더 */}
-      <div className="flex items-baseline justify-between gap-4 border-b border-zinc-200 px-4 py-2.5 dark:border-zinc-700">
+      <div className="flex items-center justify-between gap-4 border-b border-zinc-200 px-4 py-2.5 dark:border-zinc-700">
         <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{dp.date}</span>
-        <span className="text-sm">
-          <span className="text-zinc-400">Net </span>
-          <span className={`font-bold tabular-nums ${pnlColor(dp.net)}`}>{fmtUsd(dp.net)}</span>
+        <span className="flex items-center gap-3">
+          <span className="text-sm">
+            <span className="text-zinc-400">Net </span>
+            <span className={`font-bold tabular-nums ${pnlColor(dp.net)}`}>{fmtUsd(dp.net)}</span>
+          </span>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="상세 닫기"
+              className="rounded p-1 leading-none text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            >
+              ✕
+            </button>
+          )}
         </span>
       </div>
 
@@ -308,6 +324,8 @@ function MiniRow({ label, value, valueClass }: { label: string; value: string; v
 
 export default function MetricsPanel({ rows, toggles, showSupportNotes, range }: Props) {
   const [sort, setSort] = useState<{ key: SymbolSortKey; dir: "asc" | "desc" }>({ key: "symbol", dir: "asc" });
+  // 막대 클릭 시 해당 날짜 상세를 고정(hover와 무관하게 유지, X로 닫음)
+  const [pinnedDate, setPinnedDate] = useState<string | null>(null);
 
   // React Compiler가 자동 메모이즈 (수동 useMemo는 컴파일러와 충돌)
   const m = computeMetrics(rows, toggles, range);
@@ -391,20 +409,42 @@ export default function MetricsPanel({ rows, toggles, showSupportNotes, range }:
 
       {/* 일별 차트 */}
       <div>
-        <h4 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">일별 Net PnL</h4>
+        <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
+          <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">일별 Net PnL</h4>
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-500">· 막대를 클릭하면 상세가 아래에 고정됩니다</span>
+        </div>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={m.daily} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+          <BarChart
+            data={m.daily}
+            margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+            onClick={(state) => {
+              const lbl = state?.activeLabel;
+              if (lbl != null) setPinnedDate(String(lbl));
+            }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#88888830" />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d: string) => d.slice(5)} />
             <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v: number) => fmtUsd(v)} />
             <Tooltip content={<DailyTooltip />} cursor={{ fill: "#8888881a" }} />
-            <Bar dataKey="net" name="Net PnL">
+            <Bar dataKey="net" name="Net PnL" cursor="pointer">
               {m.daily.map((d) => (
                 <Cell key={d.date} fill={d.net >= 0 ? "#10b981" : "#ef4444"} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+
+        {/* 클릭 고정 상세 */}
+        {pinnedDate &&
+          (() => {
+            const dp = m.daily.find((d) => d.date === pinnedDate);
+            if (!dp) return null;
+            return (
+              <div className="mt-3 overflow-x-auto">
+                <DailyDetail dp={dp} onClose={() => setPinnedDate(null)} />
+              </div>
+            );
+          })()}
       </div>
 
       {/* 심볼별 */}
