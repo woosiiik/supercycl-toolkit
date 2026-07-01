@@ -6,6 +6,7 @@ import { EXCHANGES, EXCHANGE_COLORS, getExchange } from "@/lib/exchange-pnl/exch
 import { TRADE_DOCS } from "@/lib/exchange-pnl/tradeDocs";
 import { fmtAmount } from "@/lib/exchange-pnl/format";
 import { formatHoldTime } from "@/lib/exchange-pnl/metrics";
+import { GROUP_LABEL } from "./MetricsPanel";
 
 interface Entry {
   exchange: ExchangeId;
@@ -38,7 +39,7 @@ function ReconstructMethodDocs() {
           retention/조회범위 제약, 헤지 모드는 방향키(positionSide/positionIdx)로 분리해야 정확합니다.
           <br />
           <span className="text-[12px] text-blue-600 dark:text-blue-300">
-            ※ OKX·BingX·Bitget·Gate는 네이티브 포지션 히스토리를 제공하므로 재구성이 필요 없습니다 → &apos;포지션 히스토리 기반&apos; 도구를 사용하세요.
+            ※ OKX·BingX·Bitget·Gate는 네이티브 포지션 히스토리를 직접 수집해 아래 표에 함께 표시합니다(재구성 아님 · 크기/체결수는 미제공 &apos;—&apos;).
           </span>
         </p>
       </div>
@@ -65,15 +66,20 @@ function ReconstructMethodDocs() {
   );
 }
 
+type Sel = ExchangeId | "all";
+
 export default function PositionReconstruction({ entries }: { entries: Entry[] }) {
-  const [sel, setSel] = useState<ExchangeId | null>(null);
-  const active = sel ?? entries[0]?.exchange ?? null;
-  const cur = entries.find((e) => e.exchange === active);
+  const [sel, setSel] = useState<Sel | null>(null);
+  const active: Sel | null = sel ?? (entries.length > 1 ? "all" : entries[0]?.exchange ?? null);
+  const positions =
+    active === "all"
+      ? entries.flatMap((e) => e.positions)
+      : (entries.find((e) => e.exchange === active)?.positions ?? null);
 
   return (
     <div className="flex flex-col gap-5">
       <ReconstructMethodDocs />
-      {cur ? <ReconstructData entries={entries} active={active!} onSelect={setSel} cur={cur} /> : (
+      {positions && active ? <ReconstructData entries={entries} active={active} onSelect={setSel} positions={positions} /> : (
         <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
           아직 재구성된 포지션이 없습니다.
           <ul className="mt-2 list-inside list-disc text-xs">
@@ -91,25 +97,16 @@ function ReconstructData({
   entries,
   active,
   onSelect,
-  cur,
+  positions: rawPositions,
 }: {
   entries: Entry[];
-  active: ExchangeId;
-  onSelect: (ex: ExchangeId) => void;
-  cur: Entry;
+  active: Sel;
+  onSelect: (s: Sel) => void;
+  positions: ReconstructedPosition[];
 }) {
-  const positions = [...cur.positions].sort(
+  const positions = [...rawPositions].sort(
     (a, b) => (b.closeTime ?? b.openTime ?? 0) - (a.closeTime ?? a.openTime ?? 0),
   );
-
-  const closed = positions.filter((p) => !p.open);
-  const winCount = closed.filter((p) => p.win === true).length;
-  const lossCount = closed.filter((p) => p.win === false).length;
-  const wl = winCount + lossCount;
-  const winRate = wl > 0 ? (winCount / wl) * 100 : null;
-  const totalNet = positions.reduce((s, p) => s + p.netPnl, 0);
-  const openCount = positions.filter((p) => p.open).length;
-  const orphanCount = positions.filter((p) => p.orphan).length;
 
   const th = "px-3 py-2 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap";
   const thL = "px-3 py-2 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap";
@@ -117,8 +114,18 @@ function ReconstructData({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 거래소 선택 */}
+      {/* 거래소 선택 (전체 + 개별) */}
       <div className="flex flex-wrap gap-2">
+        {entries.length > 1 && (
+          <button
+            onClick={() => onSelect("all")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+              active === "all" ? "bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900" : "border border-zinc-300 text-zinc-600 dark:border-zinc-600 dark:text-zinc-400"
+            }`}
+          >
+            전체 ({entries.reduce((s, e) => s + e.positions.length, 0)})
+          </button>
+        )}
         {entries.map((e) => {
           const isActive = active === e.exchange;
           return (
@@ -137,11 +144,7 @@ function ReconstructData({
       </div>
 
       {/* 요약 */}
-      <div className="flex flex-wrap gap-2.5">
-        <SummaryCard label="포지션 수" value={`${positions.length}`} sub={`청산 ${closed.length} · 진행중 ${openCount}${orphanCount ? ` · 오픈전 ${orphanCount}` : ""}`} />
-        <SummaryCard label="승률" value={winRate !== null ? `${winRate.toFixed(1)}%` : "—"} sub={`${winCount}승 / ${lossCount}패`} />
-        <SummaryCard label="Net PnL 합" value={fmtAmount(totalNet)} valueClass={pnlColor(totalNet)} />
-      </div>
+      <PositionSummary positions={positions} heading="포지션 지표 · 체결/포지션 히스토리 기반" />
 
       {/* 테이블 */}
       <div className="max-h-[600px] overflow-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
@@ -165,7 +168,14 @@ function ReconstructData({
           <tbody>
             {positions.map((p, i) => (
               <tr key={i} className="border-t border-zinc-100 dark:border-zinc-800">
-                <td className="px-3 py-1.5 font-medium text-zinc-700 dark:text-zinc-300">{p.coin}</td>
+                <td className="px-3 py-1.5 font-medium text-zinc-700 dark:text-zinc-300">
+                  <span className="flex items-center gap-1.5">
+                    {active === "all" && (
+                      <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: EXCHANGE_COLORS[p.exchange] }} title={getExchange(p.exchange).name} />
+                    )}
+                    {p.coin}
+                  </span>
+                </td>
                 <td className="px-3 py-1.5">
                   <span
                     className={`inline-flex items-center gap-0.5 rounded px-1 py-px text-[10px] font-bold leading-none ${
@@ -184,7 +194,7 @@ function ReconstructData({
                   {p.open ? <span className="text-blue-500 dark:text-blue-400">진행중</span> : fmtTime(p.closeTime)}
                 </td>
                 <td className={`${td} text-zinc-500`}>{p.holdTimeMs !== null ? formatHoldTime(p.holdTimeMs) : "—"}</td>
-                <td className={`${td} text-zinc-500`}>{p.maxSize}</td>
+                <td className={`${td} text-zinc-500`}>{p.maxSize > 0 ? p.maxSize : "—"}</td>
                 <td className={`${td} ${pnlColor(p.pricePnl)}`}>{fmtAmount(p.pricePnl)}</td>
                 <td className={`${td} ${pnlColor(p.fee)}`}>{fmtAmount(p.fee)}</td>
                 <td className={`${td} ${pnlColor(p.funding)}`}>{fmtAmount(p.funding)}</td>
@@ -198,12 +208,70 @@ function ReconstructData({
                     <span className="font-semibold text-red-600 dark:text-red-400">패</span>
                   )}
                 </td>
-                <td className={`${td} text-zinc-400`}>{p.fillCount}</td>
+                <td className={`${td} text-zinc-400`}>{p.fillCount > 0 ? p.fillCount : "—"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// 포지션 요약 카드 (재구성 탭·합산보기 공용) — 청산 완료 포지션 기준
+export function PositionSummary({ positions, heading }: { positions: ReconstructedPosition[]; heading?: string }) {
+  const closed = positions.filter((p) => !p.open);
+  const winPos = closed.filter((p) => p.win === true);
+  const lossPos = closed.filter((p) => p.win === false);
+  const winCount = winPos.length;
+  const lossCount = lossPos.length;
+  const wl = winCount + lossCount;
+  const winRate = wl > 0 ? (winCount / wl) * 100 : null;
+  const avgWin = winCount ? winPos.reduce((s, p) => s + p.netPnl, 0) / winCount : 0;
+  const avgLoss = lossCount ? lossPos.reduce((s, p) => s + p.netPnl, 0) / lossCount : 0;
+  const totalNet = positions.reduce((s, p) => s + p.netPnl, 0);
+  const openCount = positions.filter((p) => p.open).length;
+  const orphanCount = positions.filter((p) => p.orphan).length;
+
+  const withHold = closed.filter((p) => p.holdTimeMs !== null);
+  const avgHold = (arr: ReconstructedPosition[]) =>
+    arr.length ? arr.reduce((s, p) => s + (p.holdTimeMs ?? 0), 0) / arr.length : 0;
+  const holdAll = avgHold(withHold);
+  const holdWin = avgHold(withHold.filter((p) => p.win === true));
+  const holdLoss = avgHold(withHold.filter((p) => p.win === false));
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {heading && <div className={GROUP_LABEL}>{heading}</div>}
+      <div className="flex flex-wrap gap-2.5">
+      <SummaryCard label="포지션 수" value={`${positions.length}`} sub={`청산 ${closed.length} · 진행중 ${openCount}${orphanCount ? ` · 오픈전 ${orphanCount}` : ""}`} />
+      <SummaryCard label="승률" value={winRate !== null ? `${winRate.toFixed(1)}%` : "—"} sub={`${winCount}승 / ${lossCount}패`} />
+      <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">Avg Win / Loss</div>
+        <div className="mt-0.5 space-y-0.5">
+          <MiniRow label="Avg Win" value={winCount ? fmtAmount(avgWin) : "—"} valueClass="text-emerald-600 dark:text-emerald-400" />
+          <MiniRow label="Avg Loss" value={lossCount ? fmtAmount(avgLoss) : "—"} valueClass="text-red-600 dark:text-red-400" />
+        </div>
+      </div>
+      <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">평균 보유시간</div>
+        <div className="mt-0.5 space-y-0.5">
+          <MiniRow label="전체" value={withHold.length ? formatHoldTime(holdAll) : "—"} />
+          <MiniRow label="승" value={holdWin ? formatHoldTime(holdWin) : "—"} valueClass="text-emerald-600 dark:text-emerald-400" />
+          <MiniRow label="패" value={holdLoss ? formatHoldTime(holdLoss) : "—"} valueClass="text-red-600 dark:text-red-400" />
+        </div>
+      </div>
+      <SummaryCard label="Net PnL 합" value={fmtAmount(totalNet)} valueClass={pnlColor(totalNet)} />
+      </div>
+    </div>
+  );
+}
+
+function MiniRow({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <span className="text-[11px] text-zinc-400">{label}</span>
+      <span className={`text-sm font-semibold tabular-nums ${valueClass ?? "text-zinc-700 dark:text-zinc-200"}`}>{value}</span>
     </div>
   );
 }

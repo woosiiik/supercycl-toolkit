@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import type { ExchangeId, StoredData, CollectResult, NormalizedRow, CollectMethod } from "@/lib/exchange-pnl/types";
+import type { ExchangeId, StoredData, CollectResult, NormalizedRow, CollectMethod, ReconstructedPosition } from "@/lib/exchange-pnl/types";
 import { EXCHANGES, getExchange, EXCHANGE_COLORS } from "@/lib/exchange-pnl/exchanges";
 import {
   loadCredentials,
@@ -15,7 +15,7 @@ import ExchangeCard, { type CollectState } from "./ExchangeCard";
 import MetricsPanel from "./MetricsPanel";
 import RawDataView from "./RawDataView";
 import MethodDocs from "./MethodDocs";
-import PositionReconstruction from "./PositionReconstruction";
+import PositionReconstruction, { PositionSummary } from "./PositionReconstruction";
 
 type Tab = "collect" | "aggregated" | "perExchange" | "positions" | "raw" | "docs";
 
@@ -179,6 +179,15 @@ export default function ExchangePnl({ method = "position" }: { method?: CollectM
   const reconEntries = collectedExchanges
     .filter((ex) => (dataMap[ex.id]?.positions?.length ?? 0) > 0)
     .map((ex) => ({ exchange: ex.id, positions: dataMap[ex.id]!.positions! }));
+
+  // 합산 보기용: 선택된 거래소들의 포지션 합집합
+  const aggregatedPositions: ReconstructedPosition[] = useMemo(() => {
+    const out: ReconstructedPosition[] = [];
+    for (const ex of collectedExchanges) {
+      if (selected.has(ex.id)) out.push(...(dataMap[ex.id]?.positions ?? []));
+    }
+    return out;
+  }, [collectedExchanges, selected, dataMap]);
 
   // 합산 대상 row
   const aggregatedRows: NormalizedRow[] = useMemo(() => {
@@ -374,6 +383,9 @@ export default function ExchangePnl({ method = "position" }: { method?: CollectM
               </label>
             ))}
           </div>
+          {method === "trade" && aggregatedPositions.length > 0 && (
+            <PositionSummary positions={aggregatedPositions} heading="포지션 지표 · 체결/포지션 히스토리 기반" />
+          )}
           <MetricsPanel rows={aggregatedRows} toggles={toggles} showSupportNotes range={aggregatedRange} />
         </div>
       )}
@@ -410,6 +422,11 @@ export default function ExchangePnl({ method = "position" }: { method?: CollectM
                   <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{getExchange(target).name}</h3>
                   <span className="text-xs text-zinc-400">{getExchange(target).unit} 단위 · {d.rows.length}건</span>
                 </div>
+                {method === "trade" && (d.positions?.length ?? 0) > 0 && (
+                  <div className="mb-4">
+                    <PositionSummary positions={d.positions!} heading="포지션 지표 · 체결/포지션 히스토리 기반" />
+                  </div>
+                )}
                 <MetricsPanel rows={d.rows} toggles={toggles} showSupportNotes range={{ start: d.startTime, end: d.endTime }} />
               </div>
             );

@@ -12,7 +12,7 @@ import {
   Cell,
 } from "recharts";
 import type { NormalizedRow, ExchangeId } from "@/lib/exchange-pnl/types";
-import { computeMetrics, formatHoldTime, type PnlToggles, type DailyPoint, type DailyEntry } from "@/lib/exchange-pnl/metrics";
+import { computeMetrics, type PnlToggles, type DailyPoint, type DailyEntry } from "@/lib/exchange-pnl/metrics";
 import { fmtAmount } from "@/lib/exchange-pnl/format";
 import { EXCHANGES, EXCHANGE_COLORS } from "@/lib/exchange-pnl/exchanges";
 
@@ -311,6 +311,8 @@ function Card({
 
 const CARD_CLS = "rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900";
 const CARD_LABEL = "text-[13px] font-semibold text-zinc-700 dark:text-zinc-200";
+// 카드 그룹 구분용 라벨 (포지션 지표 / 손익 지표)
+export const GROUP_LABEL = "text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500";
 
 // 한 카드에 여러 (라벨: 값) 줄을 넣는 미니 행
 function MiniRow({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
@@ -345,67 +347,27 @@ export default function MetricsPanel({ rows, toggles, showSupportNotes, range }:
 
   return (
     <div className="flex flex-col gap-5">
-      {/* 요약 카드 (8개 · 컴팩트) */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
-        <Card label="Net PnL" value={fmtUsd(m.totalNet)} valueClass={pnlColor(m.totalNet)} sub={`${m.closedCount.toLocaleString()}건`} dim="value" showSupport={showSupportNotes} />
-        <Card label="가격손익" value={fmtUsd(m.totalPrice)} valueClass={pnlColor(m.totalPrice)} dim="value" showSupport={showSupportNotes} />
-        <Card label="수수료" value={fmtUsd(m.totalFee)} valueClass={pnlColor(m.totalFee)} sub={toggles.includeFee ? "Net 반영" : "Net 제외"} dim="value" showSupport={showSupportNotes} />
-        <Card label="펀딩" value={fmtUsd(m.totalFunding)} valueClass={pnlColor(m.totalFunding)} sub={toggles.includeFunding ? "Net 반영" : "Net 제외"} dim="value" showSupport={showSupportNotes} />
-        <Card label="평균 PnL/건" value={fmtUsd(m.avgNet)} valueClass={pnlColor(m.avgNet)} dim="value" showSupport={showSupportNotes} />
+      {/* 손익 지표 (원장 net 기반) */}
+      <div className="flex flex-col gap-1.5">
+        <div className={GROUP_LABEL}>손익 지표 · 원장 net 기반</div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+          <Card label="Net PnL" value={fmtUsd(m.totalNet)} valueClass={pnlColor(m.totalNet)} sub={`${m.closedCount.toLocaleString()}건`} dim="value" showSupport={showSupportNotes} />
+          <Card label="가격손익" value={fmtUsd(m.totalPrice)} valueClass={pnlColor(m.totalPrice)} dim="value" showSupport={showSupportNotes} />
+          <Card label="수수료" value={fmtUsd(m.totalFee)} valueClass={pnlColor(m.totalFee)} sub={toggles.includeFee ? "Net 반영" : "Net 제외"} dim="value" showSupport={showSupportNotes} />
+          <Card label="펀딩" value={fmtUsd(m.totalFunding)} valueClass={pnlColor(m.totalFunding)} sub={toggles.includeFunding ? "Net 반영" : "Net 제외"} dim="value" showSupport={showSupportNotes} />
+          <Card label="평균 PnL/건" value={fmtUsd(m.avgNet)} valueClass={pnlColor(m.avgNet)} dim="value" showSupport={showSupportNotes} />
 
-        {/* 이익 / 손실 */}
-        <div className={CARD_CLS}>
-          <div className={CARD_LABEL}>이익 / 손실</div>
-          <div className="mt-0.5 space-y-0.5">
-            <MiniRow label="이익" value={fmtUsd(m.profit)} valueClass="text-emerald-600 dark:text-emerald-400" />
-            <MiniRow label="손실" value={fmtUsd(m.loss)} valueClass="text-red-600 dark:text-red-400" />
-          </div>
-          {showSupportNotes && <SupportLine dim="value" />}
-        </div>
-
-        {/* 승률 (정식 / 근사) */}
-        <div className={CARD_CLS}>
-          <div className={CARD_LABEL}>승률</div>
-          <div className="mt-0.5 space-y-0.5">
-            <MiniRow
-              label="정식"
-              value={
-                m.winRateStrict !== null
-                  ? `${(m.winRateStrict * 100).toFixed(1)}% (${m.winCountStrict}/${m.lossCountStrict})`
-                  : "—"
-              }
-            />
-            <MiniRow
-              label="근사"
-              value={
-                m.winRate !== null ? `${(m.winRate * 100).toFixed(1)}% (${m.winCount}/${m.lossCount})` : "—"
-              }
-            />
-          </div>
-          {showSupportNotes && <SupportLine dim="winRate" />}
-        </div>
-
-        {/* 보유시간 (전체 / 승 / 패) */}
-        <div className={CARD_CLS}>
-          <div className={CARD_LABEL}>보유시간</div>
-          {m.holdTime ? (
+          {/* 이익 / 손실 */}
+          <div className={CARD_CLS}>
+            <div className={CARD_LABEL}>이익 / 손실</div>
             <div className="mt-0.5 space-y-0.5">
-              <MiniRow label="전체" value={formatHoldTime(m.holdTime.overallAvg)} />
-              <MiniRow label="승" value={formatHoldTime(m.holdTime.winAvg)} valueClass="text-emerald-600 dark:text-emerald-400" />
-              <MiniRow label="패" value={formatHoldTime(m.holdTime.lossAvg)} valueClass="text-red-600 dark:text-red-400" />
+              <MiniRow label="이익" value={fmtUsd(m.profit)} valueClass="text-emerald-600 dark:text-emerald-400" />
+              <MiniRow label="손실" value={fmtUsd(m.loss)} valueClass="text-red-600 dark:text-red-400" />
             </div>
-          ) : (
-            <div className="mt-0.5 text-base font-semibold text-zinc-400">—</div>
-          )}
-          {showSupportNotes && <SupportLine dim="holdTime" />}
+            {showSupportNotes && <SupportLine dim="value" />}
+          </div>
         </div>
       </div>
-
-      {showSupportNotes && !m.positionGranular && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
-          이 데이터에는 포지션 단위 정보가 없어 승/패 수·승률·보유시간이 표시되지 않습니다 (income/fill 단위 거래소 포함).
-        </div>
-      )}
 
       {/* 일별 차트 */}
       <div>
