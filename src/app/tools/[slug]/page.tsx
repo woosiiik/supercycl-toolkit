@@ -42,6 +42,8 @@ export default async function ToolPage({
           <SupercyclUserManager />
         ) : slug === "exchange-pnl" ? (
           <ExchangePnl />
+        ) : slug === "exchange-pnl-trade" ? (
+          <ExchangePnl method="trade" />
         ) : slug === "hl-rate-limit-tester" ? (
           <RateLimitTester />
         ) : slug === "hl-testnet-faucet-farmer" ? (

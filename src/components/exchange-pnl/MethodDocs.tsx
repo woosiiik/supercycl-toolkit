@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { ExchangeId, ExchangeMeta } from "@/lib/exchange-pnl/types";
+import type { ExchangeId, ExchangeMeta, CollectMethod } from "@/lib/exchange-pnl/types";
 import { EXCHANGES, EXCHANGE_COLORS, getExchange } from "@/lib/exchange-pnl/exchanges";
 import { EXCHANGE_DOCS } from "@/lib/exchange-pnl/docs";
+import { TRADE_DOCS } from "@/lib/exchange-pnl/tradeDocs";
 
 function tierBadge(tier: string): string {
   if (tier === "A") return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300";
@@ -205,7 +206,127 @@ function SummaryComparison() {
   );
 }
 
-export default function MethodDocs() {
+// 트레이드 히스토리(실현손익 원장) 기반 — 수집 방식 문서
+function TradeMethodDocs() {
+  const thCls =
+    "whitespace-nowrap px-3 py-2 text-center text-[11px] font-medium text-zinc-500 dark:text-zinc-400";
+  const tdCls = "whitespace-nowrap px-3 py-2 text-center text-sm";
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+        <p className="font-semibold">트레이드 히스토리(실현손익 원장) 기반 · 운영 웹앱과 동일</p>
+        <p className="mt-1 text-[13px] leading-relaxed">
+          포지션 히스토리 방식은 포지션이 <strong>완전히 종료된 뒤에야</strong> PnL이 잡혀, 부분청산·미종료
+          포지션의 실현손익이 누락됩니다. 이 도구는 운영 중인 <strong>슈퍼사이클 애그리게이터 웹앱과 동일한 거래소 API·분류</strong>로,
+          각 거래소의 <strong>잔액변동 원장(ledger)/체결(fill)</strong>에서 <strong>이체(입출금)만 제외</strong>하고
+          거래·정산 변동을 net으로 합산합니다 → 종료 여부와 무관하게 집계됩니다.
+          펀딩(funding)은 원장에 포함되거나 별도 소스에서 수집합니다. 단,{" "}
+          <strong>보유시간·포지션 승/패·승률은 알 수 없습니다</strong>(원장/체결 단위라 포지션 경계가 없음).
+        </p>
+      </div>
+
+      {/* 지표 매트릭스 (트레이드 방식 고정) */}
+      <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
+        <table className="w-full border-collapse">
+          <thead className="bg-zinc-50 dark:bg-zinc-800">
+            <tr>
+              <th className={`${thCls} sticky left-0 z-10 bg-zinc-50 text-left dark:bg-zinc-800`}>거래소</th>
+              <th className={thCls}>수집 단위</th>
+              <th className={`${thCls} text-left`}>펀딩(funding) 소스</th>
+              <th className={thCls}>일별 PnL</th>
+              <th className={thCls}>30일 합계·평균</th>
+              <th className={thCls}>심볼별 PnL</th>
+              <th className={thCls}>보유시간</th>
+              <th className={thCls}>포지션 승/패 수</th>
+              <th className={thCls}>승률</th>
+            </tr>
+          </thead>
+          <tbody>
+            {EXCHANGES.map((ex) => {
+              const td = TRADE_DOCS[ex.id];
+              return (
+                <tr key={ex.id} className="border-t border-zinc-100 dark:border-zinc-800">
+                  <th scope="row" className="sticky left-0 z-10 whitespace-nowrap bg-white px-3 py-2 text-left dark:bg-zinc-900">
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: EXCHANGE_COLORS[ex.id] }} />
+                      <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{ex.name}</span>
+                      {td.reused && (
+                        <span className="rounded bg-zinc-200 px-1 text-[10px] text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400" title="포지션 도구와 동일 어댑터 재사용">재사용</span>
+                      )}
+                    </span>
+                  </th>
+                  <td className={`${tdCls} text-zinc-600 dark:text-zinc-400`}>{td.unitLabel}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-left">
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className={`rounded px-1 text-[10px] font-semibold ${
+                          td.fundingSource.kind === "separate"
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                            : "bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300"
+                        }`}
+                      >
+                        {td.fundingSource.kind === "separate" ? "별도 소스" : "포함"}
+                      </span>
+                      <span className="text-xs text-zinc-600 dark:text-zinc-400">{td.fundingSource.label}</span>
+                    </span>
+                  </td>
+                  <td className={tdCls}><CapCell value={true} /></td>
+                  <td className={tdCls}><CapCell value={true} /></td>
+                  <td className={tdCls}><CapCell value={true} /></td>
+                  <td className={tdCls}><CapCell value={false} /></td>
+                  <td className={tdCls}><CapCell value={false} /></td>
+                  <td className={tdCls}><CapCell value={false} /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
+        <span><span className="font-semibold text-emerald-600 dark:text-emerald-400">✅</span> 가능</span>
+        <span><span className="font-semibold text-zinc-400 dark:text-zinc-500">✗</span> 불가(모름)</span>
+        <span className="text-zinc-400 dark:text-zinc-500">|</span>
+        <span><span className="rounded bg-zinc-200 px-1 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">포함</span> 펀딩이 원장에 포함</span>
+        <span><span className="rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-900 dark:text-amber-300">별도 소스</span> 펀딩을 별도 호출/원장으로 수집</span>
+        <span><span className="rounded bg-zinc-200 px-1 text-[10px] text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400">재사용</span> 이미 트레이드/원장 기반(포지션 도구와 동일)</span>
+      </div>
+
+      {/* 거래소별 엔드포인트·설명 */}
+      <Section title="거래소별 수집 엔드포인트 · 설명">
+        <div className="flex flex-col gap-2">
+          {EXCHANGES.map((ex) => {
+            const td = TRADE_DOCS[ex.id];
+            return (
+              <div key={ex.id} className="rounded-lg border-l-4 bg-zinc-50 px-4 py-3 dark:bg-zinc-900" style={{ borderColor: EXCHANGE_COLORS[ex.id] }}>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{ex.name}</h4>
+                  <span className="font-mono text-[11px] text-zinc-400">{td.endpoint}</span>
+                </div>
+                <p className="mt-1 text-[13px] text-zinc-600 dark:text-zinc-300">{td.note}</p>
+                {td.caveats.length > 0 && (
+                  <ul className="mt-1 space-y-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    {td.caveats.map((c, i) => (
+                      <li key={i}>· {c}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+export default function MethodDocs({ method = "position" }: { method?: CollectMethod }) {
+  if (method === "trade") return <TradeMethodDocs />;
+  return <MethodDocsPosition />;
+}
+
+function MethodDocsPosition() {
   const [active, setActive] = useState<ActiveTab>("summary");
   const isSummary = active === "summary";
   const meta = isSummary ? null : getExchange(active);

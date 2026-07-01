@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import type { ExchangeId, StoredData, CollectResult, NormalizedRow } from "@/lib/exchange-pnl/types";
+import type { ExchangeId, StoredData, CollectResult, NormalizedRow, CollectMethod } from "@/lib/exchange-pnl/types";
 import { EXCHANGES, getExchange, EXCHANGE_COLORS } from "@/lib/exchange-pnl/exchanges";
 import {
   loadCredentials,
@@ -59,7 +59,7 @@ function monthOptions(): { value: string; label: string; start: string; end: str
   return opts.reverse();
 }
 
-export default function ExchangePnl() {
+export default function ExchangePnl({ method = "position" }: { method?: CollectMethod }) {
   const [creds, setCreds] = useState<Record<string, Record<string, string>>>({});
   const [dataMap, setDataMap] = useState<Partial<Record<ExchangeId, StoredData>>>({});
   const [status, setStatus] = useState<Record<string, { state: CollectState; error?: string }>>({});
@@ -80,7 +80,7 @@ export default function ExchangePnl() {
     const sel = new Set<ExchangeId>();
     for (const ex of EXCHANGES) {
       c[ex.id] = loadCredentials(ex.id);
-      const stored = loadData(ex.id);
+      const stored = loadData(ex.id, method);
       if (stored) {
         d[ex.id] = stored;
         sel.add(ex.id);
@@ -91,7 +91,7 @@ export default function ExchangePnl() {
     setDataMap(d);
     setSelected(sel);
     setLoaded(true);
-  }, []);
+  }, [method]);
 
   const handleCredChange = useCallback((ex: ExchangeId, key: string, value: string) => {
     setCreds((prev) => {
@@ -116,6 +116,7 @@ export default function ExchangePnl() {
             credentials: creds[ex] ?? {},
             startTime: startMs,
             endTime: endMs,
+            method,
           }),
         });
         const json = await res.json();
@@ -132,7 +133,7 @@ export default function ExchangePnl() {
           warnings: result.warnings,
           meta: result.meta,
         };
-        saveData(stored);
+        saveData(stored, method);
         setDataMap((prev) => ({ ...prev, [ex]: stored }));
         setSelected((prev) => new Set(prev).add(ex));
         // row가 0인데 warning이 있으면 사용자에게 알림 위해 error 대신 done 처리
@@ -142,11 +143,11 @@ export default function ExchangePnl() {
         setStatus((s) => ({ ...s, [ex]: { state: "error", error: msg } }));
       }
     },
-    [creds, startMs, endMs],
+    [creds, startMs, endMs, method],
   );
 
   const handleClearData = useCallback((ex: ExchangeId) => {
-    clearData(ex);
+    clearData(ex, method);
     setDataMap((prev) => {
       const next = { ...prev };
       delete next[ex];
@@ -158,7 +159,7 @@ export default function ExchangePnl() {
       return next;
     });
     setStatus((s) => ({ ...s, [ex]: { state: "idle" } }));
-  }, []);
+  }, [method]);
 
   const collectAll = useCallback(async () => {
     const withCreds = EXCHANGES.filter((ex) => {
@@ -310,6 +311,9 @@ export default function ExchangePnl() {
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {method === "trade"
+                ? "트레이드 히스토리(실현손익 원장) 기반 수집입니다 — 포지션 종료 여부와 무관하게 거래 발생 시점에 PnL을 귀속합니다. 보유시간·승률은 제공되지 않습니다. "
+                : "포지션 히스토리 기반 수집입니다 — 포지션이 완전히 종료된 건만 집계됩니다. "}
               각 거래소의 read-only API key를 입력하고 수집하세요. 입력값과 수집 데이터는 브라우저 localStorage에만 저장됩니다.
             </p>
             <button
@@ -433,7 +437,7 @@ export default function ExchangePnl() {
       )}
 
       {/* === 수집 방식(문서) 탭 === */}
-      {tab === "docs" && <MethodDocs />}
+      {tab === "docs" && <MethodDocs method={method} />}
     </div>
   );
 }

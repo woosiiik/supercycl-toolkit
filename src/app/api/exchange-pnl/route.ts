@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { CollectRequest, ExchangeId } from "@/lib/exchange-pnl/types";
 import { getAdapter } from "@/lib/exchange-pnl/adapters";
+import { getTradeAdapter } from "@/lib/exchange-pnl/adapters/trade";
 
 // 거래소 PNL 수집 프록시.
 // 브라우저에서 거래소 API를 직접 호출하면 CORS + 서명(HMAC) 문제가 있으므로
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Partial<CollectRequest>;
     const { exchange, credentials, startTime, endTime } = body;
+    const method = body.method === "trade" ? "trade" : "position";
 
     if (!exchange || !VALID.includes(exchange)) {
       return NextResponse.json({ error: `유효하지 않은 거래소: ${exchange}` }, { status: 400 });
@@ -30,12 +32,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "startTime, endTime(ms) 가 필요합니다." }, { status: 400 });
     }
 
-    const adapter = getAdapter(exchange);
+    const adapter = method === "trade" ? getTradeAdapter(exchange) : getAdapter(exchange);
     if (!adapter) {
-      return NextResponse.json({ error: `어댑터 없음: ${exchange}` }, { status: 400 });
+      return NextResponse.json({ error: `어댑터 없음: ${exchange} (${method})` }, { status: 400 });
     }
 
-    const result = await adapter({ exchange, credentials, startTime, endTime });
+    const result = await adapter({ exchange, credentials, startTime, endTime, method });
     return NextResponse.json(result);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

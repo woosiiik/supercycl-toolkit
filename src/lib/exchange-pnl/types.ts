@@ -54,6 +54,9 @@ export interface ExchangeMeta {
 
 export type PositionUnit = "position" | "closing_order" | "income" | "fill";
 
+/** 수집 방식: 포지션 히스토리 기반 / 트레이드 히스토리(실현손익 원장) 기반 */
+export type CollectMethod = "position" | "trade";
+
 /**
  * 정규화된 PNL row.
  * 핵심: PnL을 net 단일값이 아니라 price/fee/funding 3컴포넌트로 분리 저장
@@ -118,6 +121,8 @@ export interface CollectRequest {
   credentials: Record<string, string>;
   startTime: number; // ms
   endTime: number; // ms
+  /** 수집 방식 (미지정 시 position) */
+  method?: CollectMethod;
 }
 
 /** localStorage 저장 데이터(거래소별) */
