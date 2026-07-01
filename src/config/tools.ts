@@ -19,24 +19,14 @@ const newTools: ToolConfig[] = [
       "조회만 하므로 읽기 권한 계정이면 충분합니다. VPN 연결이 필요합니다.",
   },
   {
-    slug: "exchange-pnl",
-    name: "거래소 PNL 수집/검증 (포지션 히스토리 기반)",
-    description:
-      "7개 코인선물거래소(OKX·BingX·Bitget·Gate·Bybit·Binance·Hyperliquid)의 Futures PnL을 실제 API로 수집하여 검증하는 도구입니다.\n" +
-      "거래소별 read-only API key(Hyperliquid는 지갑 주소)를 입력하면 포지션 히스토리/income/fills를 수집해 PnL을 가격손익·수수료·펀딩 컴포넌트로 분리 정규화합니다.\n" +
-      "포지션이 완전히 종료된 건만 집계되므로 보유시간·승률 등 포지션 단위 지표를 제공하지만, 부분청산·미종료 포지션의 실현손익은 누락될 수 있습니다.\n" +
-      "여러 거래소 합산 보기, 거래소별 보기, 원본 API 응답(raw) 보기를 제공하며 수수료/펀딩 토글로 net을 재계산합니다.\n" +
-      "본격 개발 전 실제 데이터 형태 확인 및 설계 검토용입니다. API key와 수집 데이터는 브라우저 localStorage에만 저장됩니다.",
-  },
-  {
     slug: "exchange-pnl-trade",
     name: "거래소 PNL 수집/검증 (트레이드 히스토리 기반)",
     description:
       "7개 코인선물거래소의 Futures PnL을 실현손익 원장(ledger)/체결(fill) 기반으로 수집하는 도구입니다.\n" +
       "운영 중인 슈퍼사이클 애그리게이터 웹앱의 PnL 수집 로직과 동일한 거래소 API·분류를 사용합니다(이체 제외 잔액변동 원장 net 합산).\n" +
       "OKX(fills-history+bills type8)·BingX/Binance(income)·Bitget(account bill)·Gate(account_book)·Bybit(transaction-log)·Hyperliquid(fills+funding)를 사용합니다.\n" +
-      "포지션 종료 여부와 무관하게 거래·정산 발생 시점에 귀속하므로 부분청산·미종료분도 포착되지만, 원장/체결 단위라 보유시간·승률은 제공되지 않습니다.\n" +
-      "API key와 수집 데이터는 브라우저 localStorage에만 저장됩니다(포지션 도구와 별도 네임스페이스).",
+      "포지션 종료 여부와 무관하게 거래·정산 발생 시점에 귀속하므로 부분청산·미종료분도 포착됩니다. '포지션 재구성' 탭에서 체결/포지션 히스토리로 승률·보유시간도 제공합니다.\n" +
+      "API key와 수집 데이터는 브라우저 localStorage에만 저장됩니다.",
   },
 ];
 

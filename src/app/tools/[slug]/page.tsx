@@ -40,8 +40,6 @@ export default async function ToolPage({
       <div className="p-6">
         {slug === "supercycl-user" ? (
           <SupercyclUserManager />
-        ) : slug === "exchange-pnl" ? (
-          <ExchangePnl />
         ) : slug === "exchange-pnl-trade" ? (
           <ExchangePnl method="trade" />
         ) : slug === "hl-rate-limit-tester" ? (
