@@ -253,7 +253,7 @@ function reconstructPositions(execs: ExecP[], cpnlByOrder: Map<string, { pnl: nu
     if (isOpen) {
       const side: "long" | "short" = e.sideSign > 0 ? "long" : "short";
       if (acc && !acc.orphan && acc.side === side) {
-        acc.size += e.qty;
+        acc.size = Math.round((acc.size + e.qty) * 1e8) / 1e8;
       } else {
         if (acc) {
           acc.closeTime = acc.lastTime;
@@ -267,7 +267,7 @@ function reconstructPositions(execs: ExecP[], cpnlByOrder: Map<string, { pnl: nu
         acc = newAcc(e.symbol, e.sideSign > 0 ? "short" : "long", 0, null, true, e.time);
         openBySym.set(e.symbol, acc);
       } else {
-        acc.size -= e.closedSize;
+        acc.size = Math.round((acc.size - e.closedSize) * 1e8) / 1e8;
       }
       if (e.orderId) acc.closeOrderIds.add(e.orderId);
     }

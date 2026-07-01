@@ -222,7 +222,8 @@ function reconstructPositions(trades: TradeP[], fundings: FundingEvent[]): Recon
     let acc = openByKey.get(key);
     const before = acc?.pos ?? 0;
     const delta = t.sideSign * t.qty;
-    const after = before + delta;
+    // 부동소수 누적 오차 방지 — 8자리로 반올림해 0 복귀(라운드트립 종료) 감지를 안정화
+    const after = Math.round((before + delta) * 1e8) / 1e8;
 
     if (!acc) {
       const orphan = Math.abs(before) <= EPS && t.realizedPnl !== 0; // 청산인데 알려진 오픈 없음

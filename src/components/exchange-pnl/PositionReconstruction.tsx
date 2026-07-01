@@ -35,7 +35,7 @@ function ReconstructMethodDocs() {
         <p className="mt-1 text-[13px] leading-relaxed">
           체결/트레이드 히스토리를 심볼별 시간순으로 재생해 <b>&quot;0→오픈→0 복귀&quot;</b>를 한 포지션(라운드트립)으로 묶으면
           <b> 승/패·승률·보유시간</b>을 산출할 수 있습니다(PnL 표시는 원장 net 그대로 유지). 스케일인·부분청산·재진입은
-          같은 포지션, 플립은 청산+신규로 분리합니다. 공통 한계: 조회 범위 밖에서 열린 포지션은 <b>보유시간 미상</b>(orphan),
+          같은 포지션, 플립은 청산+신규로 분리합니다. 공통 한계: 조회 범위 이전에 열린 포지션(<b>이월</b>)은 최초 진입 이력이 없어 <b>보유시간 미상</b>,
           retention/조회범위 제약, 헤지 모드는 방향키(positionSide/positionIdx)로 분리해야 정확합니다.
           <br />
           <span className="text-[12px] text-blue-600 dark:text-blue-300">
@@ -128,20 +128,40 @@ function ReconstructData({
         )}
         {entries.map((e) => {
           const isActive = active === e.exchange;
+          const native = TRADE_DOCS[e.exchange].reconstruct.status === "native";
           return (
             <button
               key={e.exchange}
               onClick={() => onSelect(e.exchange)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+              className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium ${
                 isActive ? "text-white" : "border border-zinc-300 text-zinc-600 dark:border-zinc-600 dark:text-zinc-400"
               }`}
               style={isActive ? { backgroundColor: EXCHANGE_COLORS[e.exchange] } : undefined}
             >
               {getExchange(e.exchange).name} ({e.positions.length})
+              <span
+                className={`rounded px-1 py-px text-[9px] font-semibold ${
+                  isActive
+                    ? "bg-white/25"
+                    : native
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                      : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                }`}
+                title={native ? "네이티브 포지션 히스토리 (재구성 아님)" : "체결 재생으로 재구성"}
+              >
+                {native ? "네이티브" : "재구성"}
+              </span>
             </button>
           );
         })}
       </div>
+
+      {/* 재구성/네이티브 범례 */}
+      <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+        <span className="rounded bg-emerald-100 px-1 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">재구성</span> 체결 재생(크기·보유시간 정밀, HL·Bybit·Binance)
+        {" · "}
+        <span className="rounded bg-amber-100 px-1 text-[9px] font-semibold text-amber-700 dark:bg-amber-900 dark:text-amber-300">네이티브</span> 거래소 포지션 히스토리(크기 미제공, OKX·BingX·Bitget·Gate)
+      </p>
 
       {/* 요약 */}
       <PositionSummary positions={positions} heading="포지션 지표 · 체결/포지션 히스토리 기반" />
@@ -188,13 +208,17 @@ function ReconstructData({
                   </span>
                 </td>
                 <td className="px-3 py-1.5 text-left font-mono text-xs text-zinc-500">
-                  {p.orphan ? <span className="text-amber-500 dark:text-amber-400">오픈전</span> : fmtTime(p.openTime)}
+                  {p.orphan ? (
+                    <span className="text-amber-500 dark:text-amber-400" title="조회 범위 이전에 열려 최초 진입 이력이 데이터에 없음 (보유시간 미상)">이월</span>
+                  ) : (
+                    fmtTime(p.openTime)
+                  )}
                 </td>
                 <td className="px-3 py-1.5 text-left font-mono text-xs text-zinc-500">
                   {p.open ? <span className="text-blue-500 dark:text-blue-400">진행중</span> : fmtTime(p.closeTime)}
                 </td>
                 <td className={`${td} text-zinc-500`}>{p.holdTimeMs !== null ? formatHoldTime(p.holdTimeMs) : "—"}</td>
-                <td className={`${td} text-zinc-500`}>{p.maxSize > 0 ? p.maxSize : "—"}</td>
+                <td className={`${td} text-zinc-500`}>{p.maxSize > 0 ? p.maxSize.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—"}</td>
                 <td className={`${td} ${pnlColor(p.pricePnl)}`}>{fmtAmount(p.pricePnl)}</td>
                 <td className={`${td} ${pnlColor(p.fee)}`}>{fmtAmount(p.fee)}</td>
                 <td className={`${td} ${pnlColor(p.funding)}`}>{fmtAmount(p.funding)}</td>
@@ -221,19 +245,20 @@ function ReconstructData({
 // 포지션 요약 카드 (재구성 탭·합산보기 공용) — 청산 완료 포지션 기준
 export function PositionSummary({ positions, heading }: { positions: ReconstructedPosition[]; heading?: string }) {
   const closed = positions.filter((p) => !p.open);
-  const winPos = closed.filter((p) => p.win === true);
-  const lossPos = closed.filter((p) => p.win === false);
+  // 통계 기준: 청산 완료 & 진입이력 있는(이월 아님) 포지션만. 이월(시작점 없음)·진행중은 제외.
+  const statPos = closed.filter((p) => !p.orphan);
+  const winPos = statPos.filter((p) => p.win === true);
+  const lossPos = statPos.filter((p) => p.win === false);
   const winCount = winPos.length;
   const lossCount = lossPos.length;
   const wl = winCount + lossCount;
   const winRate = wl > 0 ? (winCount / wl) * 100 : null;
   const avgWin = winCount ? winPos.reduce((s, p) => s + p.netPnl, 0) / winCount : 0;
   const avgLoss = lossCount ? lossPos.reduce((s, p) => s + p.netPnl, 0) / lossCount : 0;
-  const totalNet = positions.reduce((s, p) => s + p.netPnl, 0);
   const openCount = positions.filter((p) => p.open).length;
   const orphanCount = positions.filter((p) => p.orphan).length;
 
-  const withHold = closed.filter((p) => p.holdTimeMs !== null);
+  const withHold = statPos.filter((p) => p.holdTimeMs !== null);
   const avgHold = (arr: ReconstructedPosition[]) =>
     arr.length ? arr.reduce((s, p) => s + (p.holdTimeMs ?? 0), 0) / arr.length : 0;
   const holdAll = avgHold(withHold);
@@ -244,25 +269,27 @@ export function PositionSummary({ positions, heading }: { positions: Reconstruct
     <div className="flex flex-col gap-1.5">
       {heading && <div className={GROUP_LABEL}>{heading}</div>}
       <div className="flex flex-wrap gap-2.5">
-      <SummaryCard label="포지션 수" value={`${positions.length}`} sub={`청산 ${closed.length} · 진행중 ${openCount}${orphanCount ? ` · 오픈전 ${orphanCount}` : ""}`} />
-      <SummaryCard label="승률" value={winRate !== null ? `${winRate.toFixed(1)}%` : "—"} sub={`${winCount}승 / ${lossCount}패`} />
-      <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900">
-        <div className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">Avg Win / Loss</div>
-        <div className="mt-0.5 space-y-0.5">
-          <MiniRow label="Avg Win" value={winCount ? fmtAmount(avgWin) : "—"} valueClass="text-emerald-600 dark:text-emerald-400" />
-          <MiniRow label="Avg Loss" value={lossCount ? fmtAmount(avgLoss) : "—"} valueClass="text-red-600 dark:text-red-400" />
+        <SummaryCard label="집계 포지션" value={`${statPos.length}`} sub={`전체 ${positions.length} · 이월 ${orphanCount} · 진행중 ${openCount}`} />
+        <SummaryCard label="승률" value={winRate !== null ? `${winRate.toFixed(1)}%` : "—"} sub={`${winCount}승 / ${lossCount}패`} />
+        <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">Avg Win / Loss</div>
+          <div className="mt-0.5 space-y-0.5">
+            <MiniRow label="Avg Win" value={winCount ? fmtAmount(avgWin) : "—"} valueClass="text-emerald-600 dark:text-emerald-400" />
+            <MiniRow label="Avg Loss" value={lossCount ? fmtAmount(avgLoss) : "—"} valueClass="text-red-600 dark:text-red-400" />
+          </div>
+        </div>
+        <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">평균 보유시간</div>
+          <div className="mt-0.5 space-y-0.5">
+            <MiniRow label="전체" value={withHold.length ? formatHoldTime(holdAll) : "—"} />
+            <MiniRow label="승" value={holdWin ? formatHoldTime(holdWin) : "—"} valueClass="text-emerald-600 dark:text-emerald-400" />
+            <MiniRow label="패" value={holdLoss ? formatHoldTime(holdLoss) : "—"} valueClass="text-red-600 dark:text-red-400" />
+          </div>
         </div>
       </div>
-      <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900">
-        <div className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">평균 보유시간</div>
-        <div className="mt-0.5 space-y-0.5">
-          <MiniRow label="전체" value={withHold.length ? formatHoldTime(holdAll) : "—"} />
-          <MiniRow label="승" value={holdWin ? formatHoldTime(holdWin) : "—"} valueClass="text-emerald-600 dark:text-emerald-400" />
-          <MiniRow label="패" value={holdLoss ? formatHoldTime(holdLoss) : "—"} valueClass="text-red-600 dark:text-red-400" />
-        </div>
-      </div>
-      <SummaryCard label="Net PnL 합" value={fmtAmount(totalNet)} valueClass={pnlColor(totalNet)} />
-      </div>
+      <p className="text-[11px] leading-snug text-zinc-400 dark:text-zinc-500">
+        ※ 승률·Avg Win/Loss·평균 보유시간은 <b>청산 완료 & 진입이력 있는</b> 포지션만 집계합니다 (진입이력 없는 <b>이월</b>·미청산 <b>진행중</b>은 제외). 승/패는 <b>수수료·펀딩이 반영된 net</b> 기준(net &gt; 0 = 승). PnL 합계는 합산/거래소별 탭의 &apos;손익 지표(원장 net)&apos;를 참고하세요.
+      </p>
     </div>
   );
 }
