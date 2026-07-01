@@ -1,5 +1,7 @@
-import type { CollectRequest, CollectResult, NormalizedRow, RawPage } from "../../types";
+import type { CollectRequest, CollectResult, NormalizedRow, RawPage, ReconstructedPosition } from "../../types";
 import { fetchJson, hmacSha256Base64, buildQuery, splitWindows, num, DAY_MS } from "../util";
+import { collectBitget } from "../bitget";
+import { nativeToReconstructed } from "./native";
 
 // Bitget 트레이드 방식 — 운영 웹앱(BitgetPnl)과 동일.
 // GET /api/v2/mix/account/bill 원장을 businessType으로 분류. value = amount + fee.
@@ -118,9 +120,21 @@ export async function collectBitgetTrade(req: CollectRequest): Promise<CollectRe
     warnings.push(`Bitget 미분류 businessType ${unknownTypes.size}종 → pnl로 귀속했습니다(검증 권장): ${[...unknownTypes].join(", ")}`);
   }
 
+  // 네이티브 포지션 히스토리(history-position)도 수집 → 포지션 재구성 탭(win/loss)
+  let positions: ReconstructedPosition[] = [];
+  try {
+    const native = await collectBitget(req);
+    rawPages.push(...native.rawPages);
+    requestCount += native.meta.requestCount;
+    positions = nativeToReconstructed(native.rows);
+  } catch (e) {
+    warnings.push(`Bitget 포지션 히스토리 수집 실패: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
   return {
     exchange: "bitget",
     rows,
+    positions,
     rawPages,
     warnings,
     meta: { requestCount, endpoints: [PATH], startTime: req.startTime, endTime: req.endTime },

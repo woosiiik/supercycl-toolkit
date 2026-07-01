@@ -1,5 +1,7 @@
-import type { CollectRequest, CollectResult, NormalizedRow, RawPage } from "../../types";
+import type { CollectRequest, CollectResult, NormalizedRow, RawPage, ReconstructedPosition } from "../../types";
 import { fetchJson, hmacSha256Base64, buildQuery, num } from "../util";
+import { collectOkx } from "../okx";
+import { nativeToReconstructed } from "./native";
 
 // OKX 트레이드 방식 — 운영 웹앱(OkxPnl)과 동일.
 // 실현손익·수수료: GET /api/v5/trade/fills-history (fillPnl + fee)
@@ -88,9 +90,21 @@ export async function collectOkxTrade(req: CollectRequest): Promise<CollectResul
     after = lastBillId;
   }
 
+  // 네이티브 포지션 히스토리(positions-history)도 수집 → 포지션 재구성 탭(win/loss)
+  let positions: ReconstructedPosition[] = [];
+  try {
+    const native = await collectOkx(req);
+    rawPages.push(...native.rawPages);
+    requestCount += native.meta.requestCount;
+    positions = nativeToReconstructed(native.rows);
+  } catch (e) {
+    warnings.push(`OKX 포지션 히스토리 수집 실패: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
   return {
     exchange: "okx",
     rows,
+    positions,
     rawPages,
     warnings,
     meta: { requestCount, endpoints: [FILLS_PATH, BILLS_PATH], startTime: req.startTime, endTime: req.endTime },

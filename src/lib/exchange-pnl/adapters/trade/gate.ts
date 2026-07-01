@@ -1,5 +1,7 @@
-import type { CollectRequest, CollectResult, NormalizedRow, RawPage } from "../../types";
+import type { CollectRequest, CollectResult, NormalizedRow, RawPage, ReconstructedPosition } from "../../types";
 import { fetchJson, hmacSha512Hex, sha512Hex, buildQuery, num } from "../util";
+import { collectGate } from "../gate";
+import { nativeToReconstructed } from "./native";
 
 // Gate 트레이드 방식 — 선물 계정 원장(GET /api/v4/futures/usdt/account_book) 합산.
 // type=pnl(실현손익)/fee(수수료)/fund(펀딩)을 거래 발생일에 귀속. 보유시간·포지션 승/패 불가.
@@ -57,9 +59,21 @@ export async function collectGateTrade(req: CollectRequest): Promise<CollectResu
     if (list.length < 100) break;
   }
 
+  // 네이티브 포지션 히스토리(position_close)도 수집 → 포지션 재구성 탭(win/loss)
+  let positions: ReconstructedPosition[] = [];
+  try {
+    const native = await collectGate(req);
+    rawPages.push(...native.rawPages);
+    requestCount += native.meta.requestCount;
+    positions = nativeToReconstructed(native.rows);
+  } catch (e) {
+    warnings.push(`Gate 포지션 히스토리 수집 실패: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
   return {
     exchange: "gate",
     rows,
+    positions,
     rawPages,
     warnings,
     meta: { requestCount, endpoints: [PREFIX + PATH], startTime: req.startTime, endTime: req.endTime },

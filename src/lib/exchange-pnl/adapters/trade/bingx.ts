@@ -1,5 +1,7 @@
-import type { CollectRequest, CollectResult, NormalizedRow, RawPage } from "../../types";
+import type { CollectRequest, CollectResult, NormalizedRow, RawPage, ReconstructedPosition } from "../../types";
 import { fetchJson, hmacSha256Hex, buildQuery, splitWindows, num, DAY_MS } from "../util";
+import { collectBingx } from "../bingx";
+import { nativeToReconstructed } from "./native";
 
 // BingX 트레이드 방식 — income 원장(GET /openApi/swap/v2/user/income) 합산.
 // REALIZED_PNL/COMMISSION/FUNDING_FEE 타입만 컴포넌트로 사용 (Binance income과 동일 모델).
@@ -58,9 +60,21 @@ export async function collectBingxTrade(req: CollectRequest): Promise<CollectRes
     }
   }
 
+  // 네이티브 포지션 히스토리(positionHistory)도 수집 → 포지션 재구성 탭(win/loss)
+  let positions: ReconstructedPosition[] = [];
+  try {
+    const native = await collectBingx(req);
+    rawPages.push(...native.rawPages);
+    requestCount += native.meta.requestCount;
+    positions = nativeToReconstructed(native.rows);
+  } catch (e) {
+    warnings.push(`BingX 포지션 히스토리 수집 실패: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
   return {
     exchange: "bingx",
     rows,
+    positions,
     rawPages,
     warnings,
     meta: { requestCount, endpoints: [INCOME_PATH], startTime: req.startTime, endTime: req.endTime },
