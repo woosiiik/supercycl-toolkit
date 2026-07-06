@@ -1,5 +1,5 @@
 import type { CollectRequest, CollectResult, NormalizedRow, RawPage, ReconstructedPosition } from "../../types";
-import { fetchJson, hmacSha512Hex, sha512Hex, buildQuery, num } from "../util";
+import { fetchJson, hmacSha512Hex, sha512Hex, buildQuery, num, splitWindows, DAY_MS } from "../util";
 import { collectGate } from "../gate";
 import { nativeToReconstructed } from "./native";
 
@@ -11,6 +11,9 @@ const BASE = "https://api.gateio.ws";
 const PREFIX = "/api/v4";
 const PATH = "/futures/usdt/account_book";
 const MAX_PAGES = 50;
+// account_book은 from~to 30일 초과 시 INVALID_PARAM_VALUE("time range can not exceed 30 days")
+// — 경계 판정 여유를 두고 29일 윈도우로 분할 조회
+const WINDOW_MS = 29 * DAY_MS;
 
 export async function collectGateTrade(req: CollectRequest): Promise<CollectResult> {
   const { apiKey, apiSecret } = req.credentials;
@@ -19,44 +22,53 @@ export async function collectGateTrade(req: CollectRequest): Promise<CollectResu
   const warnings: string[] = [];
   let requestCount = 0;
 
-  warnings.push("Gate 트레이드 방식 — account_book 원장(pnl/fee/fund/refr) 합산(dnw 제외, 거래 발생일 귀속). 운영 웹앱과 동일. 보유시간·포지션 승/패는 제공되지 않습니다.");
+  warnings.push("Gate 트레이드 방식 — account_book 원장(pnl/fee/fund/refr) 합산(dnw 제외, 거래 발생일 귀속). 운영 웹앱과 동일. 보유시간·포지션 승/패는 제공되지 않습니다. 30일 초과 기간은 29일 윈도우로 분할 조회합니다.");
 
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const query = buildQuery({
-      limit: 100,
-      offset: page * 100,
-      from: Math.floor(req.startTime / 1000),
-      to: Math.floor(req.endTime / 1000),
-    });
-    const fullPath = PREFIX + PATH;
-    const ts = Math.floor(Date.now() / 1000).toString();
-    const signMsg = `GET\n${fullPath}\n${query}\n${sha512Hex("")}\n${ts}`;
-    const sign = hmacSha512Hex(apiSecret, signMsg);
-    const url = `${BASE}${fullPath}?${query}`;
-    requestCount++;
-    const { page: rp, ok, body } = await fetchJson(`account_book p${page}`, url, {
-      method: "GET",
-      headers: {
-        KEY: apiKey,
-        SIGN: sign,
-        Timestamp: ts,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    });
-    rawPages.push(rp);
+  const seen = new Set<string>();
+  const windows = splitWindows(req.startTime, req.endTime, WINDOW_MS);
+  outer: for (let wi = 0; wi < windows.length; wi++) {
+    const w = windows[wi];
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const query = buildQuery({
+        limit: 100,
+        offset: page * 100,
+        from: Math.floor(w.start / 1000),
+        to: Math.floor(w.end / 1000),
+      });
+      const fullPath = PREFIX + PATH;
+      const ts = Math.floor(Date.now() / 1000).toString();
+      const signMsg = `GET\n${fullPath}\n${query}\n${sha512Hex("")}\n${ts}`;
+      const sign = hmacSha512Hex(apiSecret, signMsg);
+      const url = `${BASE}${fullPath}?${query}`;
+      requestCount++;
+      const { page: rp, ok, body } = await fetchJson(`account_book w${wi} p${page}`, url, {
+        method: "GET",
+        headers: {
+          KEY: apiKey,
+          SIGN: sign,
+          Timestamp: ts,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      });
+      rawPages.push(rp);
 
-    if (!ok) {
-      const b = body as { label?: string; message?: string };
-      warnings.push(`Gate account_book 오류 (p${page}): ${b?.label ?? rp.status} ${b?.message ?? ""}`);
-      break;
+      if (!ok) {
+        const b = body as { label?: string; message?: string };
+        warnings.push(`Gate account_book 오류 (w${wi} p${page}): ${b?.label ?? rp.status} ${b?.message ?? ""}`);
+        break outer;
+      }
+      const list = (Array.isArray(body) ? body : []) as GateBook[];
+      for (const d of list) {
+        const row = normalize(d);
+        // 윈도우 경계 초가 겹칠 수 있어 id 로 dedupe
+        if (row && !seen.has(row.id)) {
+          seen.add(row.id);
+          rows.push(row);
+        }
+      }
+      if (list.length < 100) break;
     }
-    const list = (Array.isArray(body) ? body : []) as GateBook[];
-    for (const d of list) {
-      const row = normalize(d);
-      if (row) rows.push(row);
-    }
-    if (list.length < 100) break;
   }
 
   // 네이티브 포지션 히스토리(position_close)도 수집 → 포지션 재구성 탭(win/loss)

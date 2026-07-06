@@ -76,7 +76,7 @@ export const TRADE_DOCS: Record<ExchangeId, TradeDoc> = {
     endpoint: "GET /api/v4/futures/usdt/account_book",
     fundingSource: { kind: "inline", label: "원장 포함 (type=fund)" },
     note: "선물 계정 원장에서 pnl/fee/fund/refr를 pnl로, dnw는 제외해 합산합니다. 운영 웹앱과 동일.",
-    caveats: ["계정 단위 원장 — 일부 항목은 contract(심볼) 미포함 가능", "시간은 초(sec) 단위"],
+    caveats: ["계정 단위 원장 — 일부 항목은 contract(심볼) 미포함 가능", "시간은 초(sec) 단위", "조회 기간 30일 초과 불가 → 29일 윈도우 분할"],
     reconstruct: {
       status: "native",
       source: "position_close (포지션 히스토리 기반 도구)",
