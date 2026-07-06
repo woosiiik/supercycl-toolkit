@@ -74,6 +74,7 @@ export const EXCHANGE_DOCS: Record<ExchangeId, ExchangeDoc> = {
       "심볼 미입력 시: income 원장(/swap/v2/user/income, symbol 선택)을 먼저 호출",
       "income 응답에서 거래에 등장한 distinct 심볼을 추출",
       "추출된 심볼 개수만큼 positionHistory를 반복 호출 (심볼 × 89일 윈도우)",
+      "조회 시작을 89일 앞당겨 호출 후 종료 시각 기준으로 요청 범위 필터 (범위 밖 오픈·범위 내 종료 포지션 누락 방지)",
       "심볼을 직접 입력하면 1~2단계(income 추출)를 건너뜀",
     ],
     diagram: `① 심볼 미입력

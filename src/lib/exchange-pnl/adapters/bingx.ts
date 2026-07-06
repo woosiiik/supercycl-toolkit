@@ -6,12 +6,18 @@ import { fetchJson, hmacSha256Hex, buildQuery, splitWindows, num, DAY_MS } from 
 // 인증: HMAC SHA256, header X-BX-APIKEY, signature 쿼리 append.
 // netProfit = realisedProfit + positionCommission + totalFunding (분해 제공).
 // 주의: 요청 span 최대 3개월 → 89일 윈도우로 분할.
+// 주의: startTs/endTs가 오픈/종료 어느 시각 기준인지 미문서화 — 조회 범위보다 먼저 열려
+// 범위 안에서 닫힌 포지션이 누락될 수 있어, 조회 시작을 89일 앞당긴 뒤 결과를
+// 종료 시각(updateTime) 기준으로 요청 범위로 필터링한다.
 
 const BASE = "https://open-api.bingx.com";
 const PATH = "/openApi/swap/v1/trade/positionHistory";
 const INCOME_PATH = "/openApi/swap/v2/user/income";
 const MAX_PAGES = 20;
 const WINDOW = 89 * DAY_MS;
+const LOOKBACK_MS = 89 * DAY_MS;
+// income 원장은 운영(WAS)과 동일하게 30일 윈도우로 분할 조회
+const INCOME_WINDOW = 30 * DAY_MS;
 
 export async function collectBingx(req: CollectRequest): Promise<CollectResult> {
   const { apiKey, apiSecret, symbols } = req.credentials;
@@ -25,9 +31,12 @@ export async function collectBingx(req: CollectRequest): Promise<CollectResult> 
     .map((s) => s.trim())
     .filter(Boolean);
 
+  // 범위 직전에 열려 범위 안에서 닫힌 포지션 포착용 — 조회 시작을 89일 앞당김
+  const queryStart = Math.max(0, req.startTime - LOOKBACK_MS);
+
   // 심볼 미입력 시 income 원장에서 거래 심볼 자동 추출
   if (symbolList.length === 0) {
-    const derived = await deriveSymbolsFromIncome(apiKey, apiSecret, req.startTime, req.endTime);
+    const derived = await deriveSymbolsFromIncome(apiKey, apiSecret, queryStart, req.endTime);
     rawPages.push(...derived.rawPages);
     requestCount += derived.requestCount;
     symbolList = derived.symbols;
@@ -40,7 +49,8 @@ export async function collectBingx(req: CollectRequest): Promise<CollectResult> 
     }
   }
 
-  const windows = splitWindows(req.startTime, req.endTime, WINDOW);
+  const windows = splitWindows(queryStart, req.endTime, WINDOW);
+  const seen = new Set<string>();
   for (const symbol of symbolList) {
     win: for (const w of windows) {
       const tag = `${symbol} ${new Date(w.start).toISOString().slice(0, 10)}`;
@@ -73,7 +83,14 @@ export async function collectBingx(req: CollectRequest): Promise<CollectResult> 
         const list: BingxPos[] = Array.isArray(b?.data)
           ? (b.data as BingxPos[])
           : ((b?.data as { positionHistory?: BingxPos[] })?.positionHistory ?? []);
-        for (const d of list) rows.push(normalize(d, symbol));
+        for (const d of list) {
+          const row = normalize(d, symbol);
+          // lookback으로 넓힌 조회 — 요청 범위 밖에서 닫힌 포지션 제외, 윈도우 간 중복 dedupe
+          if (row.closeTime < req.startTime || row.closeTime > req.endTime) continue;
+          if (seen.has(row.id)) continue;
+          seen.add(row.id);
+          rows.push(row);
+        }
         if (list.length < 100) break;
       }
     }
@@ -112,7 +129,7 @@ async function deriveSymbolsFromIncome(
   let requestCount = 0;
   let error: string | undefined;
 
-  const windows = splitWindows(startTime, endTime, WINDOW);
+  const windows = splitWindows(startTime, endTime, INCOME_WINDOW);
   for (const w of windows) {
     let cursorStart = w.start;
     for (let page = 0; page < MAX_PAGES; page++) {
