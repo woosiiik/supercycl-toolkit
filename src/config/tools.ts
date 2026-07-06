@@ -19,6 +19,16 @@ const newTools: ToolConfig[] = [
       "조회만 하므로 읽기 권한 계정이면 충분합니다. VPN 연결이 필요합니다.",
   },
   {
+    slug: "exchange-pnl-was",
+    name: "거래소 PNL 조회 (서버 수집·WAS API)",
+    description:
+      "WAS가 거래소 API에서 직접 수집·집계한 멀티 거래소 손익(PnL2)을 조회하는 도구입니다.\n" +
+      "Local/Dev/Staging/Production 환경을 선택하고 Access Token(JWT)을 입력하면 실제 WAS API를 호출합니다.\n" +
+      "JWT 입력 후 'API-Key 목록 조회'로 서버에 저장된 거래소 API-Key(GET /v1/sync/exchange/status)를 확인할 수 있습니다.\n" +
+      "포지션 지표(승률·평균 익절/손절·보유시간)와 손익 지표(Net PnL·가격손익·수수료·펀딩), 일별 차트, 심볼별 PnL을 표시합니다.\n" +
+      "GET /v1/pnl2/overview·daily·symbols·status 4종을 사용하며, 브라우저에서 WAS로 직접 호출합니다.",
+  },
+  {
     slug: "exchange-pnl-trade",
     name: "거래소 PNL 수집/검증 (트레이드 히스토리 기반)",
     description:

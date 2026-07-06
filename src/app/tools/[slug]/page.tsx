@@ -20,6 +20,7 @@ import YmPushStatus from "@/components/ym-push-status/YmPushStatus";
 import YmSignalDetail from "@/components/ym-signal-detail/YmSignalDetail";
 import SyncPayloadDecrypt from "@/components/sync-payload-decrypt/SyncPayloadDecrypt";
 import ExchangePnl from "@/components/exchange-pnl/ExchangePnl";
+import ExchangePnlWas from "@/components/exchange-pnl-was/ExchangePnlWas";
 import SupercyclUserManager from "@/components/supercycl-user/SupercyclUserManager";
 
 export default async function ToolPage({
@@ -40,6 +41,8 @@ export default async function ToolPage({
       <div className="p-6">
         {slug === "supercycl-user" ? (
           <SupercyclUserManager />
+        ) : slug === "exchange-pnl-was" ? (
+          <ExchangePnlWas />
         ) : slug === "exchange-pnl-trade" ? (
           <ExchangePnl method="trade" />
         ) : slug === "hl-rate-limit-tester" ? (
